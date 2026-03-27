@@ -1,0 +1,97 @@
+/* ============================================================
+   LAYOUT
+   Page-level structure and responsive grid.
+   Uses fluid sizing and dvh for seamless cross-device support.
+   ============================================================ */
+
+/* ---- Hero (full-viewport centred layout) ---- */
+
+.hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(var(--space-lg), 5vh, var(--space-xl));
+
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: clamp(var(--space-lg), 6vw, var(--space-2xl));
+
+  overflow: hidden;
+}
+
+/* ---- Decorative border frame ---- */
+
+.frame {
+  position: absolute;
+  inset: var(--frame-inset);
+  border: var(--frame-width) solid var(--color-border);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ---- Header area ---- */
+
+.hero__header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  text-align: center;
+  width: 100%;
+  max-width: 720px;
+}
+
+/* ---- Navigation area ---- */
+
+.hero__nav {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  width: 100%;
+  max-width: 720px;
+}
+
+/* ============================================================
+   RESPONSIVE BREAKPOINTS
+   ============================================================ */
+
+/* ---- Small phones (≤ 374px) ---- */
+@media (max-width: 374px) {
+  .hero__nav {
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+}
+
+/* ---- Phones (375px – 599px) ---- */
+@media (min-width: 375px) and (max-width: 599px) {
+  .hero__nav {
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+}
+
+/* ---- Tablets and up (600px+) ---- */
+@media (min-width: 600px) {
+  .hero__nav {
+    flex-direction: row;
+    gap: clamp(var(--space-md), 2.5vw, var(--space-lg));
+  }
+}
+
+/* ---- Landscape phones ---- */
+@media (max-height: 500px) and (orientation: landscape) {
+  .hero {
+    padding-block: var(--space-md);
+    gap: var(--space-md);
+  }
+}

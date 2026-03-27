@@ -1,0 +1,38 @@
+/* ============================================================
+   DESIGN TOKENS
+   Edit these variables to update the entire site's look & feel.
+   ============================================================ */
+
+:root {
+  /* ---- Colour Palette ----
+     Inspired by Neo Yokio's muted pastels against deep tones,
+     crossed with Ralph Lauren's navy / cream / gold heritage.  */
+  --color-bg:          #0e0e12;       /* deep midnight                */
+  --color-bg-subtle:   #16161d;       /* slightly lighter panel       */
+  --color-text:        #e8e0d4;       /* warm ivory / parchment       */
+  --color-text-muted:  #9a9488;       /* muted stone                  */
+  --color-accent:      #c4a46c;       /* antique gold                 */
+  --color-accent-soft: #d4be91;       /* lighter gold for hover       */
+  --color-border:      #2e2c28;       /* subtle warm border           */
+  --color-border-light:#3d3a34;       /* lighter border for hover     */
+
+  /* ---- Typography ---- */
+  --font-display:  'Cormorant Garamond', 'Georgia', serif;
+  --font-body:     'Cormorant Garamond', 'Georgia', serif;
+
+  /* ---- Spacing Scale (rem) ---- */
+  --space-xs:  0.25rem;
+  --space-sm:  0.5rem;
+  --space-md:  1rem;
+  --space-lg:  2rem;
+  --space-xl:  4rem;
+  --space-2xl: 6rem;
+
+  /* ---- Transitions ---- */
+  --ease-out:  cubic-bezier(0.22, 1, 0.36, 1);
+  --duration:  0.45s;
+
+  /* ---- Frame ---- */
+  --frame-inset: clamp(16px, 3vw, 40px);
+  --frame-width: 1px;
+}
