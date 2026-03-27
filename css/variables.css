@@ -5,16 +5,18 @@
 
 :root {
   /* ---- Colour Palette ----
-     Inspired by Neo Yokio's muted pastels against deep tones,
-     crossed with Ralph Lauren's navy / cream / gold heritage.  */
-  --color-bg:          #0e0e12;       /* deep midnight                */
-  --color-bg-subtle:   #16161d;       /* slightly lighter panel       */
-  --color-text:        #e8e0d4;       /* warm ivory / parchment       */
-  --color-text-muted:  #9a9488;       /* muted stone                  */
-  --color-accent:      #c4a46c;       /* antique gold                 */
-  --color-accent-soft: #d4be91;       /* lighter gold for hover       */
-  --color-border:      #2e2c28;       /* subtle warm border           */
-  --color-border-light:#3d3a34;       /* lighter border for hover     */
+     Inspired by Neo Yokio's signature pastel pinks, soft
+     lavenders, and muted rose tones — Kaz Kaan's world of
+     pink carnations and melancholic luxury.
+     Dark fonts for strong contrast against the light pinks.  */
+  --color-bg:          #f2d4d7;       /* soft blush pink              */
+  --color-bg-subtle:   #e8c2c6;       /* slightly deeper rose         */
+  --color-text:        #2a1f2d;       /* deep plum / near-black       */
+  --color-text-muted:  #5c4560;       /* muted aubergine              */
+  --color-accent:      #8b3a62;       /* dark magenta / berry         */
+  --color-accent-soft: #a34d78;       /* lighter magenta for hover    */
+  --color-border:      #c9a0ad;       /* dusty rose border            */
+  --color-border-light:#d4b3be;       /* lighter rose for hover       */
 
   /* ---- Typography ---- */
   --font-display:  'Cormorant Garamond', 'Georgia', serif;
