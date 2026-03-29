@@ -12,3 +12,8 @@ Thumbs.db
 # Test / dev artifacts
 screenshots/
 notes.txt
+
+# Large media originals (keep optimised versions, ignore raw source)
+# Uncomment these if you want to exclude large files from git:
+# assets/video/*.mov
+# assets/audio/*.wav

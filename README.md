@@ -6,14 +6,14 @@ A minimal, elegant single-page website serving as the central hub for the multi-
 
 The visual language fuses two distinct aesthetics:
 
-- **Neo Yokio** — muted luxury, deep midnight tones, and the refined melancholy of anime-inflected high fashion.
-- **Ralph Lauren** — serif typography, antique gold accents, warm ivory text, and restrained, heritage-driven elegance.
+- **Neo Yokio** — soft blush pinks, muted pastels, and the refined melancholy of anime-inflected luxury.
+- **Ralph Lauren** — serif typography, heritage-driven restraint, and timeless elegance.
 
 ## Structure
 
 ```
 cass-la-ria/
-├── index.html              Main page
+├── index.html              Main landing page
 ├── css/
 │   ├── variables.css       Design tokens (colours, fonts, spacing)
 │   ├── reset.css           Cross-browser reset
@@ -22,19 +22,29 @@ cass-la-ria/
 │   └── animations.css      Entrance animations (motion-safe)
 ├── js/
 │   └── main.js             Viewport-height fix and future hooks
-└── README.md
+├── assets/
+│   ├── images/             Photos, artwork, backgrounds
+│   ├── video/              Clips, reels, showreels
+│   ├── audio/              Music, samples, podcasts
+│   ├── fonts/              Custom / self-hosted font files
+│   └── icons/              Favicon, social icons, SVGs
+├── pages/                  Additional pages (portfolio, about, etc.)
+├── CONTRIBUTING.md         Guide for adding assets and updating the site
+└── README.md               This file
 ```
 
-## Editing Guide
+## Quick Edits
 
-| What you want to change       | File to edit           | Notes                                          |
-|-------------------------------|------------------------|-------------------------------------------------|
-| Colours, fonts, spacing       | `css/variables.css`    | All design tokens live here as CSS variables    |
-| Page layout / responsiveness  | `css/layout.css`       | Flexbox-based; breakpoints at 375px and 600px   |
-| Button styles / name heading  | `css/components.css`   | Fluid sizing via `clamp()`                      |
-| Entrance animations           | `css/animations.css`   | Respects `prefers-reduced-motion`               |
-| Social links / name text      | `index.html`           | Update `href` values and heading text           |
-| Future interactivity          | `js/main.js`           | Lightweight; extend the DOMContentLoaded hook   |
+| What you want to change       | File to edit           |
+|-------------------------------|------------------------|
+| Colours, fonts, spacing       | `css/variables.css`    |
+| Page layout / responsiveness  | `css/layout.css`       |
+| Button styles / name heading  | `css/components.css`   |
+| Entrance animations           | `css/animations.css`   |
+| Social links / name text      | `index.html`           |
+| Future interactivity          | `js/main.js`           |
+
+For detailed instructions on adding images, fonts, pages, video, and more, see **[CONTRIBUTING.md](CONTRIBUTING.md)**.
 
 ## Responsiveness
 
@@ -46,17 +56,11 @@ The site is built mobile-first and tested across:
 - Desktop (1024px+) — full elegance with generous whitespace
 - Landscape phones — reduced vertical padding to prevent overflow
 
-Key techniques used:
-
-- `clamp()` for fluid typography and spacing (no hard breakpoint jumps)
-- `100dvh` (dynamic viewport height) for accurate mobile fullscreen
-- JS-based `--vh` custom property as a fallback for older browsers
-- Minimum 44px touch targets on all interactive elements
-- `prefers-reduced-motion` respected for accessibility
+Key techniques: `clamp()` fluid typography, `100dvh` dynamic viewport height, JS `--vh` fallback, 44px minimum touch targets, and `prefers-reduced-motion` support.
 
 ## Deployment
 
-This is a static site — no build step required. Deploy to any static host:
+Static site — no build step required. Deploy to any static host:
 
 - **GitHub Pages** — push to `main`, enable Pages in repo settings
 - **Netlify / Vercel** — connect the repo, publish root directory
