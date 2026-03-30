@@ -1,0 +1,72 @@
+# ============================================================
+# Netlify Configuration — Cass la Ria
+# This is a plain static site (HTML/CSS/JS). No build step.
+# ============================================================
+
+[build]
+  # No build command — the site is pre-built static files.
+  # Leaving "command" out entirely tells Netlify to skip the build.
+  publish = "."
+
+# ---- Security & Performance Headers ----
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+# Cache static assets aggressively (CSS, JS, images, fonts)
+[[headers]]
+  for = "/css/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/js/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# HTML should revalidate on every request
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# ---- Redirects ----
+# Custom 404 page (optional — create pages/404.html to use)
+# [[redirects]]
+#   from = "/*"
+#   to = "/pages/404.html"
+#   status = 404
+
+# ---- Post Processing ----
+# Disable CSS/JS minification to prevent Netlify from
+# breaking valid styles (a known issue with static sites).
+[build.processing]
+  skip_processing = false
+
+[build.processing.css]
+  bundle = false
+  minify = false
+
+[build.processing.js]
+  bundle = false
+  minify = false
+
+[build.processing.html]
+  pretty_urls = true
+
+[build.processing.images]
+  compress = true

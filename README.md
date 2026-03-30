@@ -14,6 +14,7 @@ The visual language fuses two distinct aesthetics:
 ```
 cass-la-ria/
 ├── index.html              Main landing page
+├── netlify.toml            Netlify build & deploy configuration
 ├── css/
 │   ├── variables.css       Design tokens (colours, fonts, spacing)
 │   ├── reset.css           Cross-browser reset
@@ -43,8 +44,31 @@ cass-la-ria/
 | Entrance animations           | `css/animations.css`   |
 | Social links / name text      | `index.html`           |
 | Future interactivity          | `js/main.js`           |
+| Netlify build / headers       | `netlify.toml`         |
 
 For detailed instructions on adding images, fonts, pages, video, and more, see **[CONTRIBUTING.md](CONTRIBUTING.md)**.
+
+## Deployment on Netlify
+
+This site includes a `netlify.toml` that handles all configuration automatically. To deploy:
+
+1. Log in to [Netlify](https://app.netlify.com/) and click **"Add new site" → "Import an existing project"**.
+2. Connect your GitHub account and select the `cass-la-ria` repository.
+3. Netlify will read `netlify.toml` automatically. Verify the settings show:
+   - **Build command:** *(blank — leave empty)*
+   - **Publish directory:** `.`
+4. Click **"Deploy site"**.
+
+The `netlify.toml` also configures security headers, asset caching, and disables CSS/JS post-processing to prevent style breakage.
+
+### Troubleshooting
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `missing script: build` | Netlify trying to run a build command | Ensure build command is blank (the `netlify.toml` handles this) |
+| "Page not found" | Publish directory wrong | Must be `.` (root), not `/build` or a subdirectory |
+| CSS not loading | Incorrect paths or post-processing | Paths are relative; `netlify.toml` disables CSS bundling/minification |
+| Blank page | `index.html` not at root | Verify `index.html` is in the repo root, not inside a subfolder |
 
 ## Responsiveness
 
@@ -57,14 +81,6 @@ The site is built mobile-first and tested across:
 - Landscape phones — reduced vertical padding to prevent overflow
 
 Key techniques: `clamp()` fluid typography, `100dvh` dynamic viewport height, JS `--vh` fallback, 44px minimum touch targets, and `prefers-reduced-motion` support.
-
-## Deployment
-
-Static site — no build step required. Deploy to any static host:
-
-- **GitHub Pages** — push to `main`, enable Pages in repo settings
-- **Netlify / Vercel** — connect the repo, publish root directory
-- **Any web server** — upload the files as-is
 
 ## License
 
