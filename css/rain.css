@@ -1,0 +1,100 @@
+/* ============================================================
+   RAIN ANIMATION
+   Styles for the canvas rain layer, cloud elements,
+   umbrella cursor, and weather system.
+   ============================================================ */
+
+/* ---- Rain canvas (full-viewport background layer) ---- */
+
+.rain-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  display: block;
+  width: 100%;
+  height: 100%;
+
+  /* Prevent canvas from being selected or dragged */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---- Umbrella cursor (desktop only) ---- */
+
+.umbrella-cursor {
+  position: fixed;
+  z-index: 10;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+
+  /* Centered on cursor position */
+  transform: translate(-50%, -50%);
+
+  /* GPU-accelerated movement */
+  will-change: transform;
+
+  /* The umbrella character */
+  font-size: 48px;
+  line-height: 1;
+  color: var(--color-text);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.umbrella-cursor.visible {
+  opacity: 0.7;
+}
+
+/* Hide on touch devices */
+@media (hover: none) and (pointer: coarse) {
+  .umbrella-cursor {
+    display: none;
+  }
+}
+
+/* ---- Touch ripple indicator (mobile only) ---- */
+
+.touch-ripple {
+  position: fixed;
+  z-index: 10;
+  pointer-events: none;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.5);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.touch-ripple.active {
+  opacity: 0.3;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+/* ---- Ensure content stays above animation ---- */
+
+.hero {
+  position: relative;
+  z-index: 2;
+}
+
+.frame {
+  z-index: 1;
+}
+
+/* ---- Desktop: hide native cursor over the page ---- */
+
+@media (hover: hover) and (pointer: fine) {
+  body.rain-active {
+    cursor: none;
+  }
+
+  body.rain-active a,
+  body.rain-active button,
+  body.rain-active .btn {
+    cursor: none;
+  }
+}
