@@ -6,7 +6,17 @@ A minimal, elegant single-page website for the multi-faceted creative **Cass la 
 
 ### Rain Animation System
 
-A continuous Unicode rain and cloud animation runs behind the site content on every visit. Clouds made of numbers and symbols drift across the top of the page, and rain characters (`1`, `l`, `!`, `I`, `i`) fall from the clouds to the bottom of the viewport where they fade away.
+A continuous Unicode rain and cloud animation runs behind the site content on every visit. Clouds are **procedurally generated** using simplex noise with domain warping (Inigo Quilez technique), producing organic, realistic shapes that morph and drift over time. Cloud characters are drawn from a diverse Unicode set (block elements, numbers, symbols, braille dots) that **constantly cycle** as clouds move. Rain characters (`1`, `l`, `!`, `I`, `i`) spawn from cloud base positions and fall to the bottom of the viewport where they fade away.
+
+The physics model is grounded in real meteorology:
+
+- **Rain angle** follows `atan(windSpeed / terminalVelocity)` — the real formula from atmospheric physics ([Physics StackExchange #128586](https://physics.stackexchange.com/questions/128586)).
+- **Wind gradient** (Ekman spiral): rain drifts faster at cloud height and slower near the ground, creating a natural curve ([Cliff Mass Weather Blog](https://cliffmass.blogspot.com/2017/05/wind-shear-when-atmospheric-seems-to-be.html)).
+- **Cloud shapes** are based on six real cloud types (cirrus, stratus, stratocumulus, cumulus, nimbostratus, cumulonimbus), each with distinct noise parameters derived from study of 24+ reference images per type.
+- **Cloud merging** occurs naturally when noise fields overlap, consistent with Westcott (1994) bridging dynamics.
+- **Wind stretches clouds** horizontally — stronger wind produces more elongated shapes.
+- **Rain spawns from dense cloud regions** — heavier cloud areas produce more drops.
+- **Virga effect** — in light presets, some drops fade before reaching the ground (evaporation).
 
 One of **7 weather presets** is randomly selected each time a visitor loads the page:
 
