@@ -36,12 +36,12 @@
     # Self-contained site: only own scripts, styles, fonts, images allowed.
     # No inline scripts, no inline styles, no external resources.
     # frame-ancestors 'none' replaces X-Frame-Options for modern browsers.
-    # form-action 'none' blocks form submissions (site has no forms).
-    Content-Security-Policy = "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests"
+    # form-action 'self' allows mailto: links but blocks external form posts.
+    Content-Security-Policy = "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
 
     # -- Disable browser features we don't use --
     # interest-cohort=() blocks Google FLoC tracking.
-    Permissions-Policy = "camera=(), microphone=(), geolocation=(), interest-cohort=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), interest-cohort=(), payment=(), usb=(), magnetometer=(), gyroscope=(self), accelerometer=(self)"
 
     # -- Prevent cross-origin window interaction --
     Cross-Origin-Opener-Policy = "same-origin"

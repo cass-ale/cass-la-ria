@@ -27,6 +27,8 @@
    - Canvas DPI fix: medium.com/wdstack (Coen Warmer)
    - Canvas optimization: MDN Canvas API Tutorial
    - Custom cursor: 14islands.com/journal
+   - Text collision: getBoundingClientRect + point-in-rect deflection
+   - Device Orientation: MDN DeviceOrientationEvent
    ============================================================ */
 
 (function () {
@@ -144,6 +146,23 @@
 
   /* Touch */
   var TOUCH_RADIUS = 50;
+
+  /* Text collision */
+  var TEXT_COLLISION_PADDING = 6;   /* px padding around text bounding box */
+  var TEXT_DEFLECT_STRENGTH = 1.8;  /* bounce force multiplier */
+  var textCollisionRect = null;     /* cached bounding rect of the heading */
+  var TEXT_RECT_UPDATE_INTERVAL = 500; /* ms between rect recalculations */
+  var textRectTimer = 0;
+
+  /* Device tilt (mobile only) */
+  var tiltGamma = 0;    /* left-right tilt: -90 to 90 degrees */
+  var tiltBeta = 0;     /* front-back tilt: -180 to 180 degrees */
+  var tiltPermissionGranted = false;
+  var TILT_WIND_INFLUENCE = 0.04;   /* how much tilt affects wind (per degree) */
+  var TILT_CLOUD_INFLUENCE = 0.015; /* how much tilt nudges cloud drift */
+
+  /* Animation pause toggle */
+  var paused = false;
 
   /* Performance */
   var MAX_DPI = 2;
@@ -530,6 +549,7 @@
   var Z_SCALE_MIN = 0.75;
   var Z_SCALE_MAX = 1.3;
   var Z_SPEED = 0.008;       /* very slow z drift */
+  var Z_LATERAL_DRIFT = 0.003; /* z-axis clouds also drift laterally */
 
   function updateClouds(dt) {
     var dtSec = dt / 16.667;
@@ -556,9 +576,12 @@
       c.x += c.vx * dtSec * 0.016;
       c.y += c.vy * dtSec * 0.016;
 
-      /* ---- Z-axis drift (approach / recede) ---- */
+      /* ---- Z-axis drift (approach / recede) + lateral drift ---- */
       if (c.zDirection !== 0) {
         c.zScale += c.zDirection * Z_SPEED * dtSec * 0.016;
+        /* Z-axis clouds also drift laterally — approaching clouds drift one way, receding the other */
+        var lateralSign = c.zDirection * (c.dirAngle > 0 ? 1 : -1);
+        c.x += lateralSign * Z_LATERAL_DRIFT * baseSpeed * dtSec * 0.016;
         /* Reverse direction at limits for a gentle oscillation */
         if (c.zScale >= Z_SCALE_MAX) {
           c.zScale = Z_SCALE_MAX;
@@ -567,6 +590,11 @@
           c.zScale = Z_SCALE_MIN;
           c.zDirection = 1;
         }
+      }
+
+      /* ---- Tilt influence on clouds (mobile only) ---- */
+      if (tiltPermissionGranted && !isDesktop) {
+        c.x += tiltGamma * TILT_CLOUD_INFLUENCE * dtSec * 0.016 * baseSpeed;
       }
 
       /* ---- Subtle size breathing ---- */
@@ -1103,7 +1131,62 @@
   }
 
   /* ============================================================
-     13. PHYSICS — DEFLECTION
+     13. TEXT COLLISION — Rain bounces off the heading
+     ============================================================ */
+
+  function updateTextCollisionRect() {
+    var el = document.getElementById('hero-name');
+    if (!el) { textCollisionRect = null; return; }
+    var rect = el.getBoundingClientRect();
+    textCollisionRect = {
+      left: rect.left - TEXT_COLLISION_PADDING,
+      right: rect.right + TEXT_COLLISION_PADDING,
+      top: rect.top - TEXT_COLLISION_PADDING,
+      bottom: rect.bottom + TEXT_COLLISION_PADDING,
+      centerX: (rect.left + rect.right) * 0.5,
+      centerY: (rect.top + rect.bottom) * 0.5
+    };
+  }
+
+  function applyTextCollision(drop) {
+    if (!textCollisionRect) return;
+    var r = textCollisionRect;
+
+    /* Check if drop is inside or about to enter the text bounding box */
+    if (drop.x >= r.left && drop.x <= r.right &&
+        drop.y >= r.top && drop.y <= r.bottom) {
+
+      /* Determine which edge the drop is closest to */
+      var dLeft = drop.x - r.left;
+      var dRight = r.right - drop.x;
+      var dTop = drop.y - r.top;
+      var dBottom = r.bottom - drop.y;
+      var minDist = Math.min(dLeft, dRight, dTop, dBottom);
+
+      if (minDist === dTop) {
+        /* Hitting the top edge — bounce upward and to the side */
+        drop.y = r.top - 2;
+        drop.vy = -Math.abs(drop.vy) * 0.4 * TEXT_DEFLECT_STRENGTH;
+        drop.vx += randomRange(-0.8, 0.8);
+      } else if (minDist === dLeft) {
+        /* Hitting left edge — deflect left */
+        drop.x = r.left - 2;
+        drop.vx = -Math.abs(drop.vx || 0.5) * TEXT_DEFLECT_STRENGTH;
+        drop.vy *= 0.8;
+      } else if (minDist === dRight) {
+        /* Hitting right edge — deflect right */
+        drop.x = r.right + 2;
+        drop.vx = Math.abs(drop.vx || 0.5) * TEXT_DEFLECT_STRENGTH;
+        drop.vy *= 0.8;
+      } else {
+        /* Hitting bottom — push through quickly */
+        drop.vy *= 1.2;
+      }
+    }
+  }
+
+  /* ============================================================
+     13b. PHYSICS — DEFLECTION (umbrella + touch)
      ============================================================ */
 
   function applyUmbrellaDeflection(drop) {
@@ -1145,7 +1228,10 @@
      ============================================================ */
 
   function loop(timestamp) {
-    if (!running) return;
+    if (!running || paused) {
+      if (paused) animId = requestAnimationFrame(loop);
+      return;
+    }
 
     var dt = timestamp - lastTime;
     lastTime = timestamp;
@@ -1155,6 +1241,13 @@
     timeAccum += dt * 0.001;
 
     ctx.clearRect(0, 0, W, H);
+
+    /* Text collision rect update (throttled) */
+    textRectTimer += dt;
+    if (textRectTimer >= TEXT_RECT_UPDATE_INTERVAL) {
+      updateTextCollisionRect();
+      textRectTimer = 0;
+    }
 
     /* Wind */
     updateWind(dtFactor);
@@ -1196,7 +1289,16 @@
 
       var heightFactor = 0.3 + 0.7 * clamp(1 - drop.y / H, 0, 1);
       var effectiveWind = currentWind * drop.windFactor * heightFactor;
+
+      /* Tilt influence on rain (mobile only) */
+      if (tiltPermissionGranted && !isDesktop) {
+        effectiveWind += tiltGamma * TILT_WIND_INFLUENCE;
+      }
+
       drop.vx = lerp(drop.vx, effectiveWind, 0.05 * dtFactor);
+
+      /* Text collision — all platforms */
+      applyTextCollision(drop);
 
       if (isDesktop) applyUmbrellaDeflection(drop);
       else applyTouchDeflection(drop);
@@ -1250,6 +1352,72 @@
      15. LIFECYCLE
      ============================================================ */
 
+  /* ============================================================
+     16. DEVICE TILT (mobile only)
+     ============================================================ */
+
+  function setupTilt() {
+    if (isDesktop) return;
+
+    function handleOrientation(e) {
+      /* gamma: left-right tilt (-90 to 90), beta: front-back (-180 to 180) */
+      tiltGamma = clamp(e.gamma || 0, -45, 45);  /* clamp to reasonable range */
+      tiltBeta = clamp(e.beta || 0, -45, 45);
+    }
+
+    /* iOS 13+ requires explicit permission request from a user gesture */
+    if (typeof DeviceOrientationEvent !== 'undefined' &&
+        typeof DeviceOrientationEvent.requestPermission === 'function') {
+      /* iOS — we'll request permission when user first touches the screen */
+      var permRequested = false;
+      document.addEventListener('touchstart', function requestTiltPerm() {
+        if (permRequested) return;
+        permRequested = true;
+        DeviceOrientationEvent.requestPermission()
+          .then(function (state) {
+            if (state === 'granted') {
+              tiltPermissionGranted = true;
+              window.addEventListener('deviceorientation', handleOrientation, { passive: true });
+            }
+          })
+          .catch(function () { /* permission denied — tilt won't work, that's fine */ });
+      }, { once: true });
+    } else if (typeof DeviceOrientationEvent !== 'undefined') {
+      /* Android / non-iOS — permission not needed */
+      tiltPermissionGranted = true;
+      window.addEventListener('deviceorientation', handleOrientation, { passive: true });
+    }
+  }
+
+  /* ============================================================
+     17. ANIMATION PAUSE TOGGLE (WCAG 2.2.2)
+     ============================================================ */
+
+  function setupPauseToggle() {
+    var btn = document.getElementById('animation-toggle');
+    if (!btn) return;
+
+    btn.addEventListener('click', function () {
+      paused = !paused;
+      btn.setAttribute('aria-pressed', paused ? 'true' : 'false');
+      btn.setAttribute('aria-label', paused ? 'Resume weather animation' : 'Pause weather animation');
+      btn.querySelector('.animation-toggle__icon').textContent = paused ? '\u25B6' : '\u275A\u275A';
+    });
+
+    /* Auto-pause for prefers-reduced-motion */
+    var motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (motionQuery.matches) {
+      paused = true;
+      btn.setAttribute('aria-pressed', 'true');
+      btn.setAttribute('aria-label', 'Resume weather animation');
+      btn.querySelector('.animation-toggle__icon').textContent = '\u25B6';
+    }
+  }
+
+  /* ============================================================
+     18. LIFECYCLE
+     ============================================================ */
+
   function init() {
     selectPreset();
     setupCanvas();
@@ -1261,9 +1429,14 @@
     spawnClouds();
     initDrops();
     setupInteraction();
+    setupTilt();
+    setupPauseToggle();
 
     /* Initial cloud render */
     renderClouds();
+
+    /* Initial text collision rect */
+    updateTextCollisionRect();
 
     running = true;
     lastTime = performance.now();

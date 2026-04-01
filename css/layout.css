@@ -45,17 +45,17 @@
   max-width: 720px;
 }
 
-/* ---- Navigation area ---- */
+/* ---- Navigation area (icon buttons — always row) ---- */
 
 .hero__nav {
   position: relative;
   z-index: 1;
   display: flex;
   flex-direction: row;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: center;
-  gap: var(--space-md);
+  gap: clamp(var(--space-md), 3vw, var(--space-lg));
   width: 100%;
   max-width: 720px;
 }
@@ -67,24 +67,7 @@
 /* ---- Small phones (≤ 374px) ---- */
 @media (max-width: 374px) {
   .hero__nav {
-    flex-direction: column;
-    gap: var(--space-sm);
-  }
-}
-
-/* ---- Phones (375px – 599px) ---- */
-@media (min-width: 375px) and (max-width: 599px) {
-  .hero__nav {
-    flex-direction: column;
     gap: var(--space-md);
-  }
-}
-
-/* ---- Tablets and up (600px+) ---- */
-@media (min-width: 600px) {
-  .hero__nav {
-    flex-direction: row;
-    gap: clamp(var(--space-md), 2.5vw, var(--space-lg));
   }
 }
 

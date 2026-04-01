@@ -49,8 +49,16 @@
   animation: fade-up 0.7s var(--ease-out) 1.05s both;
 }
 
+.hero__contact {
+  animation: fade-up 0.7s var(--ease-out) 1.2s both;
+}
+
 .frame {
   animation: fade-in 1.2s var(--ease-out) 0.3s both;
+}
+
+.animation-toggle {
+  animation: fade-in 0.5s var(--ease-out) 1.5s both;
 }
 
 /* ---- Respect user motion preferences ---- */

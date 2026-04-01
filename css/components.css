@@ -1,7 +1,33 @@
 /* ============================================================
    COMPONENTS
-   Reusable UI elements — name heading, rule, buttons.
+   Reusable UI elements — name heading, rule, icon buttons,
+   contact button, skip link, animation toggle.
    ============================================================ */
+
+/* ---- Skip-to-content link (WCAG keyboard navigation) ---- */
+
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  padding: 0.75rem 1.5rem;
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  letter-spacing: 0.1em;
+  color: var(--color-bg);
+  background-color: var(--color-accent);
+  border-radius: 0 0 4px 4px;
+  text-decoration: none;
+  transition: top 0.2s ease;
+}
+
+.skip-link:focus {
+  top: 0;
+  outline: 2px solid var(--color-text);
+  outline-offset: 2px;
+}
 
 /* ---- Name / Title ---- */
 
@@ -30,38 +56,30 @@
   opacity: 0.6;
 }
 
-/* ---- Buttons ---- */
+/* ---- Icon Buttons (Social Links) ---- */
 
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
 
-  font-family: var(--font-display);
-  font-weight: 500;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  white-space: nowrap;
-
-  /* Fluid type: 11px → 14px */
-  font-size: clamp(0.6875rem, 0.4vw + 0.6rem, 0.875rem);
-
   color: var(--color-accent);
   background: transparent;
   border: 1px solid var(--color-border);
 
-  /* Responsive padding */
-  padding: clamp(0.7rem, 1.2vh, 1rem) clamp(1.6rem, 3vw, 2.8rem);
-
-  /* Minimum touch target of 44px for accessibility */
+  /* Square icon buttons with 44px minimum touch target */
+  width: clamp(48px, 6vw, 56px);
+  height: clamp(48px, 6vw, 56px);
   min-height: 44px;
-  min-width: 140px;
+  min-width: 44px;
+  padding: 0;
 
   cursor: pointer;
   transition:
     color var(--duration) var(--ease-out),
     border-color var(--duration) var(--ease-out),
-    background-color var(--duration) var(--ease-out);
+    background-color var(--duration) var(--ease-out),
+    transform 0.2s var(--ease-out);
 }
 
 .btn:hover,
@@ -70,6 +88,7 @@
   background-color: var(--color-accent);
   border-color: var(--color-accent);
   outline: none;
+  transform: translateY(-2px);
 }
 
 .btn:focus-visible {
@@ -79,20 +98,121 @@
 .btn:active {
   background-color: var(--color-accent-soft);
   border-color: var(--color-accent-soft);
+  transform: translateY(0);
 }
 
-/* ---- Full-width buttons on very small screens ---- */
+/* ---- SVG Icon inside buttons ---- */
 
+.btn__icon {
+  width: clamp(20px, 2.5vw, 24px);
+  height: clamp(20px, 2.5vw, 24px);
+  flex-shrink: 0;
+}
+
+/* ---- Contact Button ---- */
+
+.hero__contact {
+  position: relative;
+  z-index: 1;
+}
+
+.btn--contact {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6em;
+
+  width: auto;
+  height: auto;
+  padding: clamp(0.6rem, 1vh, 0.85rem) clamp(1.4rem, 2.5vw, 2.2rem);
+
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-size: clamp(0.6875rem, 0.4vw + 0.6rem, 0.875rem);
+  white-space: nowrap;
+}
+
+.btn__icon--contact {
+  width: 18px;
+  height: 18px;
+}
+
+/* ---- Animation Pause Toggle (WCAG 2.2.2) ---- */
+
+.animation-toggle {
+  position: fixed;
+  bottom: clamp(16px, 3vw, 32px);
+  right: clamp(16px, 3vw, 32px);
+  z-index: 50;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 40px;
+  height: 40px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0;
+
+  font-size: 14px;
+  line-height: 1;
+  color: var(--color-text-muted);
+  background: rgba(242, 212, 215, 0.7);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  cursor: pointer;
+
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+
+  opacity: 0.6;
+  transition:
+    opacity 0.3s ease,
+    background-color 0.3s ease,
+    color 0.3s ease;
+}
+
+.animation-toggle:hover,
+.animation-toggle:focus-visible {
+  opacity: 1;
+  color: var(--color-accent);
+  background: rgba(242, 212, 215, 0.9);
+}
+
+.animation-toggle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-accent);
+}
+
+.animation-toggle__icon {
+  font-style: normal;
+  letter-spacing: -2px;
+}
+
+/* When paused, show play triangle */
+.animation-toggle[aria-pressed="true"] .animation-toggle__icon {
+  letter-spacing: 0;
+}
+
+/* ---- Responsive adjustments ---- */
+
+/* Small phones: slightly smaller icon buttons */
 @media (max-width: 374px) {
-  .btn {
-    width: 100%;
-    max-width: 260px;
+  .btn--icon {
+    width: 46px;
+    height: 46px;
   }
 }
 
-@media (min-width: 375px) and (max-width: 599px) {
-  .btn {
-    width: 100%;
-    max-width: 280px;
+/* Landscape phones: compact spacing */
+@media (max-height: 500px) and (orientation: landscape) {
+  .animation-toggle {
+    bottom: 8px;
+    right: 8px;
+    width: 36px;
+    height: 36px;
   }
 }
