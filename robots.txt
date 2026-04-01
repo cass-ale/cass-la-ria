@@ -1,0 +1,26 @@
+User-agent: *
+Allow: /
+Sitemap: https://caprilaria.netlify.app/sitemap.xml
+
+# Block AI training crawlers (following industry standard set by
+# major label sites like brunomars.com and teddyswims.com)
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ChatGPT-User
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: cohere-ai
+Disallow: /
