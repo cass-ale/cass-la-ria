@@ -23,6 +23,7 @@ html {
 body {
   min-height: 100vh;
   min-height: 100dvh;          /* dynamic viewport height for mobile */
+  min-height: calc(var(--vh, 1vh) * 100); /* JS-calculated fallback for WebViews */
   line-height: 1.5;
   font-family: var(--font-body);
   color: var(--color-text);

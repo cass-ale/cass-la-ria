@@ -27,7 +27,6 @@
    - Canvas DPI fix: medium.com/wdstack (Coen Warmer)
    - Canvas optimization: MDN Canvas API Tutorial
    - Custom cursor: 14islands.com/journal
-   - Text collision: getBoundingClientRect + point-in-rect deflection
    - Device Orientation: MDN DeviceOrientationEvent
    ============================================================ */
 
@@ -146,13 +145,6 @@
 
   /* Touch */
   var TOUCH_RADIUS = 50;
-
-  /* Text collision */
-  var TEXT_COLLISION_PADDING = 6;   /* px padding around text bounding box */
-  var TEXT_DEFLECT_STRENGTH = 1.8;  /* bounce force multiplier */
-  var textCollisionRect = null;     /* cached bounding rect of the heading */
-  var TEXT_RECT_UPDATE_INTERVAL = 500; /* ms between rect recalculations */
-  var textRectTimer = 0;
 
   /* Device tilt (mobile only) */
   var tiltGamma = 0;    /* left-right tilt: -90 to 90 degrees */
@@ -1114,7 +1106,12 @@
   function onMouseLeave() { mouseActive = false; if (umbrellaEl) umbrellaEl.classList.remove('visible'); }
   function onMouseEnter() { mouseActive = true; if (umbrellaEl) umbrellaEl.classList.add('visible'); }
 
-  function onTouchStart(e) { updateTouchPoints(e); }
+  function onTouchStart(e) {
+    updateTouchPoints(e);
+    /* iOS 13+: request gyroscope permission on first touch.
+       Must be called from a direct user-gesture handler. */
+    requestTiltPermission();
+  }
   function onTouchMove(e) { updateTouchPoints(e); }
   function onTouchEnd() { touchPoints = []; if (touchRippleEl) touchRippleEl.classList.remove('active'); }
 
@@ -1131,62 +1128,7 @@
   }
 
   /* ============================================================
-     13. TEXT COLLISION — Rain bounces off the heading
-     ============================================================ */
-
-  function updateTextCollisionRect() {
-    var el = document.getElementById('hero-name');
-    if (!el) { textCollisionRect = null; return; }
-    var rect = el.getBoundingClientRect();
-    textCollisionRect = {
-      left: rect.left - TEXT_COLLISION_PADDING,
-      right: rect.right + TEXT_COLLISION_PADDING,
-      top: rect.top - TEXT_COLLISION_PADDING,
-      bottom: rect.bottom + TEXT_COLLISION_PADDING,
-      centerX: (rect.left + rect.right) * 0.5,
-      centerY: (rect.top + rect.bottom) * 0.5
-    };
-  }
-
-  function applyTextCollision(drop) {
-    if (!textCollisionRect) return;
-    var r = textCollisionRect;
-
-    /* Check if drop is inside or about to enter the text bounding box */
-    if (drop.x >= r.left && drop.x <= r.right &&
-        drop.y >= r.top && drop.y <= r.bottom) {
-
-      /* Determine which edge the drop is closest to */
-      var dLeft = drop.x - r.left;
-      var dRight = r.right - drop.x;
-      var dTop = drop.y - r.top;
-      var dBottom = r.bottom - drop.y;
-      var minDist = Math.min(dLeft, dRight, dTop, dBottom);
-
-      if (minDist === dTop) {
-        /* Hitting the top edge — bounce upward and to the side */
-        drop.y = r.top - 2;
-        drop.vy = -Math.abs(drop.vy) * 0.4 * TEXT_DEFLECT_STRENGTH;
-        drop.vx += randomRange(-0.8, 0.8);
-      } else if (minDist === dLeft) {
-        /* Hitting left edge — deflect left */
-        drop.x = r.left - 2;
-        drop.vx = -Math.abs(drop.vx || 0.5) * TEXT_DEFLECT_STRENGTH;
-        drop.vy *= 0.8;
-      } else if (minDist === dRight) {
-        /* Hitting right edge — deflect right */
-        drop.x = r.right + 2;
-        drop.vx = Math.abs(drop.vx || 0.5) * TEXT_DEFLECT_STRENGTH;
-        drop.vy *= 0.8;
-      } else {
-        /* Hitting bottom — push through quickly */
-        drop.vy *= 1.2;
-      }
-    }
-  }
-
-  /* ============================================================
-     13b. PHYSICS — DEFLECTION (umbrella + touch)
+     13. PHYSICS — DEFLECTION (umbrella + touch)
      ============================================================ */
 
   function applyUmbrellaDeflection(drop) {
@@ -1242,13 +1184,6 @@
 
     ctx.clearRect(0, 0, W, H);
 
-    /* Text collision rect update (throttled) */
-    textRectTimer += dt;
-    if (textRectTimer >= TEXT_RECT_UPDATE_INTERVAL) {
-      updateTextCollisionRect();
-      textRectTimer = 0;
-    }
-
     /* Wind */
     updateWind(dtFactor);
 
@@ -1296,9 +1231,6 @@
       }
 
       drop.vx = lerp(drop.vx, effectiveWind, 0.05 * dtFactor);
-
-      /* Text collision — all platforms */
-      applyTextCollision(drop);
 
       if (isDesktop) applyUmbrellaDeflection(drop);
       else applyTouchDeflection(drop);
@@ -1356,33 +1288,60 @@
      16. DEVICE TILT (mobile only)
      ============================================================ */
 
+  /* Orientation handler — shared reference so we can attach it from
+     either the synchronous path (Android) or the async permission
+     callback (iOS). */
+  function handleOrientation(e) {
+    /* gamma: left-right tilt (-90 to 90), beta: front-back (-180 to 180) */
+    tiltGamma = clamp(e.gamma || 0, -45, 45);
+    tiltBeta  = clamp(e.beta  || 0, -45, 45);
+  }
+
+  /* Flag: has the iOS permission prompt already been shown? */
+  var tiltPermRequested = false;
+
+  /**
+   * requestTiltPermission() — call from any user-gesture handler.
+   * On iOS 13+ this triggers the native permission dialog.
+   * On Android / non-iOS it's a no-op (permission granted at setup).
+   *
+   * Reference: dev.to/li — requestPermission for devicemotion/
+   * deviceorientation events in iOS 13+
+   */
+  function requestTiltPermission() {
+    if (tiltPermissionGranted || tiltPermRequested) return;
+    if (typeof DeviceOrientationEvent === 'undefined') return;
+    if (typeof DeviceOrientationEvent.requestPermission !== 'function') return;
+
+    tiltPermRequested = true;
+    DeviceOrientationEvent.requestPermission()
+      .then(function (state) {
+        if (state === 'granted') {
+          tiltPermissionGranted = true;
+          window.addEventListener('deviceorientation', handleOrientation, { passive: true });
+        }
+      })
+      .catch(function (err) {
+        /* Permission denied or dialog dismissed — tilt won't work.
+           Log for debugging but don't break anything. */
+        if (typeof console !== 'undefined') {
+          console.log('[Rain] Tilt permission denied:', err);
+        }
+      });
+  }
+
   function setupTilt() {
     if (isDesktop) return;
 
-    function handleOrientation(e) {
-      /* gamma: left-right tilt (-90 to 90), beta: front-back (-180 to 180) */
-      tiltGamma = clamp(e.gamma || 0, -45, 45);  /* clamp to reasonable range */
-      tiltBeta = clamp(e.beta || 0, -45, 45);
-    }
+    if (typeof DeviceOrientationEvent === 'undefined') return;
 
-    /* iOS 13+ requires explicit permission request from a user gesture */
-    if (typeof DeviceOrientationEvent !== 'undefined' &&
-        typeof DeviceOrientationEvent.requestPermission === 'function') {
-      /* iOS — we'll request permission when user first touches the screen */
-      var permRequested = false;
-      document.addEventListener('touchstart', function requestTiltPerm() {
-        if (permRequested) return;
-        permRequested = true;
-        DeviceOrientationEvent.requestPermission()
-          .then(function (state) {
-            if (state === 'granted') {
-              tiltPermissionGranted = true;
-              window.addEventListener('deviceorientation', handleOrientation, { passive: true });
-            }
-          })
-          .catch(function () { /* permission denied — tilt won't work, that's fine */ });
-      }, { once: true });
-    } else if (typeof DeviceOrientationEvent !== 'undefined') {
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+      /* iOS 13+ — permission will be requested on first touch
+         via requestTiltPermission(), which is called from
+         onTouchStart in setupInteraction(). This ensures the
+         call happens inside a direct user-gesture handler,
+         which iOS requires for the permission dialog. */
+    } else {
       /* Android / non-iOS — permission not needed */
       tiltPermissionGranted = true;
       window.addEventListener('deviceorientation', handleOrientation, { passive: true });
@@ -1434,9 +1393,6 @@
 
     /* Initial cloud render */
     renderClouds();
-
-    /* Initial text collision rect */
-    updateTextCollisionRect();
 
     running = true;
     lastTime = performance.now();

@@ -2,22 +2,43 @@
    RAIN ANIMATION
    Styles for the canvas rain layer, cloud elements,
    umbrella cursor, and weather system.
+
+   WebView compatibility notes:
+   - Canvas uses position:fixed with explicit inset + GPU hint
+   - -webkit- prefixes for older WebView engines (Instagram, FB)
+   - will-change + translateZ(0) forces GPU compositing
    ============================================================ */
 
 /* ---- Rain canvas (full-viewport background layer) ---- */
 
 .rain-canvas {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 0;
   pointer-events: none;
   display: block;
+
+  /* Explicit pixel sizing set by JS; CSS fallback.
+     In-app browsers (Instagram, TikTok, Facebook) may not
+     support 100vh correctly, so we also provide the JS-
+     calculated --vh fallback. */
   width: 100%;
-  height: 100%;
+  height: 100vh;
+  height: 100dvh;
+  height: calc(var(--vh, 1vh) * 100);
+
+  /* GPU compositing for WebView compatibility */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  will-change: contents;
 
   /* Prevent canvas from being selected or dragged */
   user-select: none;
   -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 /* ---- Umbrella cursor (desktop only) ---- */
@@ -30,6 +51,7 @@
   -webkit-user-select: none;
 
   /* Centered on cursor position */
+  -webkit-transform: translate(-50%, -50%);
   transform: translate(-50%, -50%);
 
   /* GPU-accelerated movement */
@@ -65,12 +87,14 @@
   border-radius: 50%;
   border: 1px solid var(--color-border);
   opacity: 0;
+  -webkit-transform: translate(-50%, -50%) scale(0.5);
   transform: translate(-50%, -50%) scale(0.5);
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .touch-ripple.active {
   opacity: 0.3;
+  -webkit-transform: translate(-50%, -50%) scale(1);
   transform: translate(-50%, -50%) scale(1);
 }
 
