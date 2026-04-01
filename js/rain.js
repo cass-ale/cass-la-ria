@@ -6,8 +6,11 @@
    Architecture:
    - Individual cloud objects with unique noise seeds
    - Each cloud has position, size, depth, velocity, shape params
+   - Randomized per-cloud directions: L-R, R-L, diagonals, angles
+   - Z-axis movement: clouds gently approach/recede (scale oscillation)
+   - Subtle size breathing and shape evolution over time
    - Clouds merge via bridging when they drift close together
-   - Wind affects clouds (speed, stretch) and rain (angle, drift)
+   - Wind influences but doesn't override cloud direction
    - Wind gradient: faster at cloud height, slower near ground
    - Rain spawns from cloud base, drifts with wind
    - 7 weather presets randomly selected per visit
@@ -392,13 +395,15 @@
     return v;
   }
 
-  /* Domain-warped noise for a single cloud entity */
-  function cloudEntityNoise(x, y, time, ct, seed) {
+  /* Domain-warped noise for a single cloud entity.
+     warpExtra adds per-cloud drift so shapes subtly evolve as they travel. */
+  function cloudEntityNoise(x, y, time, ct, seed, warpExtra) {
+    var wd = warpExtra || 0;
     var sx = x * ct.noiseScale * ct.aspectX + seed;
     var sy = y * ct.noiseScale * ct.aspectY + seed * 0.7;
 
-    var qx = fbm(sx + time * 0.08, sy + time * 0.04, 3);
-    var qy = fbm(sx + 5.2 + time * 0.06, sy + 1.3 + time * 0.03, 3);
+    var qx = fbm(sx + time * 0.08 + wd, sy + time * 0.04, 3);
+    var qy = fbm(sx + 5.2 + time * 0.06, sy + 1.3 + time * 0.03 + wd * 0.5, 3);
 
     var warped = fbm(
       sx + ct.warpStr * qx + time * ct.morphSpeed * 0.08,
@@ -427,16 +432,62 @@
     this.y = y;              /* center y in px */
     this.w = w;              /* width in px */
     this.h = h;              /* height in px */
+    this.baseW = w;           /* original width for size pulsing */
+    this.baseH = h;           /* original height for size pulsing */
     this.depth = depth;       /* 0 = far (dim), 1 = mid, 2 = near (bright) */
     this.seed = seed;
     this.ct = ct;             /* cloud type params reference */
-    this.vx = 0;              /* current drift velocity */
+    this.vx = 0;              /* current x drift velocity */
+    this.vy = 0;              /* current y drift velocity */
+    this.vz = 0;              /* z-axis velocity (scale change rate) */
+    this.zScale = 1.0;        /* current z-axis scale (1 = normal) */
     this.merging = false;
     this.mergePartner = null;
     this.mergeProgress = 0;   /* 0 to 1 */
     this.absorbed = false;    /* true = being absorbed into partner */
     this.opacity = 1.0;       /* for fade-in/out */
     this.charCycleOffset = Math.random() * 1000;
+
+    /* Randomized direction — each cloud gets its own trajectory */
+    this.dirAngle = 0;        /* movement angle in radians (set by assignDirection) */
+    this.dirSpeed = 1.0;      /* speed multiplier */
+    this.zDirection = 0;      /* -1 = receding, 0 = neutral, 1 = approaching */
+
+    /* Shape evolution over time */
+    this.shapePhase = Math.random() * Math.PI * 2;  /* unique phase offset */
+    this.sizeBreathRate = randomRange(0.04, 0.08);   /* slow, gentle size pulse */
+    this.sizeBreathAmp = randomRange(0.015, 0.035);  /* very subtle — max 3.5% size change */
+    this.warpDrift = randomRange(-0.12, 0.12);       /* gentle noise warp drift */
+  }
+
+  /* Assign a random movement direction to a cloud */
+  function assignDirection(cloud) {
+    var roll = Math.random();
+    if (roll < 0.30) {
+      /* Right-to-left */
+      cloud.dirAngle = Math.PI + randomRange(-0.35, 0.35);  /* ~180deg with angle variance */
+    } else if (roll < 0.60) {
+      /* Left-to-right */
+      cloud.dirAngle = randomRange(-0.35, 0.35);  /* ~0deg with angle variance */
+    } else if (roll < 0.80) {
+      /* Diagonal — any angle with stronger vertical component */
+      cloud.dirAngle = randomRange(0, Math.PI * 2);
+    } else {
+      /* Steep angle — mostly vertical drift */
+      cloud.dirAngle = randomRange(-Math.PI * 0.5 - 0.4, -Math.PI * 0.5 + 0.4);
+      if (Math.random() < 0.5) cloud.dirAngle += Math.PI;
+    }
+    cloud.dirSpeed = randomRange(0.6, 1.4);
+
+    /* Z-axis: 30% of clouds approach or recede */
+    var zRoll = Math.random();
+    if (zRoll < 0.15) {
+      cloud.zDirection = 1;   /* approaching — will grow */
+    } else if (zRoll < 0.30) {
+      cloud.zDirection = -1;  /* receding — will shrink */
+    } else {
+      cloud.zDirection = 0;   /* neutral z */
+    }
   }
 
   /* ============================================================
@@ -467,6 +518,7 @@
       var seed = Math.random() * 10000;
 
       var cloud = new CloudEntity(cx, cy, cw, ch, depth, seed, ct);
+      assignDirection(cloud);
       clouds.push(cloud);
     }
 
@@ -474,34 +526,72 @@
     clouds.sort(function (a, b) { return a.depth - b.depth; });
   }
 
+  /* Z-axis scale limits — kept subtle so clouds don't balloon or vanish */
+  var Z_SCALE_MIN = 0.75;
+  var Z_SCALE_MAX = 1.3;
+  var Z_SPEED = 0.008;       /* very slow z drift */
+
   function updateClouds(dt) {
     var dtSec = dt / 16.667;
+    var tSec = dt * 0.001;   /* real seconds for smooth time-based calcs */
 
     for (var i = 0; i < clouds.length; i++) {
       var c = clouds[i];
       if (c.absorbed && c.opacity <= 0) continue;
 
-      /* Drift with wind — deeper clouds move slower (parallax) */
+      /* ---- Per-cloud direction + wind influence ---- */
       var depthFactor = 0.5 + 0.5 * (c.depth / Math.max(c.ct.depthLayers - 1, 1));
-      var targetVx = activePreset.cloudDriftSpeed * depthFactor * (currentWind >= 0 ? 1 : -1);
-      c.vx = lerp(c.vx, targetVx, 0.01 * dtSec);
+      var baseSpeed = activePreset.cloudDriftSpeed * depthFactor * c.dirSpeed;
 
-      /* Wind stretches clouds */
-      var windStretch = 1.0 + Math.abs(currentWind) * 0.08;
-      /* (applied during rendering, not stored) */
+      /* Cloud's own direction vector, gently influenced by wind */
+      var windInfluence = 0.25;  /* wind nudges direction but doesn't override it */
+      var targetVx = Math.cos(c.dirAngle) * baseSpeed + currentWind * windInfluence * baseSpeed;
+      var targetVy = Math.sin(c.dirAngle) * baseSpeed * 0.3;  /* vertical component dampened */
 
+      /* Smooth velocity transitions */
+      c.vx = lerp(c.vx, targetVx, 0.008 * dtSec);
+      c.vy = lerp(c.vy, targetVy, 0.008 * dtSec);
+
+      /* Apply movement */
       c.x += c.vx * dtSec * 0.016;
+      c.y += c.vy * dtSec * 0.016;
 
-      /* Wrap around screen edges */
-      if (c.vx > 0 && c.x - c.w * 0.5 > W + 50) {
-        c.x = -c.w * 0.5 - 20;
-        c.seed = Math.random() * 10000;  /* new shape on re-entry */
-      } else if (c.vx < 0 && c.x + c.w * 0.5 < -50) {
-        c.x = W + c.w * 0.5 + 20;
-        c.seed = Math.random() * 10000;
+      /* ---- Z-axis drift (approach / recede) ---- */
+      if (c.zDirection !== 0) {
+        c.zScale += c.zDirection * Z_SPEED * dtSec * 0.016;
+        /* Reverse direction at limits for a gentle oscillation */
+        if (c.zScale >= Z_SCALE_MAX) {
+          c.zScale = Z_SCALE_MAX;
+          c.zDirection = -1;
+        } else if (c.zScale <= Z_SCALE_MIN) {
+          c.zScale = Z_SCALE_MIN;
+          c.zDirection = 1;
+        }
       }
 
-      /* Handle absorption fade */
+      /* ---- Subtle size breathing ---- */
+      var breathOffset = Math.sin(timeAccum * c.sizeBreathRate + c.shapePhase) * c.sizeBreathAmp;
+      c.w = c.baseW * c.zScale * (1 + breathOffset);
+      c.h = c.baseH * c.zScale * (1 + breathOffset * 0.6);  /* height breathes less */
+
+      /* ---- Clamp y within cloud zone ---- */
+      var margin = c.h * 0.3;
+      if (c.y < margin) c.y = margin;
+      if (c.y > cloudZoneH - margin) c.y = cloudZoneH - margin;
+
+      /* ---- Wrap around screen edges (any direction) ---- */
+      var pad = 60;
+      if (c.x - c.w * 0.5 > W + pad) {
+        c.x = -c.w * 0.5 - randomRange(10, 40);
+        c.seed = Math.random() * 10000;
+        assignDirection(c);  /* new direction on re-entry */
+      } else if (c.x + c.w * 0.5 < -pad) {
+        c.x = W + c.w * 0.5 + randomRange(10, 40);
+        c.seed = Math.random() * 10000;
+        assignDirection(c);
+      }
+
+      /* ---- Handle absorption fade ---- */
       if (c.absorbed) {
         c.opacity = Math.max(0, c.opacity - 0.3 * dtSec * 0.016);
       } else {
@@ -583,9 +673,17 @@
         var hFrac = randomRange(ct.heightRange[0], ct.heightRange[1]);
         c.w = W * wFrac;
         c.h = cloudZoneH * hFrac;
-        c.x = currentWind >= 0 ? -c.w * 0.5 - randomRange(50, 200) : W + c.w * 0.5 + randomRange(50, 200);
-        c.y = cloudZoneH * randomRange(0.2, 0.7);
         c.seed = Math.random() * 10000;
+        assignDirection(c);
+        /* Respawn from the edge the cloud's new direction points away from */
+        var comingFromLeft = Math.cos(c.dirAngle) > 0;
+        c.x = comingFromLeft ? -c.w * 0.5 - randomRange(50, 200) : W + c.w * 0.5 + randomRange(50, 200);
+        c.y = cloudZoneH * randomRange(0.2, 0.7);
+        c.zScale = 1.0;
+        c.baseW = W * randomRange(c.ct.widthRange[0], c.ct.widthRange[1]);
+        c.baseH = cloudZoneH * randomRange(c.ct.heightRange[0], c.ct.heightRange[1]);
+        c.w = c.baseW;
+        c.h = c.baseH;
         c.absorbed = false;
         c.merging = false;
         c.mergePartner = null;
@@ -621,9 +719,10 @@
       var c = clouds[ci];
       if (c.absorbed && c.opacity <= 0) continue;
 
-      /* Depth-based opacity and size scaling */
+      /* Depth-based opacity — z-axis scale also affects perceived depth */
       var depthOpacity = 0.4 + 0.6 * (c.depth / Math.max(c.ct.depthLayers - 1, 1));
-      var baseOpacity = activePreset.cloudOpacity * depthOpacity * c.opacity;
+      var zOpacity = 0.7 + 0.3 * ((c.zScale - Z_SCALE_MIN) / (Z_SCALE_MAX - Z_SCALE_MIN));
+      var baseOpacity = activePreset.cloudOpacity * depthOpacity * zOpacity * c.opacity;
 
       /* Cloud bounding box in screen coords */
       var cw = c.w * windStretch;
@@ -657,8 +756,9 @@
           /* Soft edge falloff */
           var edgeFade = smoothstep(1.0, 0.5, ellipse);
 
-          /* Sample noise for this cloud */
-          var density = cloudEntityNoise(px, py, timeAccum, c.ct, c.seed);
+          /* Sample noise for this cloud — warpDrift adds subtle shape evolution */
+          var warpExtra = c.warpDrift * timeAccum;
+          var density = cloudEntityNoise(px, py, timeAccum, c.ct, c.seed, warpExtra);
 
           /* Apply edge falloff to density */
           density *= edgeFade;
