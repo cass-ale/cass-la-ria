@@ -243,7 +243,7 @@
       gustEnabled: false,
       gustStrength: 0,
       gustFrequency: 0,
-      cloudOpacity: 0.10,
+      cloudOpacity: 0.25,
       rainOpacity: 0.18,
       charSize: 12,
       cloudDriftSpeed: 0.12,
@@ -259,7 +259,7 @@
       gustEnabled: false,
       gustStrength: 0,
       gustFrequency: 0,
-      cloudOpacity: 0.14,
+      cloudOpacity: 0.30,
       rainOpacity: 0.22,
       charSize: 13,
       cloudDriftSpeed: 0.18,
@@ -275,7 +275,7 @@
       gustEnabled: true,
       gustStrength: 0.4,
       gustFrequency: 0.8,
-      cloudOpacity: 0.17,
+      cloudOpacity: 0.35,
       rainOpacity: 0.28,
       charSize: 13,
       cloudDriftSpeed: 0.25,
@@ -291,7 +291,7 @@
       gustEnabled: true,
       gustStrength: 1.0,
       gustFrequency: 1.2,
-      cloudOpacity: 0.18,
+      cloudOpacity: 0.38,
       rainOpacity: 0.30,
       charSize: 14,
       cloudDriftSpeed: 0.45,
@@ -307,7 +307,7 @@
       gustEnabled: true,
       gustStrength: 0.6,
       gustFrequency: 0.5,
-      cloudOpacity: 0.22,
+      cloudOpacity: 0.42,
       rainOpacity: 0.35,
       charSize: 14,
       cloudDriftSpeed: 0.20,
@@ -323,7 +323,7 @@
       gustEnabled: true,
       gustStrength: 1.8,
       gustFrequency: 1.5,
-      cloudOpacity: 0.25,
+      cloudOpacity: 0.48,
       rainOpacity: 0.38,
       charSize: 15,
       cloudDriftSpeed: 0.60,
@@ -339,7 +339,7 @@
       gustEnabled: true,
       gustStrength: 2.5,
       gustFrequency: 2.0,
-      cloudOpacity: 0.28,
+      cloudOpacity: 0.52,
       rainOpacity: 0.40,
       charSize: 15,
       cloudDriftSpeed: 0.90,
@@ -852,7 +852,7 @@
 
         if (density > ct.cutoff) {
           var charOpacity = activePreset.cloudOpacity *
-            smoothstep(ct.cutoff, ct.cutoff + 0.25, density);
+            smoothstep(ct.cutoff, ct.cutoff + 0.12, density);
 
           cloudCtx.globalAlpha = clamp(charOpacity, 0, 1);
           cloudCtx.fillStyle = textColor;
