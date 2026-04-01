@@ -57,10 +57,6 @@
   animation: fade-in 1.2s var(--ease-out) 0.3s both;
 }
 
-.animation-toggle {
-  animation: fade-in 0.5s var(--ease-out) 1.5s both;
-}
-
 /* ---- Respect user motion preferences ---- */
 
 @media (prefers-reduced-motion: reduce) {

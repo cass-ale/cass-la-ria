@@ -70,7 +70,7 @@
   flex-wrap: nowrap;
   align-items: center;
   justify-content: center;
-  gap: clamp(var(--space-md), 3vw, var(--space-lg));
+  gap: var(--space-md);
   width: 100%;
   max-width: 720px;
 }
@@ -83,17 +83,25 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-xs);
+  gap: 0;
+  text-align: center;
 }
 
 /* ============================================================
    RESPONSIVE BREAKPOINTS
    ============================================================ */
 
+/* ---- Desktop (768px+) ---- */
+@media (min-width: 768px) {
+  .hero__nav {
+    gap: var(--space-lg);
+  }
+}
+
 /* ---- Small phones (≤ 374px) ---- */
 @media (max-width: 374px) {
   .hero__nav {
-    gap: var(--space-md);
+    gap: var(--space-sm);
   }
 }
 

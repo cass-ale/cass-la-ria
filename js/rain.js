@@ -1349,32 +1349,7 @@
   }
 
   /* ============================================================
-     17. ANIMATION PAUSE TOGGLE (WCAG 2.2.2)
-     ============================================================ */
-
-  function setupPauseToggle() {
-    var btn = document.getElementById('animation-toggle');
-    if (!btn) return;
-
-    btn.addEventListener('click', function () {
-      paused = !paused;
-      btn.setAttribute('aria-pressed', paused ? 'true' : 'false');
-      btn.setAttribute('aria-label', paused ? 'Resume weather animation' : 'Pause weather animation');
-      btn.querySelector('.animation-toggle__icon').textContent = paused ? '\u25B6' : '\u275A\u275A';
-    });
-
-    /* Auto-pause for prefers-reduced-motion */
-    var motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    if (motionQuery.matches) {
-      paused = true;
-      btn.setAttribute('aria-pressed', 'true');
-      btn.setAttribute('aria-label', 'Resume weather animation');
-      btn.querySelector('.animation-toggle__icon').textContent = '\u25B6';
-    }
-  }
-
-  /* ============================================================
-     18. LIFECYCLE
+     17. LIFECYCLE
      ============================================================ */
 
   function init() {
@@ -1389,7 +1364,11 @@
     initDrops();
     setupInteraction();
     setupTilt();
-    setupPauseToggle();
+    /* Respect prefers-reduced-motion */
+    var motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (motionQuery.matches) {
+      paused = true;
+    }
 
     /* Initial cloud render */
     renderClouds();

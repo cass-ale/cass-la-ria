@@ -1,30 +1,59 @@
 /* ============================================================
    COMPONENTS
    Reusable UI elements — name heading, rule, icon buttons,
-   contact button, email address, skip link, animation toggle.
+   contact button, email address, skip link.
    ============================================================ */
 
-/* ---- Skip-to-content link (WCAG keyboard navigation) ---- */
+/* ---- Skip-to-content link (WCAG keyboard navigation) ----
+   Uses the sr-only / clip pattern instead of top:-100% because
+   Instagram, TikTok, and Facebook WebViews sometimes render
+   off-screen positioned elements visibly. The clip approach is
+   the industry standard (Bootstrap, Tailwind, GOV.UK) and works
+   in every browser engine including in-app WebViews.
+
+   Reference: webaim.org/techniques/css/invisiblecontent
+   Reference: a11yproject.com/posts/how-to-hide-content
+   ------------------------------------------------------------ */
 
 .skip-link {
   position: absolute;
-  top: -100%;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100;
-  padding: 0.75rem 1.5rem;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  -webkit-clip-path: inset(50%);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+
+  /* Visual styling for when it becomes visible on focus */
   font-family: var(--font-display);
   font-size: 0.875rem;
   letter-spacing: 0.1em;
   color: var(--color-bg);
   background-color: var(--color-accent);
-  border-radius: 0 0 4px 4px;
   text-decoration: none;
-  transition: top 0.2s ease;
+  z-index: 100;
 }
 
 .skip-link:focus {
+  /* Undo sr-only on focus so keyboard users can see it */
+  position: absolute;
   top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: auto;
+  height: auto;
+  padding: 0.75rem 1.5rem;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  -webkit-clip-path: none;
+  clip-path: none;
+  white-space: normal;
+  border-radius: 0 0 4px 4px;
   outline: 2px solid var(--color-text);
   outline-offset: 2px;
 }
@@ -56,7 +85,12 @@
   opacity: 0.6;
 }
 
-/* ---- Icon Buttons (Social Links) ---- */
+/* ---- Icon Buttons (Social Links) ----
+   Fixed square buttons with constrained icon sizing.
+   Explicit max-width/max-height on icons prevents WebViews
+   from rendering SVGs at their intrinsic viewBox size when
+   CSS fails to load or apply correctly.
+   -------------------------------------------------------- */
 
 .btn {
   display: inline-flex;
@@ -67,9 +101,11 @@
   background: transparent;
   border: 1px solid var(--color-border);
 
-  /* Square icon buttons with 44px minimum touch target */
-  width: clamp(48px, 6vw, 56px);
-  height: clamp(48px, 6vw, 56px);
+  /* Fixed pixel sizes — no clamp() to avoid WebView issues.
+     48px is the recommended touch target (Google Material Design).
+     Slightly larger on desktop via media query below. */
+  width: 48px;
+  height: 48px;
   min-height: 44px;
   min-width: 44px;
   padding: 0;
@@ -80,7 +116,6 @@
   /* GPU compositing for smooth rendering in WebViews */
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
-  will-change: transform;
 
   transition:
     color var(--duration) var(--ease-out),
@@ -110,139 +145,103 @@
   -webkit-transform: translateY(0) translateZ(0);
 }
 
-/* ---- SVG Icon inside buttons ---- */
+/* ---- SVG Icon inside buttons ----
+   Fixed pixel size with max constraints. The SVG elements also
+   have explicit width/height attributes in the HTML as a fallback
+   for WebViews that don't apply CSS to inline SVGs. */
 
 .btn__icon {
-  width: clamp(20px, 2.5vw, 24px);
-  height: clamp(20px, 2.5vw, 24px);
+  width: 22px;
+  height: 22px;
+  max-width: 22px;
+  max-height: 22px;
   flex-shrink: 0;
 }
 
 /* ---- Contact Button ---- */
 
+.hero__contact {
+  position: relative;
+  z-index: 1;
+}
+
 .btn--contact {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.6em;
+  gap: 0.5em;
 
   width: auto;
   height: auto;
-  padding: clamp(0.6rem, 1vh, 0.85rem) clamp(1.4rem, 2.5vw, 2.2rem);
+  padding: 0.6rem 1.6rem;
 
   font-family: var(--font-display);
   font-weight: 500;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  font-size: clamp(0.6875rem, 0.4vw + 0.6rem, 0.875rem);
+  font-size: 0.75rem;
   white-space: nowrap;
 }
 
 .btn__icon--contact {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
+  max-width: 16px;
+  max-height: 16px;
 }
 
-/* ---- Visible email address (fallback for mailto: failures) ---- */
+/* ---- Visible email address (fallback for mailto: failures) ----
+   Smaller, muted, centered directly under the contact button. */
 
 .hero__email {
   display: block;
   font-family: var(--font-display);
-  font-size: clamp(0.625rem, 0.3vw + 0.55rem, 0.75rem);
-  letter-spacing: 0.12em;
+  font-size: 0.625rem;
+  letter-spacing: 0.08em;
   color: var(--color-text-muted);
-  opacity: 0.65;
+  opacity: 0.5;
   text-align: center;
   -webkit-user-select: all;
   user-select: all;
   cursor: text;
-  margin-top: var(--space-xs);
-}
-
-/* ---- Animation Pause Toggle (WCAG 2.2.2) — Desktop only ---- */
-
-.animation-toggle {
-  position: fixed;
-  bottom: clamp(16px, 3vw, 32px);
-  right: clamp(16px, 3vw, 32px);
-  z-index: 50;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  width: 40px;
-  height: 40px;
-  min-height: 44px;
-  min-width: 44px;
-  padding: 0;
-
-  font-size: 14px;
-  line-height: 1;
-  color: var(--color-text-muted);
-  background: rgba(242, 212, 215, 0.7);
-  border: 1px solid var(--color-border);
-  border-radius: 50%;
-  cursor: pointer;
-
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
-
-  opacity: 0.6;
-  transition:
-    opacity 0.3s ease,
-    background-color 0.3s ease,
-    color 0.3s ease;
-}
-
-.animation-toggle:hover,
-.animation-toggle:focus-visible {
-  opacity: 1;
-  color: var(--color-accent);
-  background: rgba(242, 212, 215, 0.9);
-}
-
-.animation-toggle:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-accent);
-}
-
-.animation-toggle__icon {
-  font-style: normal;
-  letter-spacing: -2px;
-}
-
-/* When paused, show play triangle */
-.animation-toggle[aria-pressed="true"] .animation-toggle__icon {
-  letter-spacing: 0;
-}
-
-/* Hide animation toggle on touch/mobile devices.
-   Belt-and-suspenders: use both feature queries AND explicit
-   breakpoint because some in-app browsers (Instagram, TikTok)
-   report hover incorrectly. */
-@media (hover: none), (pointer: coarse), (max-width: 767px) {
-  .animation-toggle {
-    display: none;
-  }
+  margin-top: 0.35rem;
 }
 
 /* ---- Responsive adjustments ---- */
 
-/* Small phones: slightly smaller icon buttons */
-@media (max-width: 374px) {
+/* Desktop: slightly larger icon buttons */
+@media (min-width: 768px) {
   .btn--icon {
-    width: 46px;
-    height: 46px;
+    width: 52px;
+    height: 52px;
+  }
+
+  .btn--contact {
+    padding: 0.7rem 2rem;
+    font-size: 0.8125rem;
+  }
+
+  .hero__email {
+    font-size: 0.6875rem;
   }
 }
 
-/* Landscape phones: compact spacing */
-@media (max-height: 500px) and (orientation: landscape) {
-  .animation-toggle {
-    bottom: 8px;
-    right: 8px;
-    width: 36px;
-    height: 36px;
+/* Small phones: tighter but still accessible */
+@media (max-width: 374px) {
+  .btn--icon {
+    width: 44px;
+    height: 44px;
+  }
+
+  .btn__icon {
+    width: 20px;
+    height: 20px;
+    max-width: 20px;
+    max-height: 20px;
+  }
+
+  .btn--contact {
+    padding: 0.5rem 1.2rem;
+    font-size: 0.6875rem;
   }
 }
