@@ -22,15 +22,16 @@
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/apple-touch-icon.png" />
 
   <!-- Fonts (self-hosted — zero external requests) -->
-  <link rel="stylesheet" href="css/fonts.css" />
+  <link rel="stylesheet" href="css/fonts.css?v=2" />
 
-  <!-- Styles -->
-  <link rel="stylesheet" href="css/variables.css" />
-  <link rel="stylesheet" href="css/reset.css" />
-  <link rel="stylesheet" href="css/layout.css" />
-  <link rel="stylesheet" href="css/components.css" />
-  <link rel="stylesheet" href="css/animations.css" />
-  <link rel="stylesheet" href="css/rain.css" />
+  <!-- Styles — version query strings bust immutable cache headers.
+       Update ?v= on every deploy that changes CSS. -->
+  <link rel="stylesheet" href="css/variables.css?v=2" />
+  <link rel="stylesheet" href="css/reset.css?v=2" />
+  <link rel="stylesheet" href="css/layout.css?v=2" />
+  <link rel="stylesheet" href="css/components.css?v=2" />
+  <link rel="stylesheet" href="css/animations.css?v=2" />
+  <link rel="stylesheet" href="css/rain.css?v=2" />
 </head>
 <body>
 
@@ -113,8 +114,9 @@
     </div>
   </main>
 
-  <!-- Scripts -->
-  <script src="js/main.js"></script>
-  <script src="js/rain.js"></script>
+  <!-- Scripts — version query strings bust immutable cache headers.
+       Update ?v= on every deploy that changes JS. -->
+  <script src="js/main.js?v=2"></script>
+  <script src="js/rain.js?v=2"></script>
 </body>
 </html>

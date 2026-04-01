@@ -51,23 +51,35 @@
 
 # ============================================================
 # CACHE CONTROL
-# Static assets: aggressive immutable caching.
-# HTML: always revalidate for fresh content.
+#
+# Strategy: Cache with revalidation for CSS/JS since this is a
+# plain static site without filename hashing. The browser will
+# cache files but check with the server (via ETag/If-None-Match)
+# on each visit. This gives fast loads (304 Not Modified) while
+# ensuring updates are always picked up.
+#
+# "immutable" is only safe with content-hashed filenames
+# (e.g., main.a1b2c3.css) — without hashing, it causes stale
+# cache issues that are impossible to fix without user action.
+#
+# Reference: web.dev/http-cache
+# Reference: jakearchibald.com/2016/caching-best-practices
 # ============================================================
 
-# CSS files
+# CSS files — cache 1 day, revalidate on visit
 [[headers]]
   for = "/css/*"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+    Cache-Control = "public, max-age=86400, must-revalidate"
 
-# JavaScript files
+# JavaScript files — cache 1 day, revalidate on visit
 [[headers]]
   for = "/js/*"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+    Cache-Control = "public, max-age=86400, must-revalidate"
 
-# Assets (fonts, images, video, audio, icons)
+# Assets (fonts, images, icons) — long cache OK, these rarely change
+# and are referenced by stable filenames
 [[headers]]
   for = "/assets/*"
   [headers.values]
