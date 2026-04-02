@@ -249,8 +249,8 @@
 /* ============================================================
    LANGUAGE SWITCHER
    Globe icon in the bottom-right corner of the decorative frame.
-   Hover (desktop) or tap (mobile) reveals a vertically stacked
-   list of languages in their native scripts.
+   Click to reveal a vertically stacked list of languages above
+   the globe in their native scripts.
 
    UX research sources:
      - Smashing Magazine: smashingmagazine.com/2022/05/designing-better-language-selector
@@ -261,13 +261,13 @@
      - Globe icon, not flags (flags = countries, not languages)
      - Native script labels ("日本語" not "Japanese")
      - Bottom-right placement (utility zone, doesn't compete with content)
-     - Hover reveal on desktop, tap toggle on mobile
+     - Click-only reveal (no hover) — prevents accidental activation
    ============================================================ */
 
 .lang-switcher {
   position: fixed;
-  bottom: calc(var(--frame-inset) + 8px);
-  right: calc(var(--frame-inset) + 8px);
+  bottom: calc(var(--frame-inset) + 12px);
+  right: calc(var(--frame-inset) + 12px);
   z-index: 50;
   font-family: var(--font-display);
 }
@@ -278,12 +278,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   padding: 0;
   margin: 0;
 
-  background: transparent;
+  background: rgba(242, 212, 215, 0.6);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   border: 1px solid var(--color-border);
   border-radius: 50%;
   color: var(--color-text-muted);
@@ -300,8 +302,8 @@
 .lang-switcher__trigger:focus-visible {
   color: var(--color-accent);
   border-color: var(--color-accent);
-  background-color: rgba(139, 58, 98, 0.06);
-  transform: scale(1.05);
+  background-color: rgba(139, 58, 98, 0.08);
+  transform: scale(1.08);
 }
 
 .lang-switcher__trigger:focus-visible {
@@ -310,43 +312,46 @@
 }
 
 .lang-switcher__trigger svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
 }
 
-/* ---- Language list (dropdown) ---- */
+/* ---- Language list (dropdown — opens above globe) ---- */
 
 .lang-switcher__list {
   position: absolute;
-  bottom: calc(100% + 8px);
+  bottom: calc(100% + 10px);
   right: 0;
-  min-width: 160px;
+  min-width: 140px;
 
   list-style: none;
   margin: 0;
   padding: 6px 0;
 
-  background-color: var(--color-bg);
+  background-color: rgba(242, 212, 215, 0.92);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   border: 1px solid var(--color-border);
   border-radius: 6px;
-  box-shadow: 0 4px 20px rgba(42, 31, 45, 0.12);
+  box-shadow: 0 4px 24px rgba(42, 31, 45, 0.10);
 
-  /* Hidden by default */
+  /* Hidden by default — click-only, no hover */
   opacity: 0;
   visibility: hidden;
-  transform: translateY(6px);
+  pointer-events: none;
+  transform: translateY(8px);
   transition:
     opacity 0.25s var(--ease-out),
     visibility 0.25s var(--ease-out),
     transform 0.25s var(--ease-out);
 }
 
-/* Show on hover (desktop) or when aria-expanded is true (JS toggle) */
-.lang-switcher:hover .lang-switcher__list,
+/* Show ONLY when aria-expanded is true (JS click toggle) */
 .lang-switcher__trigger[aria-expanded="true"] + .lang-switcher__list {
   opacity: 1;
   visibility: visible;
+  pointer-events: auto;
   transform: translateY(0);
 }
 
@@ -355,7 +360,7 @@
 .lang-switcher__option {
   display: block;
   width: 100%;
-  padding: 6px 16px;
+  padding: 5px 16px;
 
   font-family: var(--font-display);
   font-size: 0.8125rem;
@@ -397,31 +402,36 @@
 /* Desktop: slightly larger trigger */
 @media (min-width: 768px) {
   .lang-switcher__trigger {
-    width: 38px;
-    height: 38px;
+    width: 36px;
+    height: 36px;
+  }
+
+  .lang-switcher__trigger svg {
+    width: 17px;
+    height: 17px;
   }
 
   .lang-switcher__option {
     font-size: 0.875rem;
-    padding: 7px 18px;
+    padding: 6px 18px;
   }
 }
 
 /* Small phones */
 @media (max-width: 374px) {
   .lang-switcher {
-    bottom: calc(var(--frame-inset) + 4px);
-    right: calc(var(--frame-inset) + 4px);
+    bottom: calc(var(--frame-inset) + 6px);
+    right: calc(var(--frame-inset) + 6px);
   }
 
   .lang-switcher__trigger {
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
   }
 
   .lang-switcher__trigger svg {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
   }
 
   .lang-switcher__option {
