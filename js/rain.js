@@ -1953,6 +1953,13 @@
     }, RESIZE_DEBOUNCE);
   });
 
+  /* Expose read-only weather state for other modules (e.g. wet text effect) */
+  window.rainWeather = {
+    getPreset: function () { return activePreset; },
+    getPresets: function () { return WEATHER_PRESETS; },
+    getWind: function () { return currentWind; }
+  };
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
