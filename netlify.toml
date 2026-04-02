@@ -33,14 +33,16 @@
     Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
 
     # -- Content Security Policy --
-    # Self-contained site: only own scripts, styles, fonts, images allowed.
-    # No inline scripts, no inline styles, no external resources.
+    # Self-contained site: own scripts, styles, fonts, images allowed.
+    # Google Fonts (fonts.googleapis.com for CSS, fonts.gstatic.com for
+    # font files) allowed for CJK font loading when a non-Latin language
+    # is selected via the language switcher.
     # frame-ancestors 'none' replaces X-Frame-Options for modern browsers.
     # form-action 'self' allows mailto: links but blocks external form posts.
     # The sha256 hash whitelists the inline JSON-LD structured data script.
     # If the JSON-LD content changes, regenerate the hash with:
     #   python3 -c "import re,hashlib,base64;h=open('index.html').read();m=re.search(r'<script type=.application/ld\\+json.>(.*?)</script>',h,re.DOTALL);print('sha256-'+base64.b64encode(hashlib.sha256(m.group(1).encode()).digest()).decode())"
-    Content-Security-Policy = "default-src 'none'; script-src 'self' 'sha256-Qe/9X88GXwQJ86muMlZGe1m+eIh45ewG5AxguSruaYI='; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
+    Content-Security-Policy = "default-src 'none'; script-src 'self' 'sha256-Qe/9X88GXwQJ86muMlZGe1m+eIh45ewG5AxguSruaYI='; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
 
     # -- Disable browser features we don't use --
     # interest-cohort=() blocks Google FLoC tracking.
@@ -69,17 +71,17 @@
 # Reference: jakearchibald.com/2016/caching-best-practices
 # ============================================================
 
-# CSS files — cache 1 day, revalidate on visit
+# CSS files — always revalidate (cache busted via ?v= query strings)
 [[headers]]
   for = "/css/*"
   [headers.values]
-    Cache-Control = "public, max-age=86400, must-revalidate"
+    Cache-Control = "public, max-age=0, must-revalidate"
 
-# JavaScript files — cache 1 day, revalidate on visit
+# JavaScript files — always revalidate (cache busted via ?v= query strings)
 [[headers]]
   for = "/js/*"
   [headers.values]
-    Cache-Control = "public, max-age=86400, must-revalidate"
+    Cache-Control = "public, max-age=0, must-revalidate"
 
 # Assets (fonts, images, icons) — long cache OK, these rarely change
 # and are referenced by stable filenames
