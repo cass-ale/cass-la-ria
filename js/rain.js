@@ -1,7 +1,8 @@
 /* ============================================================
-   RAIN.JS — Procedural Weather System v3
+   RAIN.JS — Procedural Weather System v4
    Individual cloud entities with depth, drift, collision/merging,
-   continuous Unicode rain, and wind physics.
+   continuous Unicode rain, AAA wind physics, splash particles,
+   volumetric rain depth, and atmospheric mist.
 
    Architecture:
    - Individual cloud objects with unique noise seeds
@@ -10,9 +11,11 @@
    - Z-axis movement: clouds gently approach/recede (scale oscillation)
    - Subtle size breathing and shape evolution over time
    - Clouds merge via bridging when they drift close together
-   - Wind influences but doesn't override cloud direction
+   - 3-layer wind: base drift + asymmetric gust envelope + Perlin turbulence
    - Wind gradient: faster at cloud height, slower near ground
-   - Rain spawns from cloud base, drifts with wind
+   - 3-depth rain layers with parallax (foreground/mid/background)
+   - Splash particles on ground impact
+   - Atmospheric ground mist for heavy presets
    - 7 weather presets randomly selected per visit
    - Umbrella cursor (desktop) / touch deflection (mobile)
 
@@ -23,6 +26,11 @@
    - Cloud merging: Westcott 1994, Monthly Weather Review
    - Rain angle physics: Physics StackExchange #128586
    - Wind gradient / Ekman spiral: Cliff Mass Weather Blog
+   - AAA Wind: Guerrilla Games (Horizon Zero Dawn), Gajatix Studios
+   - Wind turbulence: Bandi 2017, Physical Review Letters (Δt^2/3)
+   - Gust physics: FESSTVaL, Guidewire (3-20s duration, asymmetric)
+   - 1D Noise: Michael Bromley, michaelbromley.co.uk
+   - Splash particles: Geoff Blair, geoffblair.com/blog/rain-effect
    - Particle physics: Nature of Code (Daniel Shiffman)
    - Canvas DPI fix: medium.com/wdstack (Coen Warmer)
    - Canvas optimization: MDN Canvas API Tutorial
@@ -139,6 +147,12 @@
   var CLOUD_CHARS_MEDIUM = ['0','8','6','9','3','5','*','+','=',':','^','~','$'];
   var CLOUD_CHARS_LIGHT  = ['\u2591','\u00B7','\u2022','\u2801','\u2802','.',',','\u2024'];
 
+  /* Mist characters — very light, used for ground fog */
+  var MIST_CHARS = ['\u2591', '\u00B7', '.', ',', '\u2024', '~'];
+
+  /* Splash characters — tiny impact marks */
+  var SPLASH_CHARS = ['\u00B7', '.', ',', '\'', '\u2024'];
+
   /* Umbrella */
   var UMBRELLA_CHAR = '\u2602';
   var UMBRELLA_RADIUS = 55;
@@ -170,6 +184,30 @@
 
   /* Bottom fade */
   var BOTTOM_FADE_ZONE = 0.15;
+
+  /* Rain depth layers — parallax configuration */
+  var DEPTH_LAYERS = [
+    { scale: 0.55, speedMult: 0.45, opacityMult: 0.30, windMult: 0.35, fraction: 0.20 },  /* far background */
+    { scale: 0.75, speedMult: 0.70, opacityMult: 0.55, windMult: 0.65, fraction: 0.35 },  /* midground */
+    { scale: 1.00, speedMult: 1.00, opacityMult: 1.00, windMult: 1.00, fraction: 0.45 }   /* foreground */
+  ];
+
+  /* Splash configuration */
+  var SPLASH_POOL_SIZE = 80;
+  var SPLASH_SPAWN_CHANCE = 0.35;      /* chance a foreground drop spawns splashes */
+  var SPLASH_COUNT_MIN = 2;
+  var SPLASH_COUNT_MAX = 4;
+  var SPLASH_LIFE = 0.4;               /* seconds */
+  var SPLASH_SPEED_MIN = 0.8;
+  var SPLASH_SPEED_MAX = 2.0;
+  var SPLASH_ARC_GRAVITY = 4.5;
+
+  /* Mist configuration */
+  var MIST_POOL_SIZE = 40;
+  var MIST_ZONE_FRAC = 0.18;           /* bottom fraction of viewport */
+  var MIST_DRIFT_SPEED = 0.3;
+  var MIST_LIFE_MIN = 3.0;
+  var MIST_LIFE_MAX = 6.0;
 
   /* ============================================================
      3. CLOUD TYPE DEFINITIONS
@@ -270,7 +308,9 @@
       rainOpacity: 0.18,
       charSize: 12,
       cloudDriftSpeed: 8,
-      virga: 0.3
+      virga: 0.3,
+      mistEnabled: false,
+      mistDensity: 0
     },
     lightDrizzle: {
       name: 'Light Drizzle',
@@ -286,7 +326,9 @@
       rainOpacity: 0.22,
       charSize: 13,
       cloudDriftSpeed: 12,
-      virga: 0.15
+      virga: 0.15,
+      mistEnabled: false,
+      mistDensity: 0
     },
     steadyRain: {
       name: 'Steady Rain',
@@ -302,7 +344,9 @@
       rainOpacity: 0.28,
       charSize: 13,
       cloudDriftSpeed: 18,
-      virga: 0.05
+      virga: 0.05,
+      mistEnabled: true,
+      mistDensity: 0.3
     },
     windyShower: {
       name: 'Windy Shower',
@@ -318,7 +362,9 @@
       rainOpacity: 0.30,
       charSize: 14,
       cloudDriftSpeed: 30,
-      virga: 0.08
+      virga: 0.08,
+      mistEnabled: true,
+      mistDensity: 0.4
     },
     downpour: {
       name: 'Downpour',
@@ -334,7 +380,9 @@
       rainOpacity: 0.35,
       charSize: 14,
       cloudDriftSpeed: 14,
-      virga: 0.0
+      virga: 0.0,
+      mistEnabled: true,
+      mistDensity: 0.6
     },
     stormFront: {
       name: 'Storm Front',
@@ -350,7 +398,9 @@
       rainOpacity: 0.38,
       charSize: 15,
       cloudDriftSpeed: 40,
-      virga: 0.0
+      virga: 0.0,
+      mistEnabled: true,
+      mistDensity: 0.75
     },
     typhoon: {
       name: 'Typhoon',
@@ -366,7 +416,9 @@
       rainOpacity: 0.40,
       charSize: 15,
       cloudDriftSpeed: 55,
-      virga: 0.0
+      virga: 0.0,
+      mistEnabled: true,
+      mistDensity: 0.9
     }
   };
 
@@ -395,6 +447,9 @@
      ============================================================ */
 
   var noise = new SimplexNoise(Math.random() * 65536);
+
+  /* Secondary noise instance for wind turbulence — independent seed */
+  var windNoise = new SimplexNoise(Math.random() * 65536);
 
   function fbm(x, y, octaves) {
     var v = 0, amp = 0.5, freq = 1;
@@ -476,10 +531,10 @@
     var roll = Math.random();
     if (roll < 0.30) {
       /* Right-to-left */
-      cloud.dirAngle = Math.PI + randomRange(-0.35, 0.35);  /* ~180deg with angle variance */
+      cloud.dirAngle = Math.PI + randomRange(-0.35, 0.35);
     } else if (roll < 0.60) {
       /* Left-to-right */
-      cloud.dirAngle = randomRange(-0.35, 0.35);  /* ~0deg with angle variance */
+      cloud.dirAngle = randomRange(-0.35, 0.35);
     } else if (roll < 0.80) {
       /* Diagonal — any angle with stronger vertical component */
       cloud.dirAngle = randomRange(0, Math.PI * 2);
@@ -507,8 +562,8 @@
      ============================================================ */
 
   var clouds = [];
-  var MERGE_DISTANCE_FACTOR = 0.08;   /* fraction of combined widths to start bridging */
-  var BRIDGE_GROW_RATE = 0.15;        /* how fast bridges thicken per second */
+  var MERGE_DISTANCE_FACTOR = 0.08;
+  var BRIDGE_GROW_RATE = 0.15;
 
   function spawnClouds() {
     clouds = [];
@@ -522,7 +577,6 @@
       var cw = W * wFrac;
       var ch = cloudZoneH * hFrac;
 
-      /* Distribute across the viewport with some overlap allowed */
       var cx = randomRange(-cw * 0.3, W + cw * 0.3);
       var cy = cloudZoneH * randomRange(0.2, 0.7);
 
@@ -533,48 +587,39 @@
       clouds.push(cloud);
     }
 
-    /* Sort by depth so far clouds render first */
     clouds.sort(function (a, b) { return a.depth - b.depth; });
   }
 
-  /* Z-axis scale limits — kept subtle so clouds don't balloon or vanish */
   var Z_SCALE_MIN = 0.75;
   var Z_SCALE_MAX = 1.3;
-  var Z_SPEED = 0.008;       /* very slow z drift */
-  var Z_LATERAL_DRIFT = 0.003; /* z-axis clouds also drift laterally */
+  var Z_SPEED = 0.008;
+  var Z_LATERAL_DRIFT = 0.003;
 
   function updateClouds(dt) {
     var dtSec = dt / 16.667;
-    var tSec = dt * 0.001;   /* real seconds for smooth time-based calcs */
+    var tSec = dt * 0.001;
 
     for (var i = 0; i < clouds.length; i++) {
       var c = clouds[i];
       if (c.absorbed && c.opacity <= 0) continue;
 
-      /* ---- Per-cloud direction + wind influence ---- */
       var depthFactor = 0.5 + 0.5 * (c.depth / Math.max(c.ct.depthLayers - 1, 1));
       var baseSpeed = activePreset.cloudDriftSpeed * depthFactor * c.dirSpeed;
 
-      /* Cloud's own direction vector, gently influenced by wind */
-      var windInfluence = 0.25;  /* wind nudges direction but doesn't override it */
+      var windInfluence = 0.25;
       var targetVx = Math.cos(c.dirAngle) * baseSpeed + currentWind * windInfluence * baseSpeed;
-      var targetVy = Math.sin(c.dirAngle) * baseSpeed * 0.3;  /* vertical component dampened */
+      var targetVy = Math.sin(c.dirAngle) * baseSpeed * 0.3;
 
-      /* Smooth velocity transitions */
       c.vx = lerp(c.vx, targetVx, 0.008 * dtSec);
       c.vy = lerp(c.vy, targetVy, 0.008 * dtSec);
 
-      /* Apply movement */
       c.x += c.vx * dtSec * 0.016;
       c.y += c.vy * dtSec * 0.016;
 
-      /* ---- Z-axis drift (approach / recede) + lateral drift ---- */
       if (c.zDirection !== 0) {
         c.zScale += c.zDirection * Z_SPEED * dtSec * 0.016;
-        /* Z-axis clouds also drift laterally — approaching clouds drift one way, receding the other */
         var lateralSign = c.zDirection * (c.dirAngle > 0 ? 1 : -1);
         c.x += lateralSign * Z_LATERAL_DRIFT * baseSpeed * dtSec * 0.016;
-        /* Reverse direction at limits for a gentle oscillation */
         if (c.zScale >= Z_SCALE_MAX) {
           c.zScale = Z_SCALE_MAX;
           c.zDirection = -1;
@@ -584,34 +629,29 @@
         }
       }
 
-      /* ---- Tilt influence on clouds (mobile only) ---- */
       if (tiltPermissionGranted && !isDesktop) {
         c.x += tiltGamma * TILT_CLOUD_INFLUENCE * dtSec * 0.016 * baseSpeed;
       }
 
-      /* ---- Subtle size breathing ---- */
       var breathOffset = Math.sin(timeAccum * c.sizeBreathRate + c.shapePhase) * c.sizeBreathAmp;
       c.w = c.baseW * c.zScale * (1 + breathOffset);
-      c.h = c.baseH * c.zScale * (1 + breathOffset * 0.6);  /* height breathes less */
+      c.h = c.baseH * c.zScale * (1 + breathOffset * 0.6);
 
-      /* ---- Clamp y within cloud zone ---- */
       var margin = c.h * 0.3;
       if (c.y < margin) c.y = margin;
       if (c.y > cloudZoneH - margin) c.y = cloudZoneH - margin;
 
-      /* ---- Wrap around screen edges (any direction) ---- */
       var pad = 60;
       if (c.x - c.w * 0.5 > W + pad) {
         c.x = -c.w * 0.5 - randomRange(10, 40);
         c.seed = Math.random() * 10000;
-        assignDirection(c);  /* new direction on re-entry */
+        assignDirection(c);
       } else if (c.x + c.w * 0.5 < -pad) {
         c.x = W + c.w * 0.5 + randomRange(10, 40);
         c.seed = Math.random() * 10000;
         assignDirection(c);
       }
 
-      /* ---- Handle absorption fade ---- */
       if (c.absorbed) {
         c.opacity = Math.max(0, c.opacity - 0.3 * dtSec * 0.016);
       } else {
@@ -619,7 +659,6 @@
       }
     }
 
-    /* Collision detection and merging */
     checkCloudMerging(dtSec);
   }
 
@@ -631,9 +670,8 @@
       for (var j = i + 1; j < clouds.length; j++) {
         var b = clouds[j];
         if (b.absorbed) continue;
-        if (a.depth !== b.depth) continue;  /* only same-depth clouds merge */
+        if (a.depth !== b.depth) continue;
 
-        /* Check horizontal overlap */
         var aLeft = a.x - a.w * 0.5;
         var aRight = a.x + a.w * 0.5;
         var bLeft = b.x - b.w * 0.5;
@@ -643,7 +681,6 @@
         var mergeThreshold = (a.w + b.w) * MERGE_DISTANCE_FACTOR;
 
         if (gap < mergeThreshold) {
-          /* Clouds are close enough to bridge */
           if (!a.merging || a.mergePartner !== b) {
             a.merging = true;
             a.mergePartner = b;
@@ -653,16 +690,13 @@
             b.mergeProgress = 0;
           }
 
-          /* Advance merge */
           a.mergeProgress = Math.min(1, a.mergeProgress + BRIDGE_GROW_RATE * dtSec * 0.016);
           b.mergeProgress = a.mergeProgress;
 
-          /* Full merge: smaller cloud gets absorbed */
           if (a.mergeProgress >= 1) {
             var smaller = a.w * a.h < b.w * b.h ? a : b;
             var larger = smaller === a ? b : a;
             smaller.absorbed = true;
-            /* Larger cloud grows (Westcott 1994: merged cloud is bigger) */
             larger.w *= 1.15;
             larger.h *= 1.08;
             larger.merging = false;
@@ -670,7 +704,6 @@
             larger.mergeProgress = 0;
           }
         } else {
-          /* Drifted apart — cancel merge */
           if (a.merging && a.mergePartner === b) {
             a.merging = false;
             a.mergePartner = null;
@@ -683,11 +716,9 @@
       }
     }
 
-    /* Respawn absorbed clouds after they fully fade */
     for (var i = 0; i < clouds.length; i++) {
       var c = clouds[i];
       if (c.absorbed && c.opacity <= 0) {
-        /* Respawn off-screen */
         var ct = CLOUD_TYPES[activeCloudType];
         var wFrac = randomRange(ct.widthRange[0], ct.widthRange[1]);
         var hFrac = randomRange(ct.heightRange[0], ct.heightRange[1]);
@@ -695,7 +726,6 @@
         c.h = cloudZoneH * hFrac;
         c.seed = Math.random() * 10000;
         assignDirection(c);
-        /* Respawn from the edge the cloud's new direction points away from */
         var comingFromLeft = Math.cos(c.dirAngle) > 0;
         c.x = comingFromLeft ? -c.w * 0.5 - randomRange(50, 200) : W + c.w * 0.5 + randomRange(50, 200);
         c.y = cloudZoneH * randomRange(0.2, 0.7);
@@ -730,7 +760,6 @@
 
     var windStretch = 1.0 + Math.abs(currentWind) * 0.08;
 
-    /* Reset density map */
     if (cloudDensityMap) {
       for (var k = 0; k < cloudDensityMap.length; k++) cloudDensityMap[k] = 0;
     }
@@ -739,12 +768,10 @@
       var c = clouds[ci];
       if (c.absorbed && c.opacity <= 0) continue;
 
-      /* Depth-based opacity — z-axis scale also affects perceived depth */
       var depthOpacity = 0.4 + 0.6 * (c.depth / Math.max(c.ct.depthLayers - 1, 1));
       var zOpacity = 0.7 + 0.3 * ((c.zScale - Z_SCALE_MIN) / (Z_SCALE_MAX - Z_SCALE_MIN));
       var baseOpacity = activePreset.cloudOpacity * depthOpacity * zOpacity * c.opacity;
 
-      /* Cloud bounding box in screen coords */
       var cw = c.w * windStretch;
       var ch = c.h;
       var left = Math.floor((c.x - cw * 0.5) / CLOUD_CELL);
@@ -752,7 +779,6 @@
       var top = Math.floor((c.y - ch * 0.5) / CLOUD_CELL);
       var bottom = Math.ceil((c.y + ch * 0.5) / CLOUD_CELL);
 
-      /* Clamp to screen */
       left = Math.max(0, left);
       right = Math.min(Math.ceil(W / CLOUD_CELL), right);
       top = Math.max(0, top);
@@ -763,34 +789,27 @@
           var px = col * CLOUD_CELL;
           var py = row * CLOUD_CELL;
 
-          /* Normalize position within cloud (0 to 1) */
           var nx = (px - (c.x - cw * 0.5)) / cw;
           var ny = (py - (c.y - ch * 0.5)) / ch;
 
-          /* Elliptical falloff — gives clouds defined edges */
           var ex = (nx - 0.5) * 2;
           var ey = (ny - 0.5) * 2;
           var ellipse = ex * ex + ey * ey;
           if (ellipse > 1.0) continue;
 
-          /* Soft edge falloff */
           var edgeFade = smoothstep(1.0, 0.5, ellipse);
 
-          /* Sample noise for this cloud — warpDrift adds subtle shape evolution */
           var warpExtra = c.warpDrift * timeAccum;
           var density = cloudEntityNoise(px, py, timeAccum, c.ct, c.seed, warpExtra);
 
-          /* Apply edge falloff to density */
           density *= edgeFade;
 
-          /* Flat bottom for cumulus-type clouds */
           if (c.ct === CLOUD_TYPES.cumulus || c.ct === CLOUD_TYPES.cumulonimbus) {
             if (ny > 0.65) {
               density *= smoothstep(1.0, 0.65, ny) * 1.3;
             }
           }
 
-          /* Cutoff threshold */
           if (density < c.ct.cutoff) continue;
 
           var norm = (density - c.ct.cutoff) / (1 - c.ct.cutoff);
@@ -802,7 +821,6 @@
           var ch2 = charFromDensity(norm);
           cloudCtx.fillText(ch2, px + CLOUD_CELL * 0.5, py + CLOUD_CELL * 0.5);
 
-          /* Update density map for rain spawning */
           if (cloudDensityMap) {
             var mapCol = Math.floor(px / CLOUD_CELL);
             var mapRow = Math.floor(py / CLOUD_CELL);
@@ -815,13 +833,11 @@
       }
     }
 
-    /* Render bridges between merging clouds */
     renderBridges(textColor, windStretch);
 
     cloudCtx.globalAlpha = 1;
   }
 
-  /* Bridge rendering — wispy connection between merging clouds */
   function renderBridges(textColor, windStretch) {
     for (var i = 0; i < clouds.length; i++) {
       var a = clouds[i];
@@ -829,13 +845,11 @@
       var b = a.mergePartner;
       if (b.absorbed) continue;
 
-      /* Only render bridge once per pair */
       if (clouds.indexOf(b) < i) continue;
 
       var progress = a.mergeProgress;
       if (progress <= 0) continue;
 
-      /* Bridge region between the two clouds */
       var aRight = a.x + a.w * windStretch * 0.5;
       var bLeft = b.x - b.w * windStretch * 0.5;
       var leftEdge, rightEdge;
@@ -847,7 +861,6 @@
         rightEdge = aRight;
       }
 
-      /* Bridge vertical center — average of the two clouds */
       var bridgeY = (a.y + b.y) * 0.5;
       var bridgeH = Math.min(a.h, b.h) * 0.3 * progress;
 
@@ -861,16 +874,13 @@
           var px = col * CLOUD_CELL;
           var py = row * CLOUD_CELL;
 
-          /* Bridge density based on progress and position */
           var bx = (px - leftEdge) / Math.max(rightEdge - leftEdge, 1);
           var by = (py - (bridgeY - bridgeH * 0.5)) / Math.max(bridgeH, 1);
 
-          /* Wispy shape — thin in middle, thicker at ends */
           var bridgeDensity = progress * 0.6 *
             (1 - Math.abs(by - 0.5) * 2) *
             (0.3 + 0.7 * (1 - 4 * (bx - 0.5) * (bx - 0.5)));
 
-          /* Add some noise for organic look */
           bridgeDensity *= 0.5 + 0.5 * ((noise.noise2D(px * 0.03 + timeAccum, py * 0.03) + 1) * 0.5);
 
           if (bridgeDensity < 0.1) continue;
@@ -884,14 +894,20 @@
   }
 
   /* ============================================================
-     10. PRE-RENDERED CHARACTER SPRITES (rain)
+     10. PRE-RENDERED CHARACTER SPRITES (rain + splash)
      ============================================================ */
 
   var charSprites = {};
+  var splashSprites = {};
+  var mistSprites = {};
   var spriteReady = false;
 
   function buildCharSprites(fontSize, color) {
     charSprites = {};
+    splashSprites = {};
+    mistSprites = {};
+
+    /* Rain character sprites */
     for (var i = 0; i < RAIN_CHARS.length; i++) {
       var c = RAIN_CHARS[i];
       var off = document.createElement('canvas');
@@ -905,11 +921,44 @@
       octx.fillText(c, sz / 2, sz / 2);
       charSprites[c] = off;
     }
+
+    /* Splash character sprites — smaller */
+    var splashSize = Math.ceil(fontSize * 0.6);
+    for (var i = 0; i < SPLASH_CHARS.length; i++) {
+      var c = SPLASH_CHARS[i];
+      var off = document.createElement('canvas');
+      var sz = Math.ceil(splashSize * 1.4);
+      off.width = sz; off.height = sz;
+      var octx = off.getContext('2d');
+      octx.font = splashSize + 'px "Cormorant Garamond", Georgia, serif';
+      octx.textAlign = 'center';
+      octx.textBaseline = 'middle';
+      octx.fillStyle = color;
+      octx.fillText(c, sz / 2, sz / 2);
+      splashSprites[c] = off;
+    }
+
+    /* Mist character sprites — larger, very faint */
+    var mistSize = Math.ceil(fontSize * 1.2);
+    for (var i = 0; i < MIST_CHARS.length; i++) {
+      var c = MIST_CHARS[i];
+      var off = document.createElement('canvas');
+      var sz = Math.ceil(mistSize * 1.4);
+      off.width = sz; off.height = sz;
+      var octx = off.getContext('2d');
+      octx.font = mistSize + 'px "Cormorant Garamond", Georgia, serif';
+      octx.textAlign = 'center';
+      octx.textBaseline = 'middle';
+      octx.fillStyle = color;
+      octx.fillText(c, sz / 2, sz / 2);
+      mistSprites[c] = off;
+    }
+
     spriteReady = true;
   }
 
   /* ============================================================
-     11. RAINDROP OBJECT POOL
+     11. RAINDROP OBJECT POOL (with depth layers)
      ============================================================ */
 
   function Raindrop() {
@@ -917,20 +966,224 @@
     this.char = '1'; this.opacity = 0; this.active = false;
     this.windFactor = 1; this.size = 13;
     this.virgaDrop = false; this.virgaFadeY = 0;
+    this.zLayer = 2;          /* 0=far, 1=mid, 2=near */
+    this.depthConfig = DEPTH_LAYERS[2];
   }
 
-  Raindrop.prototype.reset = function (x, y, preset) {
+  Raindrop.prototype.reset = function (x, y, preset, zLayer) {
     this.x = x; this.y = y;
-    this.vy = preset.fallSpeed + randomRange(-preset.fallSpeedVariance, preset.fallSpeedVariance);
+    this.zLayer = (zLayer !== undefined) ? zLayer : 2;
+    this.depthConfig = DEPTH_LAYERS[this.zLayer];
+
+    /* Speed scaled by depth — far drops fall slower */
+    this.vy = (preset.fallSpeed + randomRange(-preset.fallSpeedVariance, preset.fallSpeedVariance))
+              * this.depthConfig.speedMult;
     this.vx = 0;
     this.char = randomItem(RAIN_CHARS);
-    this.opacity = preset.rainOpacity * randomRange(0.6, 1.0);
+    /* Opacity scaled by depth — far drops are dimmer */
+    this.opacity = preset.rainOpacity * randomRange(0.6, 1.0) * this.depthConfig.opacityMult;
     this.active = true;
-    this.windFactor = randomRange(0.8, 1.2);
-    this.size = preset.charSize + randomInt(-1, 1);
+    this.windFactor = randomRange(0.8, 1.2) * this.depthConfig.windMult;
+    /* Size scaled by depth — far drops are smaller */
+    this.size = Math.round((preset.charSize + randomInt(-1, 1)) * this.depthConfig.scale);
     this.virgaDrop = Math.random() < preset.virga;
     this.virgaFadeY = this.virgaDrop ? randomRange(H * 0.3, H * 0.7) : H;
   };
+
+  /* ============================================================
+     11b. SPLASH PARTICLE POOL
+     Micro-particles that arc upward on raindrop impact.
+     Inspired by Geoff Blair's canvas rain demo.
+     ============================================================ */
+
+  function SplashParticle() {
+    this.x = 0; this.y = 0; this.vx = 0; this.vy = 0;
+    this.char = '.'; this.opacity = 0; this.active = false;
+    this.life = 0; this.maxLife = SPLASH_LIFE;
+    this.size = 8;
+  }
+
+  SplashParticle.prototype.reset = function (x, y) {
+    this.x = x;
+    this.y = y;
+    /* Arc upward and outward — asymmetric spread influenced by wind */
+    var angle = randomRange(-Math.PI * 0.85, -Math.PI * 0.15);  /* upward arc */
+    var speed = randomRange(SPLASH_SPEED_MIN, SPLASH_SPEED_MAX);
+    this.vx = Math.cos(angle) * speed + currentWind * 0.3;
+    this.vy = Math.sin(angle) * speed;
+    this.char = randomItem(SPLASH_CHARS);
+    this.opacity = randomRange(0.15, 0.35);
+    this.active = true;
+    this.life = 0;
+    this.maxLife = SPLASH_LIFE * randomRange(0.7, 1.3);
+    this.size = randomInt(6, 10);
+  };
+
+  var splashPool = [];
+  var splashPoolIndex = 0;
+
+  function initSplashPool() {
+    splashPool = [];
+    splashPoolIndex = 0;
+    for (var i = 0; i < SPLASH_POOL_SIZE; i++) {
+      splashPool.push(new SplashParticle());
+    }
+  }
+
+  function spawnSplash(x, y) {
+    var count = randomInt(SPLASH_COUNT_MIN, SPLASH_COUNT_MAX);
+    for (var i = 0; i < count; i++) {
+      var sp = splashPool[splashPoolIndex];
+      sp.reset(x, y);
+      splashPoolIndex = (splashPoolIndex + 1) % SPLASH_POOL_SIZE;
+    }
+  }
+
+  function updateSplashes(dtFactor, dtSec) {
+    for (var i = 0; i < splashPool.length; i++) {
+      var sp = splashPool[i];
+      if (!sp.active) continue;
+
+      sp.life += dtSec;
+      if (sp.life >= sp.maxLife) {
+        sp.active = false;
+        continue;
+      }
+
+      /* Gravity pulls splash particles back down */
+      sp.vy += SPLASH_ARC_GRAVITY * dtSec;
+      sp.x += sp.vx * dtFactor;
+      sp.y += sp.vy * dtFactor;
+
+      /* Fade out over lifetime */
+      var lifeFrac = sp.life / sp.maxLife;
+      sp.opacity = (1 - lifeFrac * lifeFrac) * 0.30;  /* quadratic fade */
+
+      /* Kill if off screen */
+      if (sp.y > H + 10 || sp.x < -20 || sp.x > W + 20) {
+        sp.active = false;
+      }
+    }
+  }
+
+  function drawSplashes() {
+    if (!spriteReady) return;
+
+    for (var i = 0; i < splashPool.length; i++) {
+      var sp = splashPool[i];
+      if (!sp.active || sp.opacity <= 0) continue;
+
+      ctx.globalAlpha = clamp(sp.opacity, 0, 1);
+
+      var sprite = splashSprites[sp.char];
+      if (sprite) {
+        var halfSize = sp.size * 0.5;
+        ctx.drawImage(sprite, ~~(sp.x - halfSize), ~~(sp.y - halfSize), sp.size, sp.size);
+      }
+    }
+  }
+
+  /* ============================================================
+     11c. ATMOSPHERIC MIST POOL
+     Slow-drifting ground fog for heavy presets.
+     ============================================================ */
+
+  function MistParticle() {
+    this.x = 0; this.y = 0; this.vx = 0;
+    this.char = '.'; this.opacity = 0; this.active = false;
+    this.life = 0; this.maxLife = 4; this.size = 16;
+  }
+
+  MistParticle.prototype.reset = function () {
+    this.x = randomRange(-50, W + 50);
+    this.y = H - H * MIST_ZONE_FRAC * randomRange(0, 1);
+    this.vx = MIST_DRIFT_SPEED * (currentWind > 0 ? 1 : -1) * randomRange(0.5, 1.5);
+    this.char = randomItem(MIST_CHARS);
+    this.opacity = 0;
+    this.active = true;
+    this.life = 0;
+    this.maxLife = randomRange(MIST_LIFE_MIN, MIST_LIFE_MAX);
+    this.size = randomInt(14, 22);
+  };
+
+  var mistPool = [];
+  var mistSpawnTimer = 0;
+
+  function initMistPool() {
+    mistPool = [];
+    mistSpawnTimer = 0;
+    for (var i = 0; i < MIST_POOL_SIZE; i++) {
+      mistPool.push(new MistParticle());
+    }
+  }
+
+  function updateMist(dtFactor, dtSec) {
+    if (!activePreset.mistEnabled) return;
+
+    /* Spawn new mist particles periodically */
+    mistSpawnTimer += dtSec;
+    var spawnInterval = 1.0 / (activePreset.mistDensity * 5 + 0.5);
+    if (mistSpawnTimer >= spawnInterval) {
+      mistSpawnTimer = 0;
+      /* Find an inactive particle */
+      for (var i = 0; i < mistPool.length; i++) {
+        if (!mistPool[i].active) {
+          mistPool[i].reset();
+          break;
+        }
+      }
+    }
+
+    for (var i = 0; i < mistPool.length; i++) {
+      var mp = mistPool[i];
+      if (!mp.active) continue;
+
+      mp.life += dtSec;
+      if (mp.life >= mp.maxLife) {
+        mp.active = false;
+        continue;
+      }
+
+      /* Drift with wind */
+      mp.vx = lerp(mp.vx, currentWind * MIST_DRIFT_SPEED * 2, 0.01 * dtFactor);
+      mp.x += mp.vx * dtFactor;
+
+      /* Gentle vertical drift — mist rises slightly */
+      mp.y -= 0.05 * dtFactor;
+
+      /* Fade in, sustain, fade out */
+      var lifeFrac = mp.life / mp.maxLife;
+      if (lifeFrac < 0.15) {
+        mp.opacity = smoothstep(0, 0.15, lifeFrac) * activePreset.mistDensity * 0.12;
+      } else if (lifeFrac > 0.7) {
+        mp.opacity = smoothstep(1, 0.7, lifeFrac) * activePreset.mistDensity * 0.12;
+      } else {
+        mp.opacity = activePreset.mistDensity * 0.12;
+      }
+
+      /* Kill if off screen */
+      if (mp.x < -80 || mp.x > W + 80) {
+        mp.active = false;
+      }
+    }
+  }
+
+  function drawMist() {
+    if (!spriteReady || !activePreset.mistEnabled) return;
+
+    for (var i = 0; i < mistPool.length; i++) {
+      var mp = mistPool[i];
+      if (!mp.active || mp.opacity <= 0) continue;
+
+      ctx.globalAlpha = clamp(mp.opacity, 0, 1);
+
+      var sprite = mistSprites[mp.char];
+      if (sprite) {
+        var halfSize = mp.size * 0.5;
+        ctx.drawImage(sprite, ~~(mp.x - halfSize), ~~(mp.y - halfSize), mp.size, mp.size);
+      }
+    }
+  }
 
   /* ============================================================
      12. MAIN ANIMATION CONTROLLER
@@ -964,6 +1217,27 @@
   var umbrellaEl = null;
   var touchRippleEl = null;
   var isDesktop = false;
+
+  /* ---- AAA Wind state (Horizon Zero Dawn 3-layer model) ---- */
+  var windBaseDirection = 1;           /* 1 = right, -1 = left */
+  var windBaseShiftTimer = 0;          /* time until next direction shift */
+  var windBaseShiftDuration = 0;       /* how long the current direction lasts */
+  var gustPhase = 'lull';              /* 'lull' | 'onset' | 'peak' | 'decay' */
+  var gustTimer = 0;                   /* time within current gust phase */
+  var gustPhaseDuration = 0;           /* duration of current phase */
+  var gustEnvelope = 0;                /* 0 to 1 — current gust strength multiplier */
+  var gustDirection = 1;               /* gust can push in different direction from base */
+
+  function initWindState() {
+    windBaseDirection = Math.random() < 0.5 ? 1 : -1;
+    windBaseShiftTimer = 0;
+    windBaseShiftDuration = randomRange(25, 60);  /* 25-60 seconds per direction */
+    gustPhase = 'lull';
+    gustTimer = 0;
+    gustPhaseDuration = randomRange(5, 15);       /* initial lull: 5-15 seconds */
+    gustEnvelope = 0;
+    gustDirection = windBaseDirection;
+  }
 
   /* ---- Select random preset ---- */
 
@@ -1014,7 +1288,6 @@
     cloudCtx = cloudCanvas.getContext('2d');
     cloudCtx.scale(dpi, dpi);
 
-    /* Density map */
     cloudDensityCols = Math.ceil(W / CLOUD_CELL);
     cloudDensityRows = Math.ceil(cloudZoneH / CLOUD_CELL);
     cloudDensityMap = new Float32Array(cloudDensityCols * cloudDensityRows);
@@ -1025,12 +1298,20 @@
     drops = [];
     for (var i = 0; i < count; i++) {
       var drop = new Raindrop();
-      spawnDrop(drop, true);
+      /* Assign depth layer based on DEPTH_LAYERS fractions */
+      var r = Math.random();
+      var zLayer = 2;
+      var cumFrac = 0;
+      for (var z = 0; z < DEPTH_LAYERS.length; z++) {
+        cumFrac += DEPTH_LAYERS[z].fraction;
+        if (r < cumFrac) { zLayer = z; break; }
+      }
+      spawnDrop(drop, true, zLayer);
       drops.push(drop);
     }
   }
 
-  function spawnDrop(drop, initialScatter) {
+  function spawnDrop(drop, initialScatter, zLayer) {
     var spawnX, spawnY;
 
     if (cloudDensityMap && !initialScatter) {
@@ -1057,7 +1338,7 @@
       spawnY = randomRange(-20, 0);
     }
 
-    drop.reset(spawnX, spawnY, activePreset);
+    drop.reset(spawnX, spawnY, activePreset, zLayer);
 
     if (initialScatter) {
       drop.y = randomRange(-H * 0.1, H);
@@ -1108,8 +1389,6 @@
 
   function onTouchStart(e) {
     updateTouchPoints(e);
-    /* iOS 13+: request gyroscope permission on first touch.
-       Must be called from a direct user-gesture handler. */
     requestTiltPermission();
   }
   function onTouchMove(e) { updateTouchPoints(e); }
@@ -1166,7 +1445,112 @@
   }
 
   /* ============================================================
-     14. ANIMATION LOOP
+     14. AAA WIND ENGINE
+     Three-layer wind model inspired by Guerrilla Games'
+     Horizon Zero Dawn wind system (Gilbert Sanders).
+
+     Layer 1: Base wind — slow directional drift that shifts over minutes
+     Layer 2: Gust envelope — asymmetric build/peak/decay cycle with lulls
+     Layer 3: Turbulence — Perlin noise micro-variation (Bandi 2017 Δt^2/3)
+
+     References:
+     - Gajatix Studios: gajatixstudios.co.uk/news/bright-life-devlog-...
+     - APS Physics: physics.aps.org/articles/v10/s5
+     - FESSTVaL: fesstval.de/en/campaign/wind-gusts
+     - Michael Bromley: michaelbromley.co.uk/blog/simple-1d-noise
+     ============================================================ */
+
+  function updateWind(dtFactor, dtSec) {
+    if (!activePreset.gustEnabled) {
+      /* Non-gust presets: gentle constant wind with subtle noise variation */
+      var turbulence = windNoise.noise2D(timeAccum * 0.5, 0) * 0.15;
+      targetWind = activePreset.windSpeed * windBaseDirection + turbulence;
+      currentWind = lerp(currentWind, targetWind, 0.02 * dtFactor);
+      return;
+    }
+
+    /* ---- Layer 1: Base wind direction shift ---- */
+    windBaseShiftTimer += dtSec;
+    if (windBaseShiftTimer >= windBaseShiftDuration) {
+      /* Shift direction — not always a full reversal, sometimes just a reduction */
+      var shiftRoll = Math.random();
+      if (shiftRoll < 0.4) {
+        windBaseDirection *= -1;  /* full reversal */
+      } else if (shiftRoll < 0.7) {
+        windBaseDirection *= 0.3;  /* significant weakening */
+      }
+      /* Normalize back to -1 or 1 range */
+      if (Math.abs(windBaseDirection) < 0.5) {
+        windBaseDirection = Math.random() < 0.5 ? 1 : -1;
+      } else {
+        windBaseDirection = windBaseDirection > 0 ? 1 : -1;
+      }
+      windBaseShiftTimer = 0;
+      windBaseShiftDuration = randomRange(20, 50);
+    }
+
+    var baseWind = activePreset.windSpeed * windBaseDirection;
+
+    /* ---- Layer 2: Asymmetric gust envelope ---- */
+    /* Real gusts: 3-20s duration, build fast, decay slow, then lull (FESSTVaL) */
+    gustTimer += dtSec;
+
+    if (gustPhase === 'lull') {
+      gustEnvelope = lerp(gustEnvelope, 0, 0.03 * dtFactor);
+      if (gustTimer >= gustPhaseDuration) {
+        gustPhase = 'onset';
+        gustTimer = 0;
+        gustPhaseDuration = randomRange(1.0, 3.0);  /* onset: 1-3 seconds (fast build) */
+        /* Gust direction: usually same as base, occasionally cross-wind */
+        gustDirection = (Math.random() < 0.8) ? windBaseDirection : -windBaseDirection;
+      }
+    } else if (gustPhase === 'onset') {
+      /* Fast build — asymmetric: gusts build faster than they decay */
+      var onsetProgress = gustTimer / gustPhaseDuration;
+      gustEnvelope = smoothstep(0, 1, onsetProgress);
+      if (gustTimer >= gustPhaseDuration) {
+        gustPhase = 'peak';
+        gustTimer = 0;
+        gustPhaseDuration = randomRange(2.0, 5.0);  /* peak: 2-5 seconds */
+      }
+    } else if (gustPhase === 'peak') {
+      /* Sustained peak with slight turbulent variation */
+      gustEnvelope = 0.85 + windNoise.noise2D(timeAccum * 2, 5.0) * 0.15;
+      if (gustTimer >= gustPhaseDuration) {
+        gustPhase = 'decay';
+        gustTimer = 0;
+        gustPhaseDuration = randomRange(3.0, 7.0);  /* decay: 3-7 seconds (slow fade) */
+      }
+    } else if (gustPhase === 'decay') {
+      /* Slow decay — takes longer than onset */
+      var decayProgress = gustTimer / gustPhaseDuration;
+      gustEnvelope = smoothstep(1, 0, decayProgress);
+      if (gustTimer >= gustPhaseDuration) {
+        gustPhase = 'lull';
+        gustTimer = 0;
+        gustPhaseDuration = randomRange(4, 15);  /* lull: 4-15 seconds */
+      }
+    }
+
+    var gustWind = gustEnvelope * activePreset.gustStrength * gustDirection;
+
+    /* ---- Layer 3: Perlin noise turbulence ---- */
+    /* High-frequency micro-variation that prevents mechanical feel.
+       Uses Simplex noise which has spectral properties similar to the
+       Δt^(2/3) turbulence model (Bandi 2017). */
+    var turb1 = windNoise.noise2D(timeAccum * 0.8, 0) * 0.3;
+    var turb2 = windNoise.noise2D(timeAccum * 2.5, 10.0) * 0.12;
+    var turbulence = (turb1 + turb2) * activePreset.gustStrength * 0.5;
+
+    /* ---- Combine all three layers ---- */
+    targetWind = baseWind + gustWind + turbulence;
+
+    /* Smooth transition — wind doesn't snap instantly */
+    currentWind = lerp(currentWind, targetWind, 0.04 * dtFactor);
+  }
+
+  /* ============================================================
+     15. ANIMATION LOOP
      ============================================================ */
 
   function loop(timestamp) {
@@ -1180,12 +1564,13 @@
     if (dt > MAX_DELTA) dt = MAX_DELTA;
 
     var dtFactor = dt / 16.667;
-    timeAccum += dt * 0.001;
+    var dtSec = dt * 0.001;
+    timeAccum += dtSec;
 
     ctx.clearRect(0, 0, W, H);
 
     /* Wind */
-    updateWind(dtFactor);
+    updateWind(dtFactor, dtSec);
 
     /* Clouds — update entities every frame, render periodically */
     updateClouds(dt);
@@ -1196,29 +1581,27 @@
     }
     ctx.drawImage(cloudCanvas, 0, 0, W * dpi, cloudZoneH * dpi, 0, 0, W, cloudZoneH);
 
+    /* Mist (behind rain for depth) */
+    updateMist(dtFactor, dtSec);
+    drawMist();
+
     /* Rain */
-    updateDrops(dtFactor);
+    updateDrops(dtFactor, dtSec);
     drawDrops();
+
+    /* Splashes (on top of rain) */
+    updateSplashes(dtFactor, dtSec);
+    drawSplashes();
+
+    ctx.globalAlpha = 1;
 
     animId = requestAnimationFrame(loop);
   }
 
-  function updateWind(dtFactor) {
-    if (activePreset.gustEnabled) {
-      var n = Math.sin(timeAccum * 0.7 * activePreset.gustFrequency) * 0.5 +
-              Math.sin(timeAccum * 1.3 * activePreset.gustFrequency) * 0.3 +
-              Math.sin(timeAccum * 0.3 * activePreset.gustFrequency) * 0.2;
-      targetWind = activePreset.windSpeed + n * activePreset.gustStrength;
-    } else {
-      targetWind = activePreset.windSpeed;
-    }
-    currentWind = lerp(currentWind, targetWind, 0.02 * dtFactor);
-  }
-
-  function updateDrops(dtFactor) {
+  function updateDrops(dtFactor, dtSec) {
     for (var i = 0; i < drops.length; i++) {
       var drop = drops[i];
-      if (!drop.active) { spawnDrop(drop, false); continue; }
+      if (!drop.active) { spawnDrop(drop, false, drop.zLayer); continue; }
 
       drop.vy += 0.02 * dtFactor;
 
@@ -1241,14 +1624,21 @@
 
       if (drop.virgaDrop && drop.y > drop.virgaFadeY) {
         var vp = (drop.y - drop.virgaFadeY) / (H * 0.15);
-        drop.opacity = activePreset.rainOpacity * (1 - vp);
+        drop.opacity = activePreset.rainOpacity * drop.depthConfig.opacityMult * (1 - vp);
         if (drop.opacity <= 0) { drop.active = false; continue; }
       }
 
       var fadeStart = H * (1 - BOTTOM_FADE_ZONE);
       if (drop.y > fadeStart && !drop.virgaDrop) {
         var fp = (drop.y - fadeStart) / (H * BOTTOM_FADE_ZONE);
-        drop.opacity = activePreset.rainOpacity * (1 - fp) * randomRange(0.6, 1.0);
+        drop.opacity = activePreset.rainOpacity * drop.depthConfig.opacityMult * (1 - fp) * randomRange(0.6, 1.0);
+      }
+
+      /* Check if drop has reached the ground — spawn splash for foreground drops */
+      if (drop.y > H - 10 && drop.zLayer === 2 && !drop.virgaDrop) {
+        if (Math.random() < SPLASH_SPAWN_CHANCE) {
+          spawnSplash(drop.x, H - randomRange(2, 8));
+        }
       }
 
       if (drop.y > H + 20 || drop.x < -100 || drop.x > W + 100 || drop.opacity <= 0) {
@@ -1270,44 +1660,29 @@
         var sprite = charSprites[drop.char];
         var halfSize = drop.size * 0.7;
 
+        /* Per-drop rotation variance — slight randomization around wind angle */
+        var dropAngle = windAngle * 0.5 + (drop.windFactor - 1) * 0.3;
+
         ctx.save();
         ctx.translate(~~drop.x, ~~drop.y);
-        ctx.rotate(windAngle * 0.5);
+        ctx.rotate(dropAngle);
         ctx.drawImage(sprite, -halfSize, -halfSize, drop.size, drop.size);
         ctx.restore();
       }
     }
-    ctx.globalAlpha = 1;
   }
-
-  /* ============================================================
-     15. LIFECYCLE
-     ============================================================ */
 
   /* ============================================================
      16. DEVICE TILT (mobile only)
      ============================================================ */
 
-  /* Orientation handler — shared reference so we can attach it from
-     either the synchronous path (Android) or the async permission
-     callback (iOS). */
   function handleOrientation(e) {
-    /* gamma: left-right tilt (-90 to 90), beta: front-back (-180 to 180) */
     tiltGamma = clamp(e.gamma || 0, -45, 45);
     tiltBeta  = clamp(e.beta  || 0, -45, 45);
   }
 
-  /* Flag: has the iOS permission prompt already been shown? */
   var tiltPermRequested = false;
 
-  /**
-   * requestTiltPermission() — call from any user-gesture handler.
-   * On iOS 13+ this triggers the native permission dialog.
-   * On Android / non-iOS it's a no-op (permission granted at setup).
-   *
-   * Reference: dev.to/li — requestPermission for devicemotion/
-   * deviceorientation events in iOS 13+
-   */
   function requestTiltPermission() {
     if (tiltPermissionGranted || tiltPermRequested) return;
     if (typeof DeviceOrientationEvent === 'undefined') return;
@@ -1322,8 +1697,6 @@
         }
       })
       .catch(function (err) {
-        /* Permission denied or dialog dismissed — tilt won't work.
-           Log for debugging but don't break anything. */
         if (typeof console !== 'undefined') {
           console.log('[Rain] Tilt permission denied:', err);
         }
@@ -1338,11 +1711,8 @@
     if (typeof DeviceOrientationEvent.requestPermission === 'function') {
       /* iOS 13+ — permission will be requested on first touch
          via requestTiltPermission(), which is called from
-         onTouchStart in setupInteraction(). This ensures the
-         call happens inside a direct user-gesture handler,
-         which iOS requires for the permission dialog. */
+         onTouchStart in setupInteraction(). */
     } else {
-      /* Android / non-iOS — permission not needed */
       tiltPermissionGranted = true;
       window.addEventListener('deviceorientation', handleOrientation, { passive: true });
     }
@@ -1362,8 +1732,12 @@
 
     spawnClouds();
     initDrops();
+    initSplashPool();
+    initMistPool();
+    initWindState();
     setupInteraction();
     setupTilt();
+
     /* Respect prefers-reduced-motion */
     var motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     if (motionQuery.matches) {
