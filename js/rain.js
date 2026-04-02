@@ -157,6 +157,26 @@
   var UMBRELLA_CHAR = '\u2602';
   var UMBRELLA_RADIUS = 55;
 
+  /* Umbrella collision physics
+     References:
+     - Surface normal reflection: GameDev StackExchange #136073
+     - Coefficient of restitution: Cyanilux rain effects breakdown
+     - Edge drip behavior: Cyanilux umbrella rim particles
+     - Impact splashes: 80 Level "How Rain Works in Video Games"
+     - Rain quality criteria: Rock Paper Shotgun rain grading */
+  var UMBRELLA_RESTITUTION = 0.45;      /* energy retained after bounce (< 1 = absorb) */
+  var UMBRELLA_SPLASH_CHANCE = 0.55;    /* chance of splash on umbrella impact */
+  var UMBRELLA_SPLASH_COUNT = [1, 2];   /* min/max splash particles per impact */
+  var UMBRELLA_DRIP_CHANCE = 0.12;      /* chance of edge drip per frame when drops are hitting */
+  var UMBRELLA_DRIP_SPEED = 0.8;        /* initial downward speed of drip particles */
+  var UMBRELLA_DRIP_LIFE = 0.8;         /* seconds a drip particle lives */
+  var UMBRELLA_EDGE_ANGLE = 0.35;       /* radians from horizontal = "edge zone" for drips */
+  var UMBRELLA_ARC_START = -Math.PI;    /* full top arc start */
+  var UMBRELLA_ARC_END = 0;             /* full top arc end */
+  var UMBRELLA_SOFT_EDGE = 8;           /* px of soft transition at arc boundary */
+  var umbrellaHitCount = 0;             /* running count of hits for drip accumulation */
+  var UMBRELLA_DRIP_THRESHOLD = 5;      /* hits needed before drips start */
+
   /* Touch */
   var TOUCH_RADIUS = 50;
 
@@ -1408,38 +1428,186 @@
 
   /* ============================================================
      13. PHYSICS — DEFLECTION (umbrella + touch)
+
+     Realistic umbrella collision with:
+     - Surface normal reflection (v' = v - 2·dot(v,n)·n)
+     - Energy-absorbing restitution (coefficient < 1)
+     - Position-dependent deflection angle
+     - Wind-influenced post-collision scatter
+     - Impact splash particles at collision point
+     - Edge drip particles from umbrella rim
+     - Depth layer filtering (only foreground drops collide)
+
+     References:
+     - Surface normals: GameDev StackExchange #136073
+     - Reflection formula: v_reflected = v - 2·dot(v,n)·n
+     - Restitution: Cyanilux rain effects breakdown
+     - Edge drips: Cyanilux umbrella rim particle system
+     - Impact splashes: 80 Level "How Rain Works in Video Games"
+     - Quality criteria: Rock Paper Shotgun rain grading
      ============================================================ */
+
+  /**
+   * spawnUmbrellaSplash — spawn micro-splash particles at the umbrella
+   * collision point. Reuses the existing splash pool but with adjusted
+   * parameters: smaller, shorter-lived, and angled along the surface normal.
+   */
+  function spawnUmbrellaSplash(cx, cy, nx, ny) {
+    var count = randomInt(UMBRELLA_SPLASH_COUNT[0], UMBRELLA_SPLASH_COUNT[1]);
+    for (var i = 0; i < count; i++) {
+      var sp = splashPool[splashPoolIndex];
+      sp.x = cx;
+      sp.y = cy;
+      /* Splash outward along the surface normal with spread */
+      var spreadAngle = Math.atan2(ny, nx) + randomRange(-0.6, 0.6);
+      var speed = randomRange(0.6, 1.4);
+      sp.vx = Math.cos(spreadAngle) * speed + currentWind * 0.2;
+      sp.vy = Math.sin(spreadAngle) * speed;
+      sp.char = randomItem(SPLASH_CHARS);
+      sp.opacity = randomRange(0.12, 0.28);
+      sp.active = true;
+      sp.life = 0;
+      sp.maxLife = SPLASH_LIFE * randomRange(0.5, 0.9);  /* shorter than ground splash */
+      sp.size = randomInt(5, 8);  /* smaller than ground splash */
+      splashPoolIndex = (splashPoolIndex + 1) % SPLASH_POOL_SIZE;
+    }
+  }
+
+  /**
+   * spawnUmbrellaDrip — spawn a slow-falling drip particle from the
+   * umbrella rim. Simulates water accumulating and dripping off the edge.
+   * Uses the splash pool with drip-specific parameters.
+   */
+  function spawnUmbrellaDrip(edgeX, edgeY) {
+    var sp = splashPool[splashPoolIndex];
+    sp.x = edgeX;
+    sp.y = edgeY;
+    /* Drips fall nearly straight down with slight wind influence */
+    sp.vx = currentWind * 0.15 + randomRange(-0.1, 0.1);
+    sp.vy = UMBRELLA_DRIP_SPEED + randomRange(0, 0.3);
+    sp.char = randomItem(SPLASH_CHARS);
+    sp.opacity = randomRange(0.15, 0.30);
+    sp.active = true;
+    sp.life = 0;
+    sp.maxLife = UMBRELLA_DRIP_LIFE * randomRange(0.8, 1.2);
+    sp.size = randomInt(6, 9);
+    splashPoolIndex = (splashPoolIndex + 1) % SPLASH_POOL_SIZE;
+  }
 
   function applyUmbrellaDeflection(drop) {
     if (!mouseActive) return;
-    var dx = drop.x - mouseX, dy = drop.y - mouseY;
-    var dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist > UMBRELLA_RADIUS || dist < 1) return;
 
+    /* Depth filtering — only foreground drops (zLayer 2) collide.
+       Background/midground drops pass behind the umbrella for parallax. */
+    if (drop.zLayer !== 2) return;
+
+    var dx = drop.x - mouseX, dy = drop.y - mouseY;
+    var distSq = dx * dx + dy * dy;
+    var radiusSq = UMBRELLA_RADIUS * UMBRELLA_RADIUS;
+
+    /* Early exit — squared distance check avoids sqrt for distant drops */
+    if (distSq > (UMBRELLA_RADIUS + UMBRELLA_SOFT_EDGE) * (UMBRELLA_RADIUS + UMBRELLA_SOFT_EDGE)) return;
+    if (distSq < 1) return;
+
+    var dist = Math.sqrt(distSq);
     var angle = Math.atan2(dy, dx);
-    if (angle > -Math.PI && angle < 0) {
-      var nx = dx / dist, ny = dy / dist;
-      var dot = drop.vx * nx + drop.vy * ny;
-      if (dot < 0) {
-        drop.vx -= 1.6 * dot * nx;
-        drop.vy -= 1.6 * dot * ny;
-        drop.vx += randomRange(-0.3, 0.3);
-        drop.vy += randomRange(-0.1, 0.2);
-        drop.x = mouseX + nx * (UMBRELLA_RADIUS + 2);
-        drop.y = mouseY + ny * (UMBRELLA_RADIUS + 2);
+
+    /* Only the top arc deflects rain (angle between -π and 0) */
+    if (angle >= UMBRELLA_ARC_END || angle <= UMBRELLA_ARC_START) return;
+
+    /* Surface normal — for a circle, it's the normalized vector from center to point */
+    var nx = dx / dist;
+    var ny = dy / dist;
+
+    /* Velocity component along the normal (negative = approaching) */
+    var vDotN = drop.vx * nx + drop.vy * ny;
+    if (vDotN >= 0) return;  /* moving away from center — no collision */
+
+    /* ---- Soft edge transition ---- */
+    /* Drops in the soft edge zone get partial deflection (gradual, not binary) */
+    var deflectionStrength = 1.0;
+    if (dist > UMBRELLA_RADIUS) {
+      deflectionStrength = 1.0 - (dist - UMBRELLA_RADIUS) / UMBRELLA_SOFT_EDGE;
+      if (deflectionStrength <= 0) return;
+    }
+
+    /* ---- Position-dependent restitution ---- */
+    /* Center of arc (angle ≈ -π/2) = more bounce, edges = more slide */
+    var centeredness = Math.abs(angle + Math.PI * 0.5) / (Math.PI * 0.5);  /* 0=center, 1=edge */
+    var restitution = UMBRELLA_RESTITUTION * (1.0 - centeredness * 0.4);  /* edges absorb more */
+
+    /* ---- Reflection: v' = v - (1 + e) * dot(v, n) * n ---- */
+    var reflectFactor = (1 + restitution) * vDotN * deflectionStrength;
+    drop.vx -= reflectFactor * nx;
+    drop.vy -= reflectFactor * ny;
+
+    /* ---- Wind-influenced scatter ---- */
+    /* Post-collision scatter follows the prevailing wind direction */
+    var windScatter = currentWind * 0.25 * deflectionStrength;
+    drop.vx += windScatter + randomRange(-0.2, 0.2) * deflectionStrength;
+    drop.vy += randomRange(-0.15, 0.1) * deflectionStrength;
+
+    /* ---- Position correction — push drop outside the collision zone ---- */
+    drop.x = mouseX + nx * (UMBRELLA_RADIUS + 3);
+    drop.y = mouseY + ny * (UMBRELLA_RADIUS + 3);
+
+    /* ---- Impact splash particles ---- */
+    if (Math.random() < UMBRELLA_SPLASH_CHANCE * deflectionStrength) {
+      var splashX = mouseX + nx * UMBRELLA_RADIUS;
+      var splashY = mouseY + ny * UMBRELLA_RADIUS;
+      spawnUmbrellaSplash(splashX, splashY, nx, ny);
+    }
+
+    /* ---- Edge drip accumulation ---- */
+    umbrellaHitCount++;
+
+    /* Drips only start after enough water has accumulated */
+    if (umbrellaHitCount > UMBRELLA_DRIP_THRESHOLD) {
+      /* Check if this hit is near the edge of the arc */
+      var edgeDist = Math.min(Math.abs(angle - UMBRELLA_ARC_END), Math.abs(angle - UMBRELLA_ARC_START));
+      if (edgeDist < UMBRELLA_EDGE_ANGLE && Math.random() < UMBRELLA_DRIP_CHANCE) {
+        /* Spawn drip at the rim point */
+        var dripX = mouseX + nx * (UMBRELLA_RADIUS + 1);
+        var dripY = mouseY + ny * (UMBRELLA_RADIUS + 1);
+        spawnUmbrellaDrip(dripX, dripY);
+        /* Partially reset accumulation (water was released) */
+        umbrellaHitCount = Math.max(0, umbrellaHitCount - 3);
       }
     }
   }
 
   function applyTouchDeflection(drop) {
+    /* Touch deflection — enhanced with depth filtering and splash feedback */
+    if (drop.zLayer !== 2) return;  /* only foreground drops */
+
     for (var i = 0; i < touchPoints.length; i++) {
       var tp = touchPoints[i];
       var dx = drop.x - tp.x, dy = drop.y - tp.y;
       var dist = Math.sqrt(dx * dx + dy * dy);
       if (dist < TOUCH_RADIUS && dist > 1) {
-        var force = (TOUCH_RADIUS - dist) / TOUCH_RADIUS;
-        drop.vx += (dx / dist) * force * 2;
-        drop.vy += (dy / dist) * force * 1.5;
+        var nx = dx / dist, ny = dy / dist;
+        var vDotN = drop.vx * nx + drop.vy * ny;
+
+        if (vDotN < 0) {
+          /* Reflection with energy absorption */
+          var reflectFactor = (1 + UMBRELLA_RESTITUTION) * vDotN;
+          drop.vx -= reflectFactor * nx;
+          drop.vy -= reflectFactor * ny;
+
+          /* Wind scatter */
+          drop.vx += currentWind * 0.2;
+
+          /* Push outside */
+          drop.x = tp.x + nx * (TOUCH_RADIUS + 2);
+          drop.y = tp.y + ny * (TOUCH_RADIUS + 2);
+
+          /* Splash at touch collision point */
+          if (Math.random() < UMBRELLA_SPLASH_CHANCE * 0.4) {
+            var splashX = tp.x + nx * TOUCH_RADIUS;
+            var splashY = tp.y + ny * TOUCH_RADIUS;
+            spawnUmbrellaSplash(splashX, splashY, nx, ny);
+          }
+        }
       }
     }
   }
