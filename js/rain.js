@@ -772,7 +772,10 @@
     cloudCtx.clearRect(0, 0, W, cloudZoneH);
 
     var textColor = getComputedStyle(document.documentElement)
-      .getPropertyValue('--color-text').trim() || '#2a1f2d';
+      .getPropertyValue('--color-weather').trim()
+      || getComputedStyle(document.documentElement)
+        .getPropertyValue('--color-text').trim()
+      || '#2a1f2d';
 
     cloudCtx.font = (CLOUD_CELL - 1) + 'px "Cormorant Garamond", Georgia, serif';
     cloudCtx.textAlign = 'center';
@@ -1894,9 +1897,12 @@
     selectPreset();
     setupCanvas();
 
-    var textColor = getComputedStyle(document.documentElement)
-      .getPropertyValue('--color-text').trim() || '#2a1f2d';
-    buildCharSprites(activePreset.charSize, textColor);
+    var weatherColor = getComputedStyle(document.documentElement)
+      .getPropertyValue('--color-weather').trim()
+      || getComputedStyle(document.documentElement)
+        .getPropertyValue('--color-text').trim()
+      || '#2a1f2d';
+    buildCharSprites(activePreset.charSize, weatherColor);
 
     spawnClouds();
     initDrops();
@@ -1942,9 +1948,12 @@
 
       var newDpi = Math.min(window.devicePixelRatio || 1, MAX_DPI);
       if (newDpi !== dpi) {
-        var textColor = getComputedStyle(document.documentElement)
-          .getPropertyValue('--color-text').trim() || '#2a1f2d';
-        buildCharSprites(activePreset.charSize, textColor);
+        var resizeColor = getComputedStyle(document.documentElement)
+          .getPropertyValue('--color-weather').trim()
+          || getComputedStyle(document.documentElement)
+            .getPropertyValue('--color-text').trim()
+          || '#2a1f2d';
+        buildCharSprites(activePreset.charSize, resizeColor);
       }
 
       for (var i = 0; i < drops.length; i++) {
@@ -1952,6 +1961,42 @@
       }
     }, RESIZE_DEBOUNCE);
   });
+
+  /* ============================================================
+     THEME CHANGE DETECTION
+     Watch for data-time-theme attribute changes on <html>.
+     When the theme changes, rebuild rain/splash/mist sprites
+     with the new --color-weather value so they always contrast
+     with the background.
+     ============================================================ */
+
+  var lastWeatherColor = '';
+
+  function onThemeChange() {
+    var style = getComputedStyle(document.documentElement);
+    var newColor = style.getPropertyValue('--color-weather').trim()
+      || style.getPropertyValue('--color-text').trim()
+      || '#2a1f2d';
+
+    if (newColor !== lastWeatherColor) {
+      lastWeatherColor = newColor;
+      buildCharSprites(activePreset.charSize, newColor);
+    }
+  }
+
+  /* MutationObserver on <html> to detect data-time-theme changes */
+  if (typeof MutationObserver !== 'undefined') {
+    var themeObserver = new MutationObserver(function (mutations) {
+      for (var i = 0; i < mutations.length; i++) {
+        if (mutations[i].attributeName === 'data-time-theme') {
+          /* Small delay to let CSS variables propagate */
+          setTimeout(onThemeChange, 50);
+          break;
+        }
+      }
+    });
+    themeObserver.observe(document.documentElement, { attributes: true });
+  }
 
   /* Expose read-only weather state for other modules (e.g. wet text effect) */
   window.rainWeather = {

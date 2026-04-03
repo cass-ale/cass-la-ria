@@ -1,10 +1,22 @@
 /* ============================================================
    DESIGN TOKENS
    Edit these variables to update the entire site's look & feel.
+
+   Time-based theming: The :root block defines the Midday default
+   (used as fallback if time-theme.js hasn't loaded yet).
+   All color transitions are handled by js/time-theme.js which
+   continuously interpolates between 8 anchor palettes and writes
+   the results as inline styles on <html>. The data-time-theme
+   attribute is set by time-theme.js purely as a signal for the
+   MutationObserver in rain.js (to trigger sprite color rebuilds).
+
+   --color-weather is specifically for rain/cloud/mist/splash
+   unicode characters — tuned for optimal contrast against each
+   theme's background color.
    ============================================================ */
 
 :root {
-  /* ---- Colour Palette ----
+  /* ---- Colour Palette (Midday default / fallback) ----
      Inspired by Neo Yokio's signature pastel pinks, soft
      lavenders, and muted rose tones — Kaz Kaan's world of
      pink carnations and melancholic luxury.
@@ -17,6 +29,7 @@
   --color-accent-soft: #a34d78;       /* lighter magenta for hover    */
   --color-border:      #c9a0ad;       /* dusty rose border            */
   --color-border-light:#d4b3be;       /* lighter rose for hover       */
+  --color-weather:     #2a1f2d;       /* weather elements (= text)    */
 
   /* ---- Typography ---- */
   --font-display:  'Cormorant Garamond', 'Georgia', serif;
