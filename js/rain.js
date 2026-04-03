@@ -153,6 +153,9 @@
   /* Splash characters — tiny impact marks */
   var SPLASH_CHARS = ['\u00B7', '.', ',', '\'', '\u2024'];
 
+  /* Ice fragment characters — used for Freezing Rain preset */
+  var ICE_SPLASH_CHARS = ['*', '+', '\u2022', '\u00D7', '\u2219', '\u2716'];
+
   /* Umbrella */
   var UMBRELLA_CHAR = '\u2602';
   var UMBRELLA_RADIUS = 55;
@@ -439,6 +442,126 @@
       virga: 0.0,
       mistEnabled: true,
       mistDensity: 0.9
+    },
+
+    /* ---- NEW PRESETS ---- */
+
+    monsoon: {
+      name: 'Monsoon',
+      cloudType: 'nimbostratus',
+      dropCount: 600,
+      fallSpeed: 5.0,
+      fallSpeedVariance: 0.5,    /* uniform terminal velocity — sheet-like */
+      windSpeed: 0.3,
+      gustEnabled: false,
+      gustStrength: 0,
+      gustFrequency: 0,
+      cloudOpacity: 0.70,
+      rainOpacity: 0.45,
+      charSize: 14,
+      cloudDriftSpeed: 10,
+      virga: 0.0,
+      mistEnabled: true,
+      mistDensity: 1.0
+    },
+    squallLine: {
+      name: 'Squall Line',
+      cloudType: 'cumulonimbus',
+      dropCount: 450,
+      fallSpeed: 5.0,
+      fallSpeedVariance: 1.8,
+      windSpeed: 4.5,             /* extreme horizontal wind */
+      gustEnabled: true,
+      gustStrength: 3.5,          /* violent gusts */
+      gustFrequency: 2.5,
+      cloudOpacity: 0.60,
+      rainOpacity: 0.38,
+      charSize: 14,
+      cloudDriftSpeed: 70,        /* rapid cloud movement */
+      virga: 0.0,
+      mistEnabled: true,
+      mistDensity: 0.7,
+      lightningEnabled: true,
+      lightningInterval: [8, 20],   /* less frequent than thunderstorm */
+      lightningBranches: 2          /* simpler bolts */
+    },
+    thunderstorm: {
+      name: 'Thunderstorm',
+      cloudType: 'cumulonimbus',
+      dropCount: 380,
+      fallSpeed: 4.8,
+      fallSpeedVariance: 1.5,
+      windSpeed: 2.0,
+      gustEnabled: true,
+      gustStrength: 2.0,
+      gustFrequency: 1.8,
+      cloudOpacity: 0.58,
+      rainOpacity: 0.35,
+      charSize: 14,
+      cloudDriftSpeed: 35,
+      virga: 0.0,
+      mistEnabled: true,
+      mistDensity: 0.6,
+      lightningEnabled: true,
+      lightningInterval: [4, 12],  /* seconds between strikes */
+      lightningBranches: 3         /* max branch depth */
+    },
+    freezingRain: {
+      name: 'Freezing Rain',
+      cloudType: 'stratus',
+      dropCount: 250,
+      fallSpeed: 5.5,              /* high terminal velocity — supercooled */
+      fallSpeedVariance: 0.8,
+      windSpeed: 0.5,
+      gustEnabled: true,
+      gustStrength: 0.5,
+      gustFrequency: 0.6,
+      cloudOpacity: 0.50,
+      rainOpacity: 0.30,
+      charSize: 13,
+      cloudDriftSpeed: 15,
+      virga: 0.0,
+      mistEnabled: false,
+      mistDensity: 0,
+      iceSplash: true              /* flag: use ice fragment chars instead of liquid */
+    },
+    radiationFog: {
+      name: 'Radiation Fog',
+      cloudType: 'stratus',
+      dropCount: 0,                /* zero rain */
+      fallSpeed: 0,
+      fallSpeedVariance: 0,
+      windSpeed: 0.05,
+      gustEnabled: false,
+      gustStrength: 0,
+      gustFrequency: 0,
+      cloudOpacity: 0.25,
+      rainOpacity: 0,
+      charSize: 13,
+      cloudDriftSpeed: 4,
+      virga: 0,
+      mistEnabled: true,
+      mistDensity: 1.0,
+      fogMode: true,               /* flag: dense fog filling 70% of viewport */
+      fogZoneFrac: 0.70
+    },
+    petrichor: {
+      name: 'Petrichor',
+      cloudType: 'stratocumulus',
+      dropCount: 60,
+      fallSpeed: 1.5,
+      fallSpeedVariance: 0.3,
+      windSpeed: 0.2,
+      gustEnabled: false,
+      gustStrength: 0,
+      gustFrequency: 0,
+      cloudOpacity: 0.30,
+      rainOpacity: 0.15,
+      charSize: 12,
+      cloudDriftSpeed: 6,
+      virga: 0.25,                 /* some drops evaporate mid-fall */
+      mistEnabled: true,
+      mistDensity: 0.2
     }
   };
 
@@ -922,12 +1045,14 @@
 
   var charSprites = {};
   var splashSprites = {};
+  var iceSplashSprites = {};
   var mistSprites = {};
   var spriteReady = false;
 
   function buildCharSprites(fontSize, color) {
     charSprites = {};
     splashSprites = {};
+    iceSplashSprites = {};
     mistSprites = {};
 
     /* Rain character sprites */
@@ -959,6 +1084,22 @@
       octx.fillStyle = color;
       octx.fillText(c, sz / 2, sz / 2);
       splashSprites[c] = off;
+    }
+
+    /* Ice splash character sprites — sharp fragments */
+    var iceSplashSize = Math.ceil(fontSize * 0.7);
+    for (var i = 0; i < ICE_SPLASH_CHARS.length; i++) {
+      var c = ICE_SPLASH_CHARS[i];
+      var off = document.createElement('canvas');
+      var sz = Math.ceil(iceSplashSize * 1.4);
+      off.width = sz; off.height = sz;
+      var octx = off.getContext('2d');
+      octx.font = iceSplashSize + 'px "Cormorant Garamond", Georgia, serif';
+      octx.textAlign = 'center';
+      octx.textBaseline = 'middle';
+      octx.fillStyle = color;
+      octx.fillText(c, sz / 2, sz / 2);
+      iceSplashSprites[c] = off;
     }
 
     /* Mist character sprites — larger, very faint */
@@ -1034,12 +1175,14 @@
     var speed = randomRange(SPLASH_SPEED_MIN, SPLASH_SPEED_MAX);
     this.vx = Math.cos(angle) * speed + currentWind * 0.3;
     this.vy = Math.sin(angle) * speed;
-    this.char = randomItem(SPLASH_CHARS);
-    this.opacity = randomRange(0.15, 0.35);
+    this.char = activePreset.iceSplash ? randomItem(ICE_SPLASH_CHARS) : randomItem(SPLASH_CHARS);
+    this.opacity = activePreset.iceSplash ? randomRange(0.20, 0.45) : randomRange(0.15, 0.35);
     this.active = true;
     this.life = 0;
-    this.maxLife = SPLASH_LIFE * randomRange(0.7, 1.3);
-    this.size = randomInt(6, 10);
+    this.maxLife = activePreset.iceSplash
+      ? SPLASH_LIFE * randomRange(1.0, 1.8)  /* ice fragments linger longer */
+      : SPLASH_LIFE * randomRange(0.7, 1.3);
+    this.size = activePreset.iceSplash ? randomInt(7, 12) : randomInt(6, 10);
   };
 
   var splashPool = [];
@@ -1098,7 +1241,7 @@
 
       ctx.globalAlpha = clamp(sp.opacity, 0, 1);
 
-      var sprite = splashSprites[sp.char];
+      var sprite = iceSplashSprites[sp.char] || splashSprites[sp.char];
       if (sprite) {
         var halfSize = sp.size * 0.5;
         ctx.drawImage(sprite, ~~(sp.x - halfSize), ~~(sp.y - halfSize), sp.size, sp.size);
@@ -1118,15 +1261,21 @@
   }
 
   MistParticle.prototype.reset = function () {
+    /* Fog mode: mist fills a larger portion of the viewport */
+    var zoneFrac = (activePreset.fogMode && activePreset.fogZoneFrac)
+      ? activePreset.fogZoneFrac
+      : MIST_ZONE_FRAC;
     this.x = randomRange(-50, W + 50);
-    this.y = H - H * MIST_ZONE_FRAC * randomRange(0, 1);
+    this.y = H - H * zoneFrac * randomRange(0, 1);
     this.vx = MIST_DRIFT_SPEED * (currentWind > 0 ? 1 : -1) * randomRange(0.5, 1.5);
     this.char = randomItem(MIST_CHARS);
     this.opacity = 0;
     this.active = true;
     this.life = 0;
-    this.maxLife = randomRange(MIST_LIFE_MIN, MIST_LIFE_MAX);
-    this.size = randomInt(14, 22);
+    this.maxLife = activePreset.fogMode
+      ? randomRange(MIST_LIFE_MIN * 1.5, MIST_LIFE_MAX * 2)  /* fog lingers longer */
+      : randomRange(MIST_LIFE_MIN, MIST_LIFE_MAX);
+    this.size = activePreset.fogMode ? randomInt(18, 30) : randomInt(14, 22);  /* fog particles larger */
   };
 
   var mistPool = [];
@@ -1145,7 +1294,8 @@
 
     /* Spawn new mist particles periodically */
     mistSpawnTimer += dtSec;
-    var spawnInterval = 1.0 / (activePreset.mistDensity * 5 + 0.5);
+    var densityMult = activePreset.fogMode ? 12 : 5;  /* fog spawns much faster */
+    var spawnInterval = 1.0 / (activePreset.mistDensity * densityMult + 0.5);
     if (mistSpawnTimer >= spawnInterval) {
       mistSpawnTimer = 0;
       /* Find an inactive particle */
@@ -1181,7 +1331,7 @@
       } else if (lifeFrac > 0.7) {
         mp.opacity = smoothstep(1, 0.7, lifeFrac) * activePreset.mistDensity * 0.12;
       } else {
-        mp.opacity = activePreset.mistDensity * 0.12;
+        mp.opacity = activePreset.mistDensity * (activePreset.fogMode ? 0.18 : 0.12);
       }
 
       /* Kill if off screen */
@@ -1721,6 +1871,226 @@
   }
 
   /* ============================================================
+     14b. PROCEDURAL LIGHTNING SYSTEM
+     Midpoint Displacement algorithm for branching bolts.
+     Rendered with ASCII line-drawing characters.
+     Reference: GameDev StackExchange #71397
+     ============================================================ */
+
+  var lightningBolts = [];     /* array of active bolt objects */
+  var lightningTimer = 0;      /* countdown to next strike */
+  var lightningNextAt = 0;     /* seconds until next strike */
+  var lightningFlashAlpha = 0; /* screen flash overlay */
+
+  function initLightning() {
+    lightningBolts = [];
+    lightningFlashAlpha = 0;
+    if (activePreset.lightningEnabled) {
+      var interval = activePreset.lightningInterval || [4, 12];
+      lightningNextAt = randomRange(interval[0], interval[1]);
+      lightningTimer = 0;
+    }
+  }
+
+  /* Midpoint displacement: recursively bisect a line segment,
+     displacing the midpoint perpendicular to the segment.
+     Returns an array of {x, y} points forming the bolt path. */
+  function generateBoltPath(x1, y1, x2, y2, displacement, depth, maxDepth) {
+    if (depth >= maxDepth || displacement < 2) {
+      return [{x: x1, y: y1}, {x: x2, y: y2}];
+    }
+
+    var midX = (x1 + x2) * 0.5;
+    var midY = (y1 + y2) * 0.5;
+
+    /* Perpendicular displacement */
+    var dx = x2 - x1;
+    var dy = y2 - y1;
+    var len = Math.sqrt(dx * dx + dy * dy);
+    if (len < 1) return [{x: x1, y: y1}, {x: x2, y: y2}];
+
+    /* Perpendicular unit vector */
+    var px = -dy / len;
+    var py = dx / len;
+
+    var offset = (Math.random() - 0.5) * displacement;
+    midX += px * offset;
+    midY += py * offset;
+
+    var left = generateBoltPath(x1, y1, midX, midY, displacement * 0.55, depth + 1, maxDepth);
+    var right = generateBoltPath(midX, midY, x2, y2, displacement * 0.55, depth + 1, maxDepth);
+
+    /* Merge, removing duplicate midpoint */
+    return left.concat(right.slice(1));
+  }
+
+  /* Generate branches that fork off the main bolt */
+  function generateBranches(mainPath, maxBranches) {
+    var branches = [];
+    var branchCount = randomInt(1, maxBranches);
+
+    for (var b = 0; b < branchCount; b++) {
+      /* Pick a random point along the main bolt (top 70% — branches don't start near ground) */
+      var idx = randomInt(Math.floor(mainPath.length * 0.1), Math.floor(mainPath.length * 0.7));
+      var origin = mainPath[idx];
+
+      /* Branch direction: roughly downward with horizontal spread */
+      var branchAngle = randomRange(-Math.PI * 0.6, Math.PI * 0.6) + Math.PI * 0.5;
+      var branchLen = randomRange(40, 150);
+      var endX = origin.x + Math.cos(branchAngle) * branchLen;
+      var endY = origin.y + Math.sin(branchAngle) * branchLen;
+
+      var branchPath = generateBoltPath(origin.x, origin.y, endX, endY, branchLen * 0.3, 0, 4);
+      branches.push({
+        path: branchPath,
+        opacity: randomRange(0.3, 0.6),
+        width: randomRange(0.5, 1.5)
+      });
+    }
+    return branches;
+  }
+
+  function spawnLightningBolt() {
+    /* Start point: random position in the cloud zone */
+    var startX = randomRange(W * 0.15, W * 0.85);
+    var startY = randomRange(10, cloudZoneH * 0.5);
+
+    /* End point: ground level with some horizontal drift */
+    var endX = startX + randomRange(-W * 0.15, W * 0.15);
+    var endY = H - randomRange(5, 30);
+
+    /* Initial displacement proportional to bolt length */
+    var boltLen = Math.sqrt((endX - startX) * (endX - startX) + (endY - startY) * (endY - startY));
+    var displacement = boltLen * 0.25;
+
+    var mainPath = generateBoltPath(startX, startY, endX, endY, displacement, 0, 7);
+    var maxBranches = (activePreset.lightningBranches || 3);
+    var branches = generateBranches(mainPath, maxBranches);
+
+    lightningBolts.push({
+      main: mainPath,
+      branches: branches,
+      life: 0,
+      maxLife: randomRange(0.12, 0.25),  /* 120-250ms visible */
+      flickerPhase: 0,
+      opacity: 1.0,
+      width: randomRange(1.5, 3.0)
+    });
+
+    /* Screen flash */
+    lightningFlashAlpha = randomRange(0.08, 0.18);
+  }
+
+  function updateLightning(dtSec) {
+    if (!activePreset.lightningEnabled) return;
+
+    /* Timer for next strike */
+    lightningTimer += dtSec;
+    if (lightningTimer >= lightningNextAt) {
+      spawnLightningBolt();
+      lightningTimer = 0;
+      var interval = activePreset.lightningInterval || [4, 12];
+      lightningNextAt = randomRange(interval[0], interval[1]);
+
+      /* Occasionally double-strike (rapid follow-up) */
+      if (Math.random() < 0.25) {
+        setTimeout(function () {
+          if (activePreset.lightningEnabled) spawnLightningBolt();
+        }, randomRange(50, 150));
+      }
+    }
+
+    /* Update active bolts */
+    for (var i = lightningBolts.length - 1; i >= 0; i--) {
+      var bolt = lightningBolts[i];
+      bolt.life += dtSec;
+      bolt.flickerPhase += dtSec;
+
+      if (bolt.life >= bolt.maxLife) {
+        lightningBolts.splice(i, 1);
+        continue;
+      }
+
+      /* Rapid flickering — lightning doesn't glow steadily */
+      var lifeFrac = bolt.life / bolt.maxLife;
+      var flicker = Math.sin(bolt.flickerPhase * 80) * 0.3 + 0.7;
+      bolt.opacity = (1 - lifeFrac * lifeFrac) * flicker;
+    }
+
+    /* Decay screen flash */
+    if (lightningFlashAlpha > 0) {
+      lightningFlashAlpha *= 0.88;  /* fast exponential decay */
+      if (lightningFlashAlpha < 0.005) lightningFlashAlpha = 0;
+    }
+  }
+
+  function drawLightning() {
+    if (lightningBolts.length === 0 && lightningFlashAlpha <= 0) return;
+
+    /* Screen flash overlay */
+    if (lightningFlashAlpha > 0) {
+      ctx.save();
+      ctx.globalAlpha = lightningFlashAlpha;
+      ctx.fillStyle = '#f0e8ff';  /* pale violet-white flash */
+      ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+    }
+
+    /* Draw bolts */
+    for (var b = 0; b < lightningBolts.length; b++) {
+      var bolt = lightningBolts[b];
+      if (bolt.opacity <= 0) continue;
+
+      /* Main bolt — bright core */
+      ctx.save();
+      ctx.globalAlpha = clamp(bolt.opacity, 0, 1);
+      ctx.strokeStyle = '#f8f0ff';
+      ctx.lineWidth = bolt.width;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.shadowColor = '#d4c0ff';
+      ctx.shadowBlur = 12;
+
+      ctx.beginPath();
+      ctx.moveTo(bolt.main[0].x, bolt.main[0].y);
+      for (var p = 1; p < bolt.main.length; p++) {
+        ctx.lineTo(bolt.main[p].x, bolt.main[p].y);
+      }
+      ctx.stroke();
+
+      /* Glow pass — wider, dimmer */
+      ctx.globalAlpha = clamp(bolt.opacity * 0.4, 0, 1);
+      ctx.strokeStyle = '#c8b0e8';
+      ctx.lineWidth = bolt.width * 3;
+      ctx.shadowBlur = 25;
+      ctx.beginPath();
+      ctx.moveTo(bolt.main[0].x, bolt.main[0].y);
+      for (var p = 1; p < bolt.main.length; p++) {
+        ctx.lineTo(bolt.main[p].x, bolt.main[p].y);
+      }
+      ctx.stroke();
+
+      /* Branches — thinner, dimmer */
+      for (var br = 0; br < bolt.branches.length; br++) {
+        var branch = bolt.branches[br];
+        ctx.globalAlpha = clamp(bolt.opacity * branch.opacity, 0, 1);
+        ctx.strokeStyle = '#e0d4f0';
+        ctx.lineWidth = branch.width;
+        ctx.shadowBlur = 8;
+
+        ctx.beginPath();
+        ctx.moveTo(branch.path[0].x, branch.path[0].y);
+        for (var p = 1; p < branch.path.length; p++) {
+          ctx.lineTo(branch.path[p].x, branch.path[p].y);
+        }
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+  }
+
+  /* ============================================================
      15. ANIMATION LOOP
      ============================================================ */
 
@@ -1763,6 +2133,10 @@
     /* Splashes (on top of rain) */
     updateSplashes(dtFactor, dtSec);
     drawSplashes();
+
+    /* Lightning (on top of everything) */
+    updateLightning(dtSec);
+    drawLightning();
 
     ctx.globalAlpha = 1;
 
@@ -1909,6 +2283,7 @@
     initSplashPool();
     initMistPool();
     initWindState();
+    initLightning();
     setupInteraction();
     setupTilt();
 
@@ -2000,6 +2375,9 @@
 
   /* Expose read-only weather state for other modules (e.g. wet text effect) */
   window.rainWeather = {
+    get activePreset() { return activePreset; },
+    set activePreset(p) { activePreset = p; activeCloudType = p.cloudType; },
+    presets: WEATHER_PRESETS,
     getPreset: function () { return activePreset; },
     getPresets: function () { return WEATHER_PRESETS; },
     getWind: function () { return currentWind; }

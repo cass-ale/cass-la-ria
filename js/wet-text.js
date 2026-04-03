@@ -59,13 +59,21 @@
      ============================================================ */
 
   var INTENSITY_MAP = {
+    /* Original 7 presets */
     'Gentle Mist':   0.08,
     'Light Drizzle': 0.22,
     'Steady Rain':   0.42,
     'Windy Shower':  0.58,
     'Downpour':      0.74,
     'Storm Front':   0.88,
-    'Typhoon':       1.00
+    'Typhoon':       1.00,
+    /* 6 new presets */
+    'Monsoon':       0.95,   /* near-maximum — sheet-like walls of water */
+    'Squall Line':   0.82,   /* sudden onset, horizontal rain */
+    'Thunderstorm':  0.90,   /* heavy rain with lightning */
+    'Freezing Rain': 0.55,   /* moderate — ice fragments */
+    'Radiation Fog': 0.03,   /* minimal — no rain, just fog */
+    'Petrichor':     0.12    /* sparse calming drizzle */
   };
 
   /* ============================================================
