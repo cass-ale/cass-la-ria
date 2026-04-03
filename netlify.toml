@@ -39,10 +39,13 @@
     # is selected via the language switcher.
     # frame-ancestors 'none' replaces X-Frame-Options for modern browsers.
     # form-action 'self' allows mailto: links but blocks external form posts.
-    # The sha256 hash whitelists the inline JSON-LD structured data script.
+    # The sha256 hashes whitelist the inline JSON-LD structured data script
+    # and the inline service worker registration script.
     # If the JSON-LD content changes, regenerate the hash with:
     #   python3 -c "import re,hashlib,base64;h=open('index.html').read();m=re.search(r'<script type=.application/ld\\+json.>(.*?)</script>',h,re.DOTALL);print('sha256-'+base64.b64encode(hashlib.sha256(m.group(1).encode()).digest()).decode())"
-    Content-Security-Policy = "default-src 'none'; script-src 'self' 'sha256-Qe/9X88GXwQJ86muMlZGe1m+eIh45ewG5AxguSruaYI='; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
+    # manifest-src 'self' allows the PWA manifest.json to be loaded.
+    # worker-src 'self' allows the service worker (sw.js) to be registered.
+    Content-Security-Policy = "default-src 'none'; script-src 'self' 'sha256-2se67jeqDptuJ195uK1pyIOBC3ZcE4wuRKJrJ4/wB9E=' 'sha256-Knd0YgTwmW/EJHFa1+Uu8/8E7i6tn7CDhGP2IFJyz40='; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
 
     # -- Disable browser features we don't use --
     # interest-cohort=() blocks Google FLoC tracking.

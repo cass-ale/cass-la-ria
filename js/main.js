@@ -372,7 +372,18 @@
       }
     });
 
-    /* Restore saved language preference */
+    /* Restore language preference.
+       Priority: 1. URL ?lang= parameter (for hreflang/shared links)
+                 2. localStorage saved preference
+                 3. Default (English) */
+    var urlLang = null;
+    try {
+      var params = new URLSearchParams(window.location.search);
+      urlLang = params.get('lang');
+    } catch (e) {
+      /* URLSearchParams not supported in very old browsers */
+    }
+
     var savedLang = null;
     try {
       savedLang = localStorage.getItem('cass-la-ria-lang');
@@ -380,8 +391,9 @@
       /* localStorage may be blocked */
     }
 
-    if (savedLang && window.i18n && window.i18n.translations[savedLang]) {
-      switchLanguage(savedLang);
+    var initLang = urlLang || savedLang;
+    if (initLang && window.i18n && window.i18n.translations[initLang]) {
+      switchLanguage(initLang);
     }
   }
 

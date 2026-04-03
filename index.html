@@ -61,16 +61,39 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Cass la Ria" />
 
-  <!-- Structured Data — JSON-LD (Person schema for a creative/artist)
-       Helps Google understand this is a creative professional's website.
-       Reference: https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data
-       Reference: https://schema.org/Person -->
+  <!-- PWA Web App Manifest — enables "Add to Home Screen" on mobile.
+       Reference: https://web.dev/articles/add-manifest
+       Reference: https://developer.mozilla.org/en-US/docs/Web/Manifest -->
+  <link rel="manifest" href="manifest.json" />
+
+  <!-- Hreflang — tells search engines which language variants exist.
+       Since this is a single-page site with JS-based language switching,
+       all hreflang tags point to the same URL with a language parameter.
+       Google uses these to serve the correct language in search results.
+       Reference: https://developers.google.com/search/docs/specialty/international/localized-versions -->
+  <link rel="alternate" hreflang="en" href="https://caprilaria.netlify.app/" />
+  <link rel="alternate" hreflang="es" href="https://caprilaria.netlify.app/?lang=es" />
+  <link rel="alternate" hreflang="pt" href="https://caprilaria.netlify.app/?lang=pt" />
+  <link rel="alternate" hreflang="fr" href="https://caprilaria.netlify.app/?lang=fr" />
+  <link rel="alternate" hreflang="ja" href="https://caprilaria.netlify.app/?lang=ja" />
+  <link rel="alternate" hreflang="ko" href="https://caprilaria.netlify.app/?lang=ko" />
+  <link rel="alternate" hreflang="id" href="https://caprilaria.netlify.app/?lang=id" />
+  <link rel="alternate" hreflang="zh" href="https://caprilaria.netlify.app/?lang=zh" />
+  <link rel="alternate" hreflang="x-default" href="https://caprilaria.netlify.app/" />
+
+  <!-- Structured Data — JSON-LD (enhanced MusicGroup + Person schema)
+       Expanded from basic Person to include MusicGroup type for better
+       categorization in Google's Knowledge Graph. Includes genre, contact,
+       and knowsLanguage for multilingual SEO.
+       Reference: https://schema.org/MusicGroup
+       Reference: https://schema.org/Person
+       Reference: https://inclassics.com/blog/seo-for-musicians-schema-markup -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "Person",
+    "@type": ["Person", "MusicGroup"],
     "name": "Cass la Ria",
-    "alternateName": "Cass Aleria",
+    "alternateName": ["Cass Aleria", "casslaria", "alriamustdie"],
     "url": "https://caprilaria.netlify.app/",
     "image": "https://caprilaria.netlify.app/assets/images/og-image.png",
     "sameAs": [
@@ -79,7 +102,9 @@
       "https://www.instagram.com/casslaria"
     ],
     "jobTitle": "Creative",
-    "description": "Multi-faceted creative — music, video, and visual art."
+    "description": "Multi-faceted creative — music, video, and visual art.",
+    "email": "admin@caprilaria.com",
+    "knowsLanguage": ["en", "es", "pt", "fr", "ja", "ko", "id", "zh"]
   }
   </script>
 
@@ -237,8 +262,20 @@
   <!-- Scripts — version query strings bust immutable cache headers.
        Update ?v= on every deploy that changes JS. -->
   <script src="js/i18n.js?v=2"></script>
-  <script src="js/main.js?v=5"></script>
+  <script src="js/main.js?v=6"></script>
   <script src="js/rain.js?v=6"></script>
   <script src="js/wet-text.js?v=2"></script>
+
+  <!-- Service Worker registration — enables PWA install + offline caching.
+       Registered after all other scripts to avoid blocking the main thread.
+       The SW uses a stale-while-revalidate strategy for core assets.
+       Reference: https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API -->
+  <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('/sw.js').catch(function() {});
+    });
+  }
+  </script>
 </body>
 </html>
