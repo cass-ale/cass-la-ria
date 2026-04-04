@@ -16,7 +16,9 @@ const translations = {
     'contact-btn': 'Contact',
     'email-copied': 'Email copied!',
     'meta-desc': 'Official website of Cass la Ria. Multi-faceted creative — music, video, and visual art.',
-    'meta-title': 'Cass la Ria | Official Website'
+    'meta-title': 'Cass la Ria | Official Website',
+    'error-404-message': 'This page was lost in the rain',
+    'error-home-btn': 'Return Home'
   },
 
   // Spanish (ES) - Romance: Requires expansion, edit ruthlessly to prevent bloat
@@ -26,7 +28,9 @@ const translations = {
     'contact-btn': 'Contacto',
     'email-copied': '¡Correo copiado!',
     'meta-desc': 'Sitio web oficial de Cass la Ria. Mente creativa sin fronteras: música, video y arte visual.',
-    'meta-title': 'Cass la Ria | Sitio Oficial'
+    'meta-title': 'Cass la Ria | Sitio Oficial',
+    'error-404-message': 'Esta página se perdió bajo la lluvia',
+    'error-home-btn': 'Volver al Inicio'
   },
 
   // Portuguese (PT-BR) - Romance: Warmth and rhythm
@@ -36,7 +40,9 @@ const translations = {
     'contact-btn': 'Contato',
     'email-copied': 'E-mail copiado!',
     'meta-desc': 'Site oficial de Cass la Ria. Uma mente criativa plural — música, vídeo e arte visual.',
-    'meta-title': 'Cass la Ria | Site Oficial'
+    'meta-title': 'Cass la Ria | Site Oficial',
+    'error-404-message': 'Esta página se perdeu na chuva',
+    'error-home-btn': 'Voltar ao Início'
   },
 
   // French (FR) - Romance: Euphony and elegance
@@ -46,7 +52,9 @@ const translations = {
     'contact-btn': 'Contact',
     'email-copied': 'E-mail copié !',
     'meta-desc': 'Site officiel de Cass la Ria. Esprit créatif pluriel — musique, vidéo et art visuel.',
-    'meta-title': 'Cass la Ria | Site Officiel'
+    'meta-title': 'Cass la Ria | Site Officiel',
+    'error-404-message': 'Cette page s\u2019est perdue sous la pluie',
+    'error-home-btn': 'Retour à l\u2019Accueil'
   },
 
   // Japanese (JA) - Yūgen: Say less, mean more. Concrete images.
@@ -56,7 +64,9 @@ const translations = {
     'contact-btn': 'コンタクト',
     'email-copied': 'コピーしました',
     'meta-desc': 'Cass la Ria 公式サイト。音楽、映像、視覚芸術の交差点。',
-    'meta-title': 'Cass la Ria | 公式サイト'
+    'meta-title': 'Cass la Ria | 公式サイト',
+    'error-404-message': '雨に消えたページ',
+    'error-home-btn': 'ホームへ戻る'
   },
 
   // Korean (KO) - Han/Jeong: Emotional weight, warmth, oral quality
@@ -66,7 +76,9 @@ const translations = {
     'contact-btn': '연락하기',
     'email-copied': '이메일 복사됨!',
     'meta-desc': 'Cass la Ria 공식 웹사이트. 음악, 영상, 시각 예술을 아우르는 크리에이티브.',
-    'meta-title': 'Cass la Ria | 공식 웹사이트'
+    'meta-title': 'Cass la Ria | 공식 웹사이트',
+    'error-404-message': '빗속에 사라진 페이지',
+    'error-home-btn': '홈으로 돌아가기'
   },
 
   // Indonesian (ID) - Direct, natural, rhythmic
@@ -76,7 +88,9 @@ const translations = {
     'contact-btn': 'Kontak',
     'email-copied': 'Email disalin!',
     'meta-desc': 'Situs resmi Cass la Ria. Kreator multi-dimensi — musik, video, dan seni visual.',
-    'meta-title': 'Cass la Ria | Situs Resmi'
+    'meta-title': 'Cass la Ria | Situs Resmi',
+    'error-404-message': 'Halaman ini hilang di tengah hujan',
+    'error-home-btn': 'Kembali ke Beranda'
   },
 
   // Chinese Simplified (ZH) - Qi yun: Compress ruthlessly. Every character must be necessary.
@@ -86,7 +100,9 @@ const translations = {
     'contact-btn': '联络',
     'email-copied': '已复制邮箱',
     'meta-desc': 'Cass la Ria 官方网站。跨界创作者——音乐、影像、视觉艺术。',
-    'meta-title': 'Cass la Ria | 官方网站'
+    'meta-title': 'Cass la Ria | 官方网站',
+    'error-404-message': '此页已消散于雨中',
+    'error-home-btn': '返回首页'
   }
 };
 

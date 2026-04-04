@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+  <!-- ============================================================
+       OFFLINE — No Connection
+       Served by the service worker when the user is offline and
+       the requested page is not in cache. Self-contained with
+       inline styles so it works without network access.
+
+       Design: Maintains the Cass la Ria aesthetic with the same
+       typography, colors, and decorative frame. Weather effects
+       are omitted since they require JS files that may not be cached.
+       ============================================================ -->
+
+  <title>Offline — Cass la Ria</title>
+  <meta name="description" content="You are currently offline — Cass la Ria" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#f2d4d7" />
+
+  <!-- Privacy & Security meta tags -->
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+
+  <!-- Mobile meta tags -->
+  <meta name="MobileOptimized" content="width" />
+  <meta name="HandheldFriendly" content="true" />
+  <meta name="format-detection" content="telephone=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+  <!-- Favicon (may be cached) -->
+  <link rel="icon" type="image/x-icon" href="/assets/icons/favicon.ico" />
+
+  <!-- Self-contained styles — no external CSS dependencies.
+       This page must render correctly even when completely offline
+       with an empty cache. All styles are inline. -->
+  <style>
+    /* ---- Reset ---- */
+    *, *::before, *::after {
+      margin: 0; padding: 0; box-sizing: border-box;
+    }
+    html {
+      -webkit-text-size-adjust: 100%;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* ---- Design tokens (Midday default) ---- */
+    :root {
+      --color-bg: #f2d4d7;
+      --color-text: #2a1f2d;
+      --color-text-muted: #5c4560;
+      --color-accent: #8b3a62;
+      --color-accent-soft: #a34d78;
+      --color-border: #c9a0ad;
+      --font-display: 'Cormorant Garamond', 'Georgia', serif;
+      --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+      --frame-inset: clamp(16px, 3vw, 40px);
+    }
+
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+      line-height: 1.5;
+      font-family: var(--font-display);
+      color: var(--color-text);
+      background-color: var(--color-bg);
+    }
+
+    /* ---- Layout ---- */
+    .hero {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: clamp(2rem, 5vh, 4rem);
+      min-height: 100vh;
+      min-height: 100dvh;
+      padding: clamp(2rem, 6vw, 6rem);
+      padding-top: max(clamp(2rem, 6vw, 6rem), env(safe-area-inset-top));
+      padding-bottom: max(clamp(2rem, 6vw, 6rem), env(safe-area-inset-bottom));
+      overflow: hidden;
+    }
+
+    /* ---- Decorative frame ---- */
+    .frame {
+      position: absolute;
+      inset: var(--frame-inset);
+      border: 1px solid var(--color-border);
+      pointer-events: none;
+      animation: fade-in 1.2s var(--ease-out) 0.3s both;
+    }
+
+    /* ---- Header ---- */
+    .hero__header {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      text-align: center;
+      width: 100%;
+      max-width: 720px;
+    }
+
+    /* ---- Offline icon ---- */
+    .offline__icon {
+      color: var(--color-text-muted);
+      opacity: 0.5;
+      animation: fade-up 0.8s var(--ease-out) 0.1s both;
+    }
+
+    /* ---- Error code heading ---- */
+    .error__code {
+      font-family: var(--font-display);
+      font-weight: 300;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--color-text);
+      font-size: clamp(1.5rem, 5vw + 0.5rem, 3rem);
+      line-height: 1.15;
+      animation: fade-up 1s var(--ease-out) 0.15s both;
+    }
+
+    /* ---- Decorative rule ---- */
+    .hero__rule {
+      width: clamp(60px, 12vw, 120px);
+      height: 1px;
+      background-color: var(--color-accent);
+      opacity: 0.6;
+      transform-origin: center;
+      animation: rule-grow 0.8s var(--ease-out) 0.55s both;
+    }
+
+    /* ---- Subtitle ---- */
+    .error__message {
+      font-family: var(--font-display);
+      font-weight: 300;
+      font-style: italic;
+      letter-spacing: 0.08em;
+      color: var(--color-text-muted);
+      font-size: clamp(0.8125rem, 1.5vw + 0.25rem, 1.0625rem);
+      line-height: 1.5;
+      text-align: center;
+      max-width: 360px;
+      animation: fade-up 0.8s var(--ease-out) 0.45s both;
+    }
+
+    /* ---- Retry button ---- */
+    .error__home {
+      animation: fade-up 0.7s var(--ease-out) 0.85s both;
+    }
+
+    .btn--contact {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5em;
+      width: auto;
+      height: auto;
+      padding: 0.6rem 1.6rem;
+      font-family: var(--font-display);
+      font-weight: 500;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      white-space: nowrap;
+      color: var(--color-accent);
+      background: transparent;
+      border: 1px solid var(--color-border);
+      cursor: pointer;
+      text-decoration: none;
+      transition:
+        color 0.45s var(--ease-out),
+        border-color 0.45s var(--ease-out),
+        background-color 0.45s var(--ease-out),
+        transform 0.2s var(--ease-out);
+    }
+
+    .btn--contact:hover,
+    .btn--contact:focus-visible {
+      color: #f9eef0;
+      background-color: var(--color-accent);
+      border-color: var(--color-accent);
+      outline: none;
+      transform: translateY(-2px);
+    }
+
+    .btn--contact:focus-visible {
+      box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-accent);
+    }
+
+    .btn--contact:active {
+      background-color: var(--color-accent-soft);
+      border-color: var(--color-accent-soft);
+      transform: translateY(0);
+    }
+
+    .btn__icon--contact {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
+    /* ---- Animations ---- */
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fade-in {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    @keyframes rule-grow {
+      from { transform: scaleX(0); }
+      to   { transform: scaleX(1); }
+    }
+
+    /* ---- Reduced motion ---- */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-delay: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* ---- Responsive ---- */
+    @media (min-width: 768px) {
+      .btn--contact {
+        padding: 0.7rem 2rem;
+        font-size: 0.8125rem;
+      }
+    }
+    @media (max-width: 374px) {
+      .btn--contact {
+        padding: 0.5rem 1.2rem;
+        font-size: 0.6875rem;
+      }
+    }
+    @media (max-height: 500px) and (orientation: landscape) {
+      .hero {
+        padding-block: 1rem;
+        gap: 1rem;
+      }
+    }
+
+    /* ---- Accessibility ---- */
+    a, button {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+  </style>
+</head>
+<body>
+
+  <main id="main-content" class="hero">
+    <!-- Decorative border frame -->
+    <div class="frame" aria-hidden="true"></div>
+
+    <!-- Offline content -->
+    <header class="hero__header">
+      <!-- Cloud-off icon -->
+      <div class="offline__icon" aria-hidden="true">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+          <line x1="1" y1="1" x2="23" y2="23" />
+          <path d="M18.73 18.73A4.5 4.5 0 0 1 16.5 19H6a5 5 0 0 1-1.93-9.61A8 8 0 0 1 4.07 8" />
+          <path d="M8.53 5.18A8 8 0 0 1 20 11.5a4.5 4.5 0 0 1 2.94 3.07" />
+        </svg>
+      </div>
+
+      <h1 class="error__code">Offline</h1>
+      <div class="hero__rule" aria-hidden="true"></div>
+      <p class="error__message">Waiting for the clouds to clear</p>
+    </header>
+
+    <!-- Retry button -->
+    <div class="error__home">
+      <button
+        class="btn--contact"
+        onclick="window.location.reload()"
+        aria-label="Try again"
+      >
+        <svg class="btn__icon--contact" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+          <polyline points="23 4 23 10 17 10" />
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+        </svg>
+        <span>Try Again</span>
+      </button>
+    </div>
+  </main>
+
+  <!-- Site credit (hidden from visual display, visible to crawlers and view-source) -->
+  <!-- Site designed and built by Cass Aleria -->
+
+</body>
+</html>
