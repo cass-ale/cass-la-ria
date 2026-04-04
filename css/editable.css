@@ -9,6 +9,12 @@
    aesthetic — no harsh borders or intrusive UI. Uses the
    existing design tokens from variables.css.
    
+   DESKTOP (v2 — audit fixes):
+     - Tooltip wraps with max-width instead of nowrap
+     - Desktop hint bar shows "Enter to save · Esc to cancel"
+     - Reset button visible at reduced opacity, full on hover
+     - Screen reader announcements via .editable-sr-only
+   
    MOBILE: Touch-friendly UI with floating pencil button,
    fixed save/cancel bar, larger touch targets (48px min),
    and iOS zoom prevention (font-size >= 16px in edit mode).
@@ -18,6 +24,19 @@
      - Material Design: 48dp minimum touch target
      - iOS auto-zoom prevention: font-size >= 16px on inputs
    ============================================================ */
+
+/* ---- Screen reader only ---- */
+.editable-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 
 /* ---- Idle state: subtle dashed underline on hover ---- */
 [data-editable] {
@@ -47,7 +66,10 @@
   padding: 4px 14px;
   border: 1px solid var(--color-border, #c9a0ad);
   border-radius: 3px;
-  white-space: nowrap;
+  /* Allow wrapping for long tooltip text */
+  white-space: normal;
+  max-width: 280px;
+  text-align: center;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s ease, transform 0.3s ease;
@@ -92,8 +114,25 @@
   padding: 8px 8px;
   margin: -8px -8px;
   line-height: 1.5;
-  /* Ensure the element is not obscured by the mobile bar */
   margin-bottom: 80px;
+}
+
+/* ---- Desktop save/cancel hint bar ---- */
+.editable-desktop-hint {
+  font-family: var(--font-body, 'Cormorant Garamond', Georgia, serif);
+  font-size: 0.72rem;
+  font-style: italic;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted, #5c4560);
+  opacity: 0;
+  padding: 4px 0 0 4px;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  user-select: none;
+}
+
+.editable-desktop-hint.is-visible {
+  opacity: 0.7;
 }
 
 /* ---- User-modified indicator ---- */
@@ -128,8 +167,9 @@
   font-size: 10px;
   line-height: 1;
   cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.2s ease;
+  /* Always visible at reduced opacity on desktop */
+  opacity: 0.4;
+  transition: opacity 0.2s ease, background 0.2s ease, color 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -137,8 +177,10 @@
   padding: 0;
 }
 
-/* Desktop: show on hover */
-[data-editable].is-modified:hover .editable-reset {
+/* Full opacity on hover */
+[data-editable].is-modified:hover .editable-reset,
+.editable-reset:hover,
+.editable-reset:focus-visible {
   opacity: 1;
 }
 
@@ -147,7 +189,7 @@
   color: var(--color-bg, #f2d4d7);
 }
 
-/* Mobile: always show reset button on modified elements, larger touch target */
+/* Mobile: always show reset button, larger touch target */
 @media (hover: none) {
   .editable-reset {
     opacity: 1;
@@ -156,7 +198,6 @@
     font-size: 14px;
     top: -12px;
     right: -12px;
-    /* Expand touch target to 48px without changing visual size */
     -webkit-tap-highlight-color: transparent;
   }
   

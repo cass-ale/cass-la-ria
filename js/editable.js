@@ -13,6 +13,10 @@
      Add data-editable="unique-key" to any element:
        <p data-editable="hero-tagline" data-i18n="tagline">Original text</p>
    
+     For multi-line elements (paragraphs, descriptions):
+       <p data-editable="story-text" data-editable-multiline>Long text...</p>
+       (Ctrl+Enter / Cmd+Enter saves; plain Enter adds line break)
+   
      The "unique-key" is used as the localStorage key prefix.
      If the element also has data-i18n, the current language
      is included in the key for per-language editing.
@@ -39,6 +43,15 @@
      - Editing element scrolled into view above virtual keyboard
      - Toast positioned higher to stay above keyboard
      - Larger touch targets (48px minimum) per Material Design
+   
+   DESKTOP UX (v2 — audit fixes):
+     - Double-click to enter edit mode
+     - Subtle inline hint bar: "Enter to save · Esc to cancel"
+     - Enter saves (Ctrl+Enter for multiline elements)
+     - Escape cancels
+     - Click-outside CANCELS (does not auto-save)
+     - Reset button visible at reduced opacity, full on hover
+     - Screen reader announcements for edit state changes
    
    Sources & references:
      - contentEditable best practices: https://medium.com/content-uneditable/contenteditable-the-good-the-bad-and-the-ugly-261a38555e9c
@@ -68,6 +81,30 @@
     zh: '\u89c9\u5f97\u7ffb\u8bd1\u4e0d\u591f\u597d\uff1f\u6765\u8bd5\u8bd5\u4f60\u7684\u7248\u672c\uff01'
   };
 
+  /* Desktop save/cancel hint text */
+  var SAVE_HINT_I18N = {
+    en: 'Enter to save \u00b7 Esc to cancel',
+    es: 'Enter para guardar \u00b7 Esc para cancelar',
+    pt: 'Enter para salvar \u00b7 Esc para cancelar',
+    fr: 'Entr\u00e9e pour enregistrer \u00b7 \u00c9chap pour annuler',
+    ja: 'Enter\u3067\u4fdd\u5b58 \u00b7 Esc\u3067\u30ad\u30e3\u30f3\u30bb\u30eb',
+    ko: 'Enter \uc800\uc7a5 \u00b7 Esc \ucde8\uc18c',
+    id: 'Enter untuk simpan \u00b7 Esc untuk batal',
+    zh: 'Enter \u4fdd\u5b58 \u00b7 Esc \u53d6\u6d88'
+  };
+
+  /* Multiline save hint (Ctrl/Cmd+Enter) */
+  var SAVE_HINT_MULTI_I18N = {
+    en: 'Ctrl+Enter to save \u00b7 Esc to cancel',
+    es: 'Ctrl+Enter para guardar \u00b7 Esc para cancelar',
+    pt: 'Ctrl+Enter para salvar \u00b7 Esc para cancelar',
+    fr: 'Ctrl+Entr\u00e9e pour enregistrer \u00b7 \u00c9chap pour annuler',
+    ja: 'Ctrl+Enter\u3067\u4fdd\u5b58 \u00b7 Esc\u3067\u30ad\u30e3\u30f3\u30bb\u30eb',
+    ko: 'Ctrl+Enter \uc800\uc7a5 \u00b7 Esc \ucde8\uc18c',
+    id: 'Ctrl+Enter untuk simpan \u00b7 Esc untuk batal',
+    zh: 'Ctrl+Enter \u4fdd\u5b58 \u00b7 Esc \u53d6\u6d88'
+  };
+
   /* Mobile-specific button labels */
   var MOBILE_LABELS = {
     en: { save: 'Save', cancel: 'Cancel', edit: 'Edit' },
@@ -86,16 +123,13 @@
   var toastEl = null;
   var toastTimer = null;
   var isTouchDevice = false;
-  var activePencilBtn = null;     // The floating pencil button currently shown
-  var activeMobileBar = null;     // The mobile save/cancel bar currently shown
+  var activePencilBtn = null;
+  var activeMobileBar = null;
+  var activeDesktopHint = null;  // Desktop save/cancel hint element
+  var srAnnouncer = null;        // Screen reader live region
 
   /* ---- Device detection ---- */
 
-  /**
-   * Detect touch capability. We use (hover: none) as the primary
-   * signal — this correctly identifies phones/tablets even when
-   * they also fire touch events (like laptops with touchscreens).
-   */
   function detectTouch() {
     if (window.matchMedia) {
       isTouchDevice = window.matchMedia('(hover: none)').matches;
@@ -124,15 +158,41 @@
     return el.getAttribute('data-original-text') || '';
   }
 
+  function isMultiline(el) {
+    return el.hasAttribute('data-editable-multiline');
+  }
+
+  function isMac() {
+    return navigator.platform && navigator.platform.indexOf('Mac') > -1;
+  }
+
   function getMobileLabels() {
     var lang = getCurrentLang();
     return MOBILE_LABELS[lang] || MOBILE_LABELS.en;
   }
 
-  /**
-   * Show a brief toast notification.
-   * On mobile, position higher to avoid virtual keyboard.
-   */
+  /* ---- Accessibility: screen reader announcements ---- */
+
+  function ensureSRAnnouncer() {
+    if (srAnnouncer) return;
+    srAnnouncer = document.createElement('div');
+    srAnnouncer.setAttribute('role', 'status');
+    srAnnouncer.setAttribute('aria-live', 'assertive');
+    srAnnouncer.setAttribute('aria-atomic', 'true');
+    srAnnouncer.className = 'editable-sr-only';
+    document.body.appendChild(srAnnouncer);
+  }
+
+  function announceToSR(message) {
+    ensureSRAnnouncer();
+    srAnnouncer.textContent = '';
+    requestAnimationFrame(function () {
+      srAnnouncer.textContent = message;
+    });
+  }
+
+  /* ---- Toast notification ---- */
+
   function showToast(message) {
     if (!toastEl) {
       toastEl = document.createElement('div');
@@ -240,6 +300,7 @@
     el.classList.add('is-modified');
     addResetButton(el);
     showToast('Edit saved');
+    announceToSR('Your edit has been saved.');
   }
 
   function addResetButton(el) {
@@ -254,7 +315,6 @@
       e.preventDefault();
       resetElement(el);
     });
-    // Touch handler for mobile
     btn.addEventListener('touchend', function (e) {
       e.stopPropagation();
       e.preventDefault();
@@ -279,16 +339,57 @@
     el.classList.remove('is-modified');
     removeResetButton(el);
     showToast('Reset to original');
+    announceToSR('Text has been reset to the original.');
+  }
+
+  /* ---- Desktop UI: Save/Cancel hint bar ---- */
+
+  function showDesktopHint(el) {
+    removeDesktopHint();
+
+    var lang = getCurrentLang();
+    var multi = isMultiline(el);
+    var hintText = multi
+      ? (SAVE_HINT_MULTI_I18N[lang] || SAVE_HINT_MULTI_I18N.en)
+      : (SAVE_HINT_I18N[lang] || SAVE_HINT_I18N.en);
+
+    // On Mac, replace "Ctrl" with "Cmd" for multiline
+    if (multi && isMac()) {
+      hintText = hintText.replace('Ctrl', '\u2318');
+    }
+
+    var hint = document.createElement('div');
+    hint.className = 'editable-desktop-hint';
+    hint.setAttribute('aria-hidden', 'true');
+    hint.textContent = hintText;
+
+    // Insert after the element
+    if (el.nextSibling) {
+      el.parentNode.insertBefore(hint, el.nextSibling);
+    } else {
+      el.parentNode.appendChild(hint);
+    }
+    activeDesktopHint = hint;
+
+    // Animate in
+    requestAnimationFrame(function () {
+      hint.classList.add('is-visible');
+    });
+  }
+
+  function removeDesktopHint() {
+    if (activeDesktopHint) {
+      activeDesktopHint.classList.remove('is-visible');
+      var ref = activeDesktopHint;
+      setTimeout(function () { ref.remove(); }, 300);
+      activeDesktopHint = null;
+    }
   }
 
   /* ---- Mobile UI: Pencil button ---- */
 
-  /**
-   * Show a floating pencil/edit button near the tapped element.
-   * Tapping the pencil enters edit mode.
-   */
   function showPencilButton(el) {
-    removePencilButton(); // Remove any existing one
+    removePencilButton();
 
     var labels = getMobileLabels();
     var btn = document.createElement('button');
@@ -296,7 +397,6 @@
     btn.setAttribute('aria-label', labels.edit);
     btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
 
-    // Position near the element
     var rect = el.getBoundingClientRect();
     btn.style.position = 'fixed';
     btn.style.top = Math.max(8, rect.top - 48) + 'px';
@@ -320,7 +420,6 @@
     document.body.appendChild(btn);
     activePencilBtn = btn;
 
-    // Auto-dismiss after 4 seconds if not tapped
     setTimeout(function () {
       if (activePencilBtn === btn) {
         removePencilButton();
@@ -337,11 +436,6 @@
 
   /* ---- Mobile UI: Save/Cancel bar ---- */
 
-  /**
-   * Show a fixed bottom bar with Save and Cancel buttons
-   * while editing on mobile. This replaces Enter/Escape keys
-   * which are unreliable on mobile virtual keyboards.
-   */
   function showMobileBar(el) {
     removeMobileBar();
 
@@ -382,7 +476,6 @@
     document.body.appendChild(bar);
     activeMobileBar = bar;
 
-    // Trigger entrance animation
     requestAnimationFrame(function () {
       bar.classList.add('is-visible');
     });
@@ -401,7 +494,7 @@
 
   function startEditing(el) {
     if (activeElement) {
-      finishEditing(activeElement);
+      cancelEditing(activeElement);
     }
 
     activeElement = el;
@@ -410,28 +503,33 @@
     el.setAttribute('contenteditable', 'true');
     el.classList.add('is-editing');
 
-    // On mobile, show the save/cancel bar
     if (isTouchDevice) {
       showMobileBar(el);
-      // Add mobile editing class for CSS adjustments
       el.classList.add('is-editing-mobile');
+    } else {
+      showDesktopHint(el);
     }
 
     el.focus();
 
-    // Select all text for easy replacement
-    var range = document.createRange();
-    range.selectNodeContents(el);
-    var sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
+    // Select all text for easy replacement — use a small delay
+    // to avoid the double-click word-selection flash on desktop
+    setTimeout(function () {
+      var range = document.createRange();
+      range.selectNodeContents(el);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }, 10);
 
-    // Scroll element into view (important on mobile where keyboard covers content)
+    // Scroll element into view on mobile
     if (isTouchDevice) {
       setTimeout(function () {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 350); // Delay to let virtual keyboard appear first
+      }, 350);
     }
+
+    announceToSR('Editing mode. ' + (isMultiline(el) ? 'Press Control Enter to save, or Escape to cancel.' : 'Press Enter to save, or Escape to cancel.'));
   }
 
   function finishEditing(el) {
@@ -448,9 +546,10 @@
     activeElement = null;
     originalText = '';
 
+    removeDesktopHint();
+
     if (isTouchDevice) {
       removeMobileBar();
-      // Blur to dismiss virtual keyboard
       el.blur();
       document.activeElement && document.activeElement.blur();
     }
@@ -466,11 +565,15 @@
     activeElement = null;
     originalText = '';
 
+    removeDesktopHint();
+
     if (isTouchDevice) {
       removeMobileBar();
       el.blur();
       document.activeElement && document.activeElement.blur();
     }
+
+    announceToSR('Editing cancelled.');
   }
 
   /* ---- Initialization ---- */
@@ -504,7 +607,7 @@
 
       // Desktop: double-click to edit
       el.addEventListener('dblclick', function (e) {
-        if (isTouchDevice) return; // Handled by touch events
+        if (isTouchDevice) return;
         e.preventDefault();
         startEditing(el);
       });
@@ -512,9 +615,8 @@
       // Mobile: single tap to show pencil button
       el.addEventListener('touchend', function (e) {
         if (!isTouchDevice) return;
-        if (activeElement === el) return; // Already editing this element
+        if (activeElement === el) return;
 
-        // Don't interfere if user is tapping the reset button
         if (e.target.classList && e.target.classList.contains('editable-reset')) return;
 
         e.preventDefault();
@@ -526,32 +628,49 @@
     document.addEventListener('keydown', function (e) {
       if (!activeElement) return;
 
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        finishEditing(activeElement);
-      }
-
+      // Escape always cancels
       if (e.key === 'Escape') {
         e.preventDefault();
         cancelEditing(activeElement);
+        return;
+      }
+
+      // Enter handling depends on multiline mode
+      if (e.key === 'Enter') {
+        if (isMultiline(activeElement)) {
+          // Multiline: Ctrl+Enter (or Cmd+Enter on Mac) saves
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            finishEditing(activeElement);
+          }
+          // Plain Enter: allow default (line break) in multiline
+        } else {
+          // Single-line: Enter saves
+          if (!e.shiftKey) {
+            e.preventDefault();
+            finishEditing(activeElement);
+          }
+        }
       }
     });
 
-    // Click/tap outside to finish editing (desktop)
-    // On mobile, the save/cancel bar handles this
-    document.addEventListener('click', function (e) {
+    // Desktop: click-outside CANCELS (not saves)
+    document.addEventListener('mousedown', function (e) {
       if (!activeElement) return;
-      if (isTouchDevice) return; // Mobile uses explicit save/cancel buttons
-      if (!activeElement.contains(e.target)) {
-        finishEditing(activeElement);
-      }
+      if (isTouchDevice) return;
+      if (activeElement.contains(e.target)) return;
+      // Don't cancel if clicking the desktop hint bar
+      if (activeDesktopHint && activeDesktopHint.contains(e.target)) return;
+      // Don't cancel if clicking a reset button
+      if (e.target.classList && e.target.classList.contains('editable-reset')) return;
+
+      cancelEditing(activeElement);
     });
 
     // Dismiss pencil button when tapping elsewhere on mobile
     document.addEventListener('touchend', function (e) {
       if (!activePencilBtn) return;
       if (activePencilBtn.contains(e.target)) return;
-      // Check if tapping on an editable element (will show its own pencil)
       if (e.target.closest && e.target.closest('[data-editable]')) return;
       removePencilButton();
     });
@@ -561,7 +680,6 @@
       detectTouch();
     });
 
-    // Add mobile class to body for CSS targeting
     if (isTouchDevice) {
       document.body.classList.add('is-touch-device');
     }

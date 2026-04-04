@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Editable Module — Test Page</title>
+
+  <!-- Site styles (for design token consistency) -->
+  <link rel="stylesheet" href="css/variables.css?v=5" />
+  <link rel="stylesheet" href="css/reset.css?v=5" />
+  <link rel="stylesheet" href="css/fonts.css?v=5" />
+
+  <!-- Editable module styles -->
+  <link rel="stylesheet" href="css/editable.css?v=3" />
+
+  <style>
+    body {
+      background: var(--color-bg);
+      color: var(--color-text);
+      font-family: var(--font-body);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .test-container {
+      max-width: 600px;
+      width: 100%;
+      text-align: center;
+    }
+
+    h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 300;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.5rem;
+    }
+
+    .test-tagline {
+      font-size: 1.1rem;
+      font-style: italic;
+      letter-spacing: 0.04em;
+      color: var(--color-text-muted);
+      margin-bottom: 2rem;
+      line-height: 1.6;
+    }
+
+    .test-paragraph {
+      font-size: 1rem;
+      line-height: 1.8;
+      margin-bottom: 1.5rem;
+      text-align: left;
+    }
+
+    .test-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--color-text-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .test-section {
+      border-top: 1px solid var(--color-border);
+      padding-top: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .test-controls {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      margin-top: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .test-btn {
+      font-family: var(--font-body);
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 8px 20px;
+      border: 1px solid var(--color-border);
+      background: transparent;
+      color: var(--color-text);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      min-height: 44px;
+    }
+
+    .test-btn:hover {
+      background: var(--color-accent);
+      color: var(--color-bg);
+      border-color: var(--color-accent);
+    }
+
+    .test-output {
+      margin-top: 1.5rem;
+      text-align: left;
+      font-size: 0.8rem;
+      background: color-mix(in srgb, var(--color-bg-subtle) 50%, transparent);
+      border: 1px solid var(--color-border);
+      padding: 1rem;
+      border-radius: 4px;
+      max-height: 300px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      font-family: monospace;
+      display: none;
+    }
+
+    .lang-test {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .lang-test button {
+      font-family: var(--font-body);
+      font-size: 0.75rem;
+      padding: 4px 12px;
+      border: 1px solid var(--color-border);
+      background: transparent;
+      color: var(--color-text-muted);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      min-height: 44px;
+    }
+
+    .lang-test button.active {
+      background: var(--color-accent);
+      color: var(--color-bg);
+      border-color: var(--color-accent);
+    }
+
+    .frame {
+      position: fixed;
+      inset: var(--frame-inset);
+      border: var(--frame-width) solid var(--color-border);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .device-info {
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--color-text-muted);
+      margin-top: 16px;
+      font-style: italic;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 600px) {
+      body { padding: 1rem 0.75rem; }
+      .test-container { padding: 0 0.5rem; }
+      h1 { font-size: 1.8rem; }
+      .test-controls { gap: 0.5rem; }
+      .test-btn { padding: 8px 14px; font-size: 0.7rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Decorative frame (matches site) -->
+  <div class="frame" aria-hidden="true"></div>
+
+  <div class="test-container">
+
+    <p class="test-label">Inline Editing Module — Test Page</p>
+
+    <!-- Test element 1: Title (editable) -->
+    <h1 data-editable="test-title" data-i18n="test-title">Cass la Ria</h1>
+
+    <!-- Test element 2: Tagline (editable) -->
+    <p class="test-tagline" data-editable="test-tagline" data-i18n="test-tagline">Multi-faceted creative — music, video, and visual art.</p>
+
+    <!-- Test element 3: Paragraph (editable) -->
+    <div class="test-section">
+      <p class="test-label">Editable single-line paragraph (Enter to save)</p>
+      <p class="test-paragraph" data-editable="test-paragraph" data-i18n="test-paragraph">This Lake was one of the Great Lakes, and he was often told of the gifts one could receive.</p>
+    </div>
+
+    <!-- Test element 3b: Multi-line paragraph (editable, Ctrl+Enter to save) -->
+    <div class="test-section">
+      <p class="test-label">Editable multi-line paragraph (Ctrl+Enter to save)</p>
+      <p class="test-paragraph" data-editable="test-multiline" data-editable-multiline>This is a multi-line editable element. You can press Enter to add line breaks. Use Ctrl+Enter (or Cmd+Enter on Mac) to save your changes. Press Escape to cancel.</p>
+    </div>
+
+    <!-- Test element 4: Non-editable (for contrast) -->
+    <div class="test-section">
+      <p class="test-label">Non-editable text (no data-editable attribute)</p>
+      <p class="test-paragraph">This text cannot be edited. It serves as a control to verify that only marked elements are interactive.</p>
+    </div>
+
+    <!-- Language switcher (simulated) -->
+    <div class="test-section">
+      <p class="test-label">Simulate language switch</p>
+      <div class="lang-test">
+        <button class="active" data-test-lang="en">EN</button>
+        <button data-test-lang="es">ES</button>
+        <button data-test-lang="pt">PT</button>
+        <button data-test-lang="fr">FR</button>
+        <button data-test-lang="ja">JA</button>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="test-controls">
+      <button class="test-btn" id="btn-export">Export Edits</button>
+      <button class="test-btn" id="btn-summary">Edit Summary</button>
+      <button class="test-btn" id="btn-clear">Clear All</button>
+    </div>
+
+    <!-- Output panel -->
+    <pre class="test-output" id="output"></pre>
+
+    <!-- Device detection info -->
+    <p class="device-info" id="device-info"></p>
+
+  </div>
+
+  <!-- Simulated i18n data (minimal, for testing) -->
+  <script>
+    window.I18N = {
+      en: {
+        'test-title': 'Cass la Ria',
+        'test-tagline': 'Multi-faceted creative — music, video, and visual art.',
+        'test-paragraph': 'This Lake was one of the Great Lakes, and he was often told of the gifts one could receive.'
+      },
+      es: {
+        'test-title': 'Cass la Ria',
+        'test-tagline': 'Creativa multifacética — música, video y arte visual.',
+        'test-paragraph': 'Este era uno de los Grandes Lagos. A menudo se hablaba de los obsequios que regalaba.'
+      },
+      pt: {
+        'test-title': 'Cass la Ria',
+        'test-tagline': 'Criativa multifacetada — música, vídeo e arte visual.',
+        'test-paragraph': 'Este era um dos Grandes Lagos. Ele sempre ouvia falar das dádivas que se recebiam.'
+      },
+      fr: {
+        'test-title': 'Cass la Ria',
+        'test-tagline': 'Créative pluridisciplinaire — musique, vidéo et art visuel.',
+        'test-paragraph': 'Ce Lac était l\'un des Grands Lacs, et on lui parlait souvent des dons que l\'on pouvait recevoir.'
+      },
+      ja: {
+        'test-title': 'Cass la Ria',
+        'test-tagline': '多彩なクリエイティブ — 音楽、映像、ビジュアルアート。',
+        'test-paragraph': 'この湖は大いなる湖のひとつであり、授かる恵みについてよく語られていた。'
+      }
+    };
+  </script>
+
+  <!-- Editable module -->
+  <script src="js/editable.js?v=3"></script>
+
+  <!-- Test page controls -->
+  <script>
+    (function () {
+      var output = document.getElementById('output');
+
+      // Show device detection info
+      function updateDeviceInfo() {
+        var isTouchCSS = window.matchMedia && window.matchMedia('(hover: none)').matches;
+        var hasTouchEvents = 'ontouchstart' in window;
+        var screenW = window.innerWidth;
+        var info = document.getElementById('device-info');
+        info.textContent = 'Touch (CSS hover:none): ' + isTouchCSS +
+          ' | Touch events: ' + hasTouchEvents +
+          ' | Viewport: ' + screenW + 'px' +
+          ' | Mode: ' + (isTouchCSS ? 'MOBILE (tap \u2192 pencil \u2192 edit \u2192 save/cancel bar)' : 'DESKTOP (hover tooltip \u2192 double-click \u2192 Enter/Escape)');
+      }
+      updateDeviceInfo();
+      window.addEventListener('resize', updateDeviceInfo);
+
+      // Language switch simulation
+      document.querySelectorAll('[data-test-lang]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var lang = btn.getAttribute('data-test-lang');
+          document.documentElement.lang = lang;
+          localStorage.setItem('preferred-language', lang);
+
+          // Update active state
+          document.querySelectorAll('[data-test-lang]').forEach(function (b) {
+            b.classList.remove('active');
+          });
+          btn.classList.add('active');
+
+          // Simulate i18n text swap
+          document.querySelectorAll('[data-i18n]').forEach(function (el) {
+            var key = el.getAttribute('data-i18n');
+            if (window.I18N[lang] && window.I18N[lang][key]) {
+              el.setAttribute('data-original-text', window.I18N[lang][key]);
+              // Only update text if not user-modified
+              if (!el.classList.contains('is-modified')) {
+                el.textContent = window.I18N[lang][key];
+              }
+            }
+          });
+
+          // Notify the editable module
+          if (window.EditableModule) {
+            window.EditableModule.onLanguageChange();
+          }
+        });
+      });
+
+      // Export button
+      document.getElementById('btn-export').addEventListener('click', function () {
+        var data = window.EditableModule.exportEdits();
+        output.style.display = 'block';
+        output.textContent = data || '(no edits yet)';
+      });
+
+      // Summary button
+      document.getElementById('btn-summary').addEventListener('click', function () {
+        var data = window.EditableModule.editSummary();
+        output.style.display = 'block';
+        output.textContent = JSON.stringify(data, null, 2) || '(no edits yet)';
+      });
+
+      // Clear button
+      document.getElementById('btn-clear').addEventListener('click', function () {
+        window.EditableModule.clearAll();
+        output.style.display = 'none';
+      });
+    })();
+  </script>
+
+</body>
+</html>
