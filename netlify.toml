@@ -37,6 +37,8 @@
     # Google Fonts (fonts.googleapis.com for CSS, fonts.gstatic.com for
     # font files) allowed for CJK font loading when a non-Latin language
     # is selected via the language switcher.
+    # Google Apps Script (script.google.com) allowed for the inline
+    # editing feedback system — edits are logged to a Google Sheet.
     # frame-ancestors 'none' replaces X-Frame-Options for modern browsers.
     # form-action 'self' allows mailto: links but blocks external form posts.
     # The sha256 hashes whitelist the inline JSON-LD structured data script
@@ -45,7 +47,7 @@
     #   python3 -c "import re,hashlib,base64;h=open('index.html').read();m=re.search(r'<script type=.application/ld\\+json.>(.*?)</script>',h,re.DOTALL);print('sha256-'+base64.b64encode(hashlib.sha256(m.group(1).encode()).digest()).decode())"
     # manifest-src 'self' allows the PWA manifest.json to be loaded.
     # worker-src 'self' allows the service worker (sw.js) to be registered.
-    Content-Security-Policy = "default-src 'none'; script-src 'self' 'sha256-2se67jeqDptuJ195uK1pyIOBC3ZcE4wuRKJrJ4/wB9E=' 'sha256-Knd0YgTwmW/EJHFa1+Uu8/8E7i6tn7CDhGP2IFJyz40=' 'sha256-+s8TkJ5Z99YKtAMyghilURDLxZ25lIBbzWE8Buam4sA='; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
+    Content-Security-Policy = "default-src 'none'; script-src 'self' 'sha256-2se67jeqDptuJ195uK1pyIOBC3ZcE4wuRKJrJ4/wB9E=' 'sha256-Knd0YgTwmW/EJHFa1+Uu8/8E7i6tn7CDhGP2IFJyz40=' 'sha256-+s8TkJ5Z99YKtAMyghilURDLxZ25lIBbzWE8Buam4sA='; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self'; connect-src 'self' https://script.google.com; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
 
     # -- Disable browser features we don't use --
     # interest-cohort=() blocks Google FLoC tracking.

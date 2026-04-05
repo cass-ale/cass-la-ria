@@ -52,7 +52,7 @@ The physics model is grounded in real meteorology:
 - **Virga effect** — in light presets, some drops fade before reaching the ground (evaporation).
 - **Depth parallax** — far clouds drift slower than near clouds, creating a layered sky.
 
-One of **7 weather presets** is randomly selected each time a visitor loads the page:
+One of **13 weather presets** is randomly selected each time a visitor loads the page:
 
 | Preset | Rain | Wind | Gusts | Mood |
 |---|---|---|---|---|
@@ -63,6 +63,12 @@ One of **7 weather presets** is randomly selected each time a visitor loads the 
 | Downpour | Heavy | Slight | Yes | Intense, vertical |
 | Storm Front | Very heavy | Very strong | Yes | Dramatic, angled |
 | Typhoon | Extreme | Extreme | Yes | Chaotic, powerful |
+| Monsoon | Very heavy | Moderate | Yes | Dense, tropical |
+| Squall Line | Heavy | Very strong | Yes | Fast-moving front |
+| Thunderstorm | Heavy | Strong | Yes | With procedural lightning |
+| Freezing Rain | Moderate | Slight | No | Slow, heavy drops |
+| Radiation Fog | Very light | None | No | Ground-level mist |
+| Petrichor | Light | None | No | Post-rain calm |
 
 ### Umbrella Cursor (Desktop)
 
@@ -84,6 +90,27 @@ On mobile devices with gyroscope/accelerometer, tilting the phone influences the
 ### Animation Pause Toggle
 
 A pause/play button in the bottom-right corner allows users to stop and restart the weather animation. This satisfies WCAG 2.2.2 (Pause, Stop, Hide). The animation also auto-pauses when `prefers-reduced-motion: reduce` is set in the user's OS.
+
+### Time-Based Colour Theme
+
+The site's colour palette changes smoothly throughout the day based on the visitor's local time. The theme system (`js/time-theme.js`) updates CSS custom properties every minute, interpolating between palettes for dawn, morning, midday, afternoon, golden hour, dusk, evening, and night. All UI elements — including the language switcher, editing UI, and weather animation — follow the theme automatically.
+
+### Multilingual Support
+
+The site supports 8 languages: English, Spanish, Portuguese, French, Japanese, Korean, Indonesian, and Chinese. Translation strings live in `js/i18n.js`. A globe icon in the top-right reveals a dropdown language selector. CJK fonts are lazy-loaded via Google Fonts with `text=` subsetting (~17KB each).
+
+### Inline Editing (Crowdsource Translation Feedback)
+
+Visitors can edit any translated text element to suggest improvements. On desktop, double-click to edit; on mobile, tap to reveal a pencil button. Edits are:
+
+- **User-scoped** — stored in the visitor's `localStorage`, visible only to them
+- **Remotely logged** — sent to a Google Sheet via Apps Script for the site owner to review
+- **Spam-checked** — 6 client-side heuristics flag suspicious edits (profanity, gibberish, length anomaly, link injection, rate flooding, duplicates)
+- **Batched** — remote submissions are debounced (5s) and flushed on page close via `sendBeacon`
+
+### Wet Text Effect
+
+The "CASS LA RIA" heading features a rain-responsive wet/drip text effect using SVG filters (turbulence + displacement). The effect intensity responds to the current weather preset.
 
 ### Performance
 
@@ -108,28 +135,29 @@ The site is built to meet WCAG 2.2 AA standards:
 | Focus indicators | WCAG 2.4.7 | Visible focus ring on all buttons and links |
 | Pause animation | WCAG 2.2.2 | Toggle button + `prefers-reduced-motion` auto-pause |
 | Colour contrast | WCAG 1.4.3 | Dark plum text on light pink background (7:1+ ratio) |
-| Touch targets | WCAG 2.5.8 | Minimum 44×44px on all interactive elements |
+| Touch targets | WCAG 2.5.8 | Minimum 44x44px on all interactive elements |
 | Semantic HTML | WCAG 1.3.1 | Proper heading hierarchy, landmarks, nav labels |
+| Screen reader | WCAG 4.1.3 | Live region announcements for edit state changes |
 
 ## Privacy and Security
 
-This site collects **zero user data**. No cookies, no analytics, no tracking pixels, no forms, no third-party scripts.
+This site collects **no cookies, no analytics, no tracking pixels, and no third-party scripts**. The only data transmitted externally is voluntary translation edit feedback, which is sent to a private Google Sheet for the site owner to review. No personally identifiable information is collected — only the edited text, original text, language, and browser user agent.
 
 ### Self-Hosted Fonts
 
-Google Fonts (Cormorant Garamond) are self-hosted in `assets/fonts/` to eliminate all external requests. No DNS lookups to Google, no referrer leakage, no cookie exchange.
+Google Fonts (Cormorant Garamond) are self-hosted in `assets/fonts/` to eliminate all external requests. No DNS lookups to Google, no referrer leakage, no cookie exchange. CJK fonts are loaded on-demand from Google Fonts only when a CJK language is selected.
 
 ### Security Headers (via `netlify.toml`)
 
 | Header | Value | Purpose |
 |---|---|---|
-| Content-Security-Policy | `default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; ...` | Only own resources allowed |
+| Content-Security-Policy | `default-src 'none'; script-src 'self'; ...` | Only own resources + Google Fonts/Apps Script allowed |
 | Strict-Transport-Security | `max-age=63072000; includeSubDomains; preload` | Force HTTPS for 2 years |
 | X-Frame-Options | `DENY` | Prevent clickjacking |
 | X-Content-Type-Options | `nosniff` | Prevent MIME sniffing |
 | X-XSS-Protection | `0` | Disabled per OWASP (CSP replaces it) |
 | Referrer-Policy | `strict-origin-when-cross-origin` | Limit referrer leakage |
-| Permissions-Policy | `camera=(), microphone=(), geolocation=(), interest-cohort=(), ...` | Disable unused APIs, block FLoC |
+| Permissions-Policy | `camera=(), microphone=(), geolocation=(), ...` | Disable unused APIs, block FLoC |
 | Cross-Origin-Opener-Policy | `same-origin` | Prevent cross-origin window interaction |
 | Cross-Origin-Resource-Policy | `same-origin` | Prevent resource theft |
 
@@ -139,25 +167,41 @@ Sources: [OWASP HTTP Headers Cheat Sheet](https://cheatsheetseries.owasp.org/che
 
 ```
 cass-la-ria/
-├── index.html              ← Main page
-├── netlify.toml            ← Netlify deploy config + security headers
+├── index.html              ← Main page (name, links, meta, structured data)
+├── netlify.toml            ← Netlify deploy config + security headers (CSP, HSTS, etc.)
+├── manifest.json           ← PWA manifest for "Add to Home Screen"
+├── sw.js                   ← Service worker for offline support
+├── robots.txt              ← Search engine crawl rules
+├── sitemap.xml             ← Sitemap for SEO
+├── 404.html                ← Custom 404 error page
+├── offline.html            ← Offline fallback page
 ├── css/
-│   ├── fonts.css           ← Self-hosted @font-face declarations
-│   ├── variables.css       ← Design tokens (colours, fonts, spacing)
+│   ├── fonts.css           ← Self-hosted @font-face declarations (Latin)
+│   ├── fonts-cjk.css       ← CJK font fallback declarations (loaded lazily)
+│   ├── variables.css       ← Design tokens (colours, fonts, spacing, transitions)
 │   ├── reset.css           ← Cross-browser normalisation
 │   ├── layout.css          ← Page structure + responsive breakpoints
-│   ├── components.css      ← Icon buttons, contact, heading, toggle
+│   ├── components.css      ← Icon buttons, language switcher, contact, heading, toggle
 │   ├── animations.css      ← Entrance animations (motion-safe)
-│   └── rain.css            ← Rain canvas, umbrella cursor, touch ripple
+│   ├── rain.css            ← Rain canvas, umbrella cursor, touch ripple
+│   └── editable.css        ← Inline editing UI (tooltip, pencil, mobile bar, toast)
 ├── js/
-│   ├── main.js             ← Viewport-height fix + future hooks
-│   └── rain.js             ← Rain animation engine (clouds, drops, wind, presets, tilt, collision)
+│   ├── main.js             ← Viewport fix, deep linking, mailto fallback, i18n switcher
+│   ├── rain.js             ← Rain animation engine (clouds, drops, wind, presets, tilt, collision)
+│   ├── time-theme.js       ← Time-based colour theme (updates CSS variables every minute)
+│   ├── i18n.js             ← Translation strings for all 8 languages
+│   ├── editable.js         ← Inline editing module (localStorage + Google Sheet + spam detection)
+│   └── wet-text.js         ← Wet/drip text effect on the heading
 ├── assets/
 │   ├── fonts/              ← Self-hosted Cormorant Garamond .woff2 files
 │   ├── icons/              ← Favicon files (ICO, PNG, Apple Touch)
-│   ├── images/             ← Future photos, artwork, backgrounds
-│   ├── video/              ← Future clips, reels
-│   └── audio/              ← Future music, samples
+│   ├── images/             ← Photos, artwork, backgrounds
+│   ├── video/              ← Clips, reels
+│   └── audio/              ← Music, samples
+├── docs/
+│   ├── apps-script-endpoint.js  ← Google Apps Script code for the edit feedback sheet
+│   └── APPS_SCRIPT_SETUP.md     ← Step-by-step deployment guide for the Apps Script
+├── research/               ← Research notes (UX, weather, translation, benchmarks)
 ├── pages/                  ← Future additional pages
 ├── CONTRIBUTING.md         ← Guide for updating the site
 └── README.md               ← This file
@@ -171,7 +215,11 @@ cass-la-ria/
 | Name text or social links | `index.html` |
 | Button/icon styles | `css/components.css` |
 | Rain behaviour or presets | `js/rain.js` |
+| Time-based theme palettes | `js/time-theme.js` |
+| Translation strings | `js/i18n.js` |
+| Editing system behaviour | `js/editable.js` |
 | Security headers | `netlify.toml` |
+| Apps Script endpoint | `docs/apps-script-endpoint.js` |
 | Add a new font weight | `css/fonts.css` + drop `.woff2` in `assets/fonts/` |
 
 For detailed instructions on adding images, fonts, pages, video, and more, see **[CONTRIBUTING.md](CONTRIBUTING.md)**.
@@ -193,6 +241,7 @@ The `netlify.toml` in the repo overrides all UI settings automatically.
 | "Page not found" | Publish directory wrong | Must be `.` (root) |
 | CSS not loading | Post-processing breaking styles | `netlify.toml` disables bundling/minification |
 | Blank page | `index.html` not at root | Verify it is in the repo root |
+| Edits not reaching Google Sheet | CSP blocking `connect-src` | Ensure `script.google.com` is in CSP |
 
 ## Responsive Breakpoints
 
@@ -204,6 +253,81 @@ The `netlify.toml` in the repo overrides all UI settings automatically.
 | Landscape phone | height ≤ 500px | Reduced vertical padding |
 
 Key techniques: `clamp()` fluid typography, `100dvh` dynamic viewport height, JS `--vh` fallback, 44px minimum touch targets, and `prefers-reduced-motion` support.
+
+---
+
+## Changelog
+
+All notable changes to this project, in reverse chronological order.
+
+### 2026-04-05 — Code Audit, Spam Detection, and Form Optimization
+
+- **Spam/troll auto-flagging**: Added 6 client-side heuristics to `editable.js` that detect profanity, gibberish, length anomalies, link injection, rate flooding, and duplicate submissions. Flags are sent as a column in the Google Sheet payload for easy filtering.
+- **Debounced batch submission**: Remote edit logging now collects edits for 5 seconds before sending, reducing network requests. Pending edits are flushed on page close via `navigator.sendBeacon`.
+- **CSP fix**: Added `https://script.google.com` to `connect-src` in the Content Security Policy — the previous `connect-src 'self'` was silently blocking all remote edit logging.
+- **Language switcher theme fix**: Replaced 6 hardcoded RGBA colour values in `components.css` with dynamic CSS custom properties (`color-mix()` + `var()`), so the translate button now tracks the time-based theme.
+- **Apps Script endpoint updated**: Added `flags` column (column H) to the Google Sheet schema. Updated `docs/apps-script-endpoint.js` with deployment instructions.
+- **Documentation overhaul**: Rewrote `CONTRIBUTING.md` with complete directory map, architecture overview, and all systems. Updated `README.md` with accurate directory structure, all features, and this changelog.
+
+### 2026-04-04 — Inline Editing System
+
+- **Inline editing module** (`editable.js` + `editable.css`): Visitors can double-click (desktop) or tap (mobile) any `data-editable` element to suggest translation improvements. Edits persist in `localStorage` (user-scoped) and are logged to a Google Sheet via Apps Script.
+- **Mobile editing UX**: Tap-to-edit with floating pencil button, visible Save/Cancel bar, toast notifications, iOS auto-zoom prevention (16px minimum font), virtual keyboard awareness.
+- **Desktop editing UX audit**: Click-outside cancels (not auto-saves), inline hint bar ("Enter to save · Esc to cancel"), multiline support (Ctrl+Enter), reset button, screen reader announcements.
+- **Custom 404 and offline pages**: Branded error pages matching the site's design.
+
+### 2026-04-03 — Time Theme, PWA, and Weather Expansion
+
+- **Time-based colour theming** (`time-theme.js`): 8 palettes (dawn through night) with smooth CSS variable interpolation every minute.
+- **PWA support**: `manifest.json`, `sw.js` service worker, offline fallback page.
+- **SEO enhancements**: `hreflang` tags for all 8 languages, enhanced JSON-LD schema, `?lang=` URL parameter support.
+- **Wet text optimisation**: SMIL `hueRotate` animation, reduced noise octaves, throttled JS updates, mobile fallback.
+- **6 new weather presets**: Monsoon, Squall Line, Thunderstorm (with procedural lightning), Freezing Rain, Radiation Fog, Petrichor.
+
+### 2026-04-02 — Multilingual Support and Weather v4
+
+- **8-language support** (`i18n.js`): EN, ES, PT, FR, JA, KO, ID, ZH with globe icon language switcher.
+- **Weather System v4**: AAA wind engine with Ekman spiral gradient, 3 depth layers with parallax, ground splashes, atmospheric mist particles.
+- **Umbrella collision physics**: Realistic deflection with splash and drip effects.
+- **Wet text effect** (`wet-text.js`): Rain-responsive SVG filter displacement on the heading.
+- **Language switcher fixes**: Click-only dropdown, improved positioning inside decorative frame.
+- **Cache busting**: Added `?v=` query strings to CSS/JS references + Google Fonts CSP allowance.
+- **Favicon fixes**: Transparent background ICO + pink background Apple Touch icon.
+
+### 2026-04-01 — Cloud System, Interaction, and Mobile Fixes
+
+- **Individual cloud entities**: Each cloud has unique noise seed, position, depth layer, direction, z-axis movement, size breathing, and shape evolution.
+- **Cloud collision and merging**: Five-phase model (Westcott 1994) — approach, bridging, thickening, merger, growth.
+- **Rain-text collision**: Drops bounce off the "CASS LA RIA" heading bounding box.
+- **Phone tilt**: DeviceOrientationEvent API shifts rain direction and cloud drift on mobile.
+- **Favicon**: Crystal skull in all standard sizes.
+- **Social media icons**: Inline SVGs with deep linking on mobile.
+- **Contact button**: Mailto link with envelope icon.
+- **Accessibility**: Skip link, ARIA labels, focus indicators, pause toggle, touch targets.
+- **Mobile/WebView fixes**: Comprehensive display overhaul for compatibility.
+- **Cache policy**: `must-revalidate` for HTML/CSS/JS, immutable for assets.
+- **SEO**: Meta tags, OG image, JSON-LD structured data.
+
+### 2026-03-31 — Rain Animation System
+
+- **Rain animation engine** (`rain.js`): Procedural simplex noise clouds, realistic wind-cloud-rain physics, 7 weather presets.
+- **Self-hosted fonts**: Cormorant Garamond `.woff2` files in `assets/fonts/`.
+- **Security hardening**: Full CSP, HSTS, X-Frame-Options, and all OWASP-recommended headers via `netlify.toml`.
+
+### 2026-03-30 — Netlify Deployment
+
+- **`netlify.toml`**: Zero-config Netlify deployment with security headers and cache control.
+
+### 2026-03-28 — Asset Structure
+
+- **Scalable asset directories**: `assets/fonts/`, `assets/icons/`, `assets/images/`, `assets/video/`, `assets/audio/`.
+- **`CONTRIBUTING.md`**: Initial contributor guide.
+
+### 2026-03-27 — Initial Release
+
+- **Initial commit**: Single-page landing with name, social links (YouTube, TikTok, Instagram), and Neo Yokio pink colour palette.
+
+---
 
 ## License
 

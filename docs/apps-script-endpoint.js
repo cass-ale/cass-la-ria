@@ -5,21 +5,43 @@
  * the editable module on caprilaria.netlify.app and appends
  * edit data as rows in the bound Google Sheet.
  * 
+ * SHEET COLUMNS (in order):
+ *   A: Timestamp    — server-side ISO 8601 timestamp
+ *   B: Language     — language code (en, es, pt, fr, ja, ko, id, zh)
+ *   C: Key          — element key (data-editable value)
+ *   D: Before       — original text
+ *   E: After        — user's edited text
+ *   F: URL          — page URL path
+ *   G: User Agent   — browser user agent string
+ *   H: Flags        — comma-separated spam/troll flags (empty = clean)
+ *                      Possible values: PROFANITY, GIBBERISH,
+ *                      LENGTH_LONG, LENGTH_SHORT, LINK_INJECT,
+ *                      RATE_FLOOD, DUPLICATE
+ * 
+ * TIP: To filter flagged edits in the sheet, add a filter on
+ *      column H and exclude rows where Flags is not empty.
+ * 
  * DEPLOYMENT:
  *   1. Open the Google Sheet: CJA — Translation Edit Feedback
  *   2. Extensions > Apps Script
  *   3. Replace the default code with this file's contents
- *   4. Click Deploy > New deployment
- *   5. Type: Web app
- *   6. Execute as: Me
- *   7. Who has access: Anyone
- *   8. Click Deploy and authorize when prompted
- *   9. Copy the Web app URL — this goes into editable.js
+ *   4. Click Deploy > Manage deployments > Edit (pencil icon)
+ *   5. Set version to "New version"
+ *   6. Click Deploy
+ *   7. The existing URL stays the same — no need to update editable.js
+ * 
+ * FIRST-TIME SETUP (if no deployment exists yet):
+ *   1. Click Deploy > New deployment
+ *   2. Type: Web app
+ *   3. Execute as: Me
+ *   4. Who has access: Anyone
+ *   5. Click Deploy and authorize when prompted
+ *   6. Copy the Web app URL — this goes into editable.js as REMOTE_ENDPOINT
  */
 
 /**
  * Handle POST requests from the editable module.
- * Expects JSON body with: lang, key, before, after, url, userAgent
+ * Expects JSON body with: lang, key, before, after, url, userAgent, flags
  */
 function doPost(e) {
   try {
@@ -32,16 +54,16 @@ function doPost(e) {
     
     // Append the edit as a new row
     sheet.appendRow([
-      new Date().toISOString(),           // Timestamp (server-side for consistency)
-      data.lang || '',                     // Language code
-      data.key || '',                      // Element key (data-editable value)
-      data.before || '',                   // Original text
-      data.after || '',                    // User's edited text
-      data.url || '',                      // Page URL
-      data.userAgent || ''                 // User agent string
+      new Date().toISOString(),           // A: Timestamp (server-side)
+      data.lang || '',                     // B: Language code
+      data.key || '',                      // C: Element key
+      data.before || '',                   // D: Original text
+      data.after || '',                    // E: User's edited text
+      data.url || '',                      // F: Page URL
+      data.userAgent || '',                // G: User agent string
+      data.flags || ''                     // H: Spam/troll flags
     ]);
     
-    // Return success response with CORS headers
     return ContentService
       .createTextOutput(JSON.stringify({ status: 'ok' }))
       .setMimeType(ContentService.MimeType.JSON);

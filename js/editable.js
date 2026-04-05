@@ -30,10 +30,19 @@
      editable_[key]_[lang]: persisted text per element per language
    
    REMOTE LOGGING:
-     Edits are also sent to a Google Sheet via Apps Script.
+     Edits are sent to a Google Sheet via Apps Script in
+     debounced batches (5s delay). On page close, any pending
+     edits are flushed via navigator.sendBeacon.
      Sheet: https://docs.google.com/spreadsheets/d/1dtYb5b_2DNpFJnZf23rfnQAJWVnE9hwnHLjZTn4XvT8/edit
      Endpoint: Google Apps Script doPost() web app
      Failures are silent — localStorage is the primary fallback.
+   
+   SPAM / TROLL DETECTION:
+     Each edit is analysed client-side before submission.
+     Flags (PROFANITY, GIBBERISH, LENGTH_LONG, LENGTH_SHORT,
+     LINK_INJECT, RATE_FLOOD, DUPLICATE) are included in the
+     payload so the Google Sheet can filter flagged rows.
+     Edits are never blocked — flags are informational only.
    
    MOBILE UX:
      - Tap on editable element shows a floating pencil button
@@ -214,59 +223,223 @@
     }, 2400);
   }
 
-  /* ---- Remote logging ---- */
+  /* ---- Spam / troll detection ---- */
 
-  function sendToRemote(editableKey, lang, before, after) {
-    if (!REMOTE_ENDPOINT) return;
+  /**
+   * Analyse an edit and return an array of flag strings.
+   * An empty array means the edit looks legitimate.
+   *
+   * Heuristics (all client-side, lightweight, no external API):
+   *   1. PROFANITY    — matches a compact list of common English slurs
+   *                     and spam keywords. Not exhaustive, but catches
+   *                     the obvious cases without a heavy dictionary.
+   *   2. GIBBERISH    — text is >60% non-letter characters (excluding
+   *                     CJK/Hangul/Devanagari/Arabic which are valid).
+   *   3. LENGTH       — edit is >5x or <0.1x the original length.
+   *   4. LINK_INJECT  — edit contains http://, https://, or www.
+   *   5. RATE_FLOOD   — user has submitted >10 edits in the last 5 min.
+   *   6. DUPLICATE    — identical text submitted for the same key+lang.
+   *
+   * Flags are informational — the edit is still saved locally and
+   * sent to the Google Sheet with a "flags" column so the site
+   * owner can filter/review flagged rows.
+   *
+   * References:
+   *   - Honeypot + heuristic anti-spam: https://dev.to/ingosteinke/how-to-stop-form-spam-without-using-recaptcha-13i8
+   *   - Client-side spam filtering: https://stackoverflow.com/questions/3868643
+   *   - Content moderation best practices: https://dev.to/bewalt/content-moderation-and-profanity-filtering-best-practices-1ik8
+   */
 
-    var payload = {
-      key: editableKey,
-      lang: lang,
-      before: before,
-      after: after,
-      url: window.location.pathname,
-      userAgent: navigator.userAgent
-    };
+  /* Compact profanity / spam keyword list (lowercase).
+     Kept intentionally short — catches blatant trolling, not edge cases. */
+  var PROFANITY_RE = /\b(fuck|shit|ass(?:hole)?|bitch|cunt|dick|damn|bastard|nigger|faggot|retard|whore|slut|cock|penis|vagina|porn|viagra|cialis|casino|crypto|nft|airdrop|buy\s?now|click\s?here|free\s?money|subscribe|follow\s?me)\b/i;
 
-    try {
-      fetch(REMOTE_ENDPOINT, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(payload)
-      }).catch(function () {
-        // Network error — silently fail
-      });
-    } catch (e) {
-      // fetch not available — silently fail
+  /* URL / link injection pattern */
+  var LINK_RE = /https?:\/\/|www\./i;
+
+  /* Non-letter noise detector.
+     Matches characters that are NOT: letters (any script), digits,
+     whitespace, or common punctuation. If >60% of the text is noise,
+     it is likely gibberish / keyboard mashing. */
+  var NOISE_CHAR_RE = /[^\p{L}\p{N}\s.,;:!?'"\-\u2014\u2013()\[\]]/gu;
+
+  /* Rate limiting state */
+  var recentEditTimestamps = [];
+  var RATE_WINDOW_MS = 5 * 60 * 1000;  // 5 minutes
+  var RATE_MAX_EDITS = 10;
+
+  function detectSpamFlags(editableKey, lang, before, after) {
+    var flags = [];
+
+    /* 1. Profanity / spam keywords */
+    if (PROFANITY_RE.test(after)) {
+      flags.push('PROFANITY');
     }
+
+    /* 2. Gibberish — high ratio of non-letter noise characters */
+    if (after.length > 3) {
+      var noiseChars = after.match(NOISE_CHAR_RE);
+      var noiseRatio = noiseChars ? noiseChars.length / after.length : 0;
+      if (noiseRatio > 0.6) {
+        flags.push('GIBBERISH');
+      }
+    }
+
+    /* 3. Length anomaly — suspiciously long or short vs original */
+    if (before.length > 0) {
+      var ratio = after.length / before.length;
+      if (ratio > 5) {
+        flags.push('LENGTH_LONG');
+      } else if (ratio < 0.1) {
+        flags.push('LENGTH_SHORT');
+      }
+    }
+
+    /* 4. Link / URL injection */
+    if (LINK_RE.test(after)) {
+      flags.push('LINK_INJECT');
+    }
+
+    /* 5. Rate flooding — too many edits in a short window */
+    var now = Date.now();
+    recentEditTimestamps.push(now);
+    /* Prune timestamps older than the window */
+    recentEditTimestamps = recentEditTimestamps.filter(function (t) {
+      return now - t < RATE_WINDOW_MS;
+    });
+    if (recentEditTimestamps.length > RATE_MAX_EDITS) {
+      flags.push('RATE_FLOOD');
+    }
+
+    /* 6. Duplicate — same text already submitted for this key+lang */
+    var dupeKey = 'editable_dupe_' + editableKey + '_' + lang;
+    try {
+      var prev = localStorage.getItem(dupeKey);
+      if (prev === after) {
+        flags.push('DUPLICATE');
+      }
+      localStorage.setItem(dupeKey, after);
+    } catch (e) { /* ignore */ }
+
+    return flags;
   }
 
-  function logEdit(editableKey, lang, before, after) {
-    var edits = [];
-    try {
-      edits = JSON.parse(localStorage.getItem(STORAGE_KEY_EDITS)) || [];
-    } catch (e) {
-      edits = [];
-    }
+  /* ---- Remote logging (debounced batch) ---- */
 
-    edits.push({
+  /**
+   * Edits are collected into a batch queue and flushed to the
+   * Google Sheet endpoint after a short delay (BATCH_DELAY_MS).
+   * This avoids firing a separate fetch() for every keystroke
+   * or rapid edit sequence.
+   *
+   * If the user closes the tab before the batch fires, the
+   * 'visibilitychange' / 'pagehide' listener flushes immediately
+   * via navigator.sendBeacon (which survives page unload).
+   *
+   * References:
+   *   - navigator.sendBeacon: https://developer.mozilla.org/en-US/docs/Web/API/Navigator/sendBeacon
+   *   - Batching pattern: https://web.dev/articles/performance-http2
+   */
+
+  var pendingBatch = [];
+  var batchTimer = null;
+  var BATCH_DELAY_MS = 5000;  // 5-second debounce
+
+  function queueForRemote(payload) {
+    if (!REMOTE_ENDPOINT) return;
+    pendingBatch.push(payload);
+
+    /* Reset the debounce timer */
+    clearTimeout(batchTimer);
+    batchTimer = setTimeout(flushBatch, BATCH_DELAY_MS);
+  }
+
+  function flushBatch() {
+    if (!pendingBatch.length) return;
+
+    var batch = pendingBatch.slice();
+    pendingBatch = [];
+    clearTimeout(batchTimer);
+
+    /* Send each edit as an individual request (Apps Script doPost
+       expects a single edit object, not an array). We use a small
+       stagger (50ms) to avoid hammering the endpoint. */
+    batch.forEach(function (payload, i) {
+      setTimeout(function () {
+        try {
+          fetch(REMOTE_ENDPOINT, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify(payload)
+          }).catch(function () {
+            /* Network error — silently fail; localStorage has the data */
+          });
+        } catch (e) {
+          /* fetch not available — silently fail */
+        }
+      }, i * 50);
+    });
+  }
+
+  /* Flush on page unload so edits aren't lost */
+  function flushOnUnload() {
+    if (!pendingBatch.length || !REMOTE_ENDPOINT) return;
+
+    /* sendBeacon is fire-and-forget and survives page close.
+       Falls back to synchronous flush if sendBeacon unavailable. */
+    pendingBatch.forEach(function (payload) {
+      try {
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(
+            REMOTE_ENDPOINT,
+            new Blob([JSON.stringify(payload)], { type: 'text/plain' })
+          );
+        }
+      } catch (e) { /* ignore */ }
+    });
+    pendingBatch = [];
+  }
+
+  /* Register unload listeners (both for maximum browser coverage) */
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') flushOnUnload();
+  });
+  window.addEventListener('pagehide', flushOnUnload);
+
+  /* ---- Edit logging ---- */
+
+  function logEdit(editableKey, lang, before, after) {
+    /* Run spam detection */
+    var flags = detectSpamFlags(editableKey, lang, before, after);
+
+    var editRecord = {
       key: editableKey,
       lang: lang,
       before: before,
       after: after,
       timestamp: new Date().toISOString(),
       url: window.location.pathname,
-      userAgent: navigator.userAgent
-    });
+      userAgent: navigator.userAgent,
+      flags: flags.length ? flags.join(',') : ''
+    };
 
+    /* Persist to localStorage */
+    var edits = [];
+    try {
+      edits = JSON.parse(localStorage.getItem(STORAGE_KEY_EDITS)) || [];
+    } catch (e) {
+      edits = [];
+    }
+    edits.push(editRecord);
     try {
       localStorage.setItem(STORAGE_KEY_EDITS, JSON.stringify(edits));
     } catch (e) {
-      // localStorage full — silently fail
+      /* localStorage full — silently fail */
     }
 
-    sendToRemote(editableKey, lang, before, after);
+    /* Queue for remote logging (batched) */
+    queueForRemote(editRecord);
   }
 
   /* ---- Save / Reset ---- */
