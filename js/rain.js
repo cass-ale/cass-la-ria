@@ -180,21 +180,26 @@
   var SUNSET_HOUR  = 20.0;
   var SUN_CELL = 10;           /* px per character cell for celestial rendering */
 
-  /* Sun character sets — 5 concentric zones */
-  var SUN_CORE   = ['\u2600','\u2609','\u25C9','\u25CF','\u2299','\u25CE','\u2739'];
+  /* Sun character sets — 5 concentric zones
+     VS15 (\uFE0E) appended to chars with emoji variants to force text presentation.
+     This prevents iOS/Android from rendering color emoji that ignore fillStyle.
+     Ref: https://jeffkreeftmeijer.com/unicode-variation-selectors/
+     Ref: https://character.construction/emoji-vs-text                          */
+  var SUN_CORE   = ['\u2739','\u2609\uFE0E','\u25C9','\u25CF','\u2299','\u25CE','\u2600\uFE0E'];
   var SUN_INNER  = ['\u2726','\u2727','\u2736','\u2737','\u2738','\u274B','\u274A','\u2749','\u273A','\u273B','\u273C','\u203B','\u2055'];
-  var SUN_RAYS   = ['/','\\','|','\u2014','\u2571','\u2572','\u2502','\u2500','*','+','\u00B7','\u2022','\u2219'];
-  var SUN_CORONA = ['\u00B7','\u2022','\u2219','\u22C5','\u02D9','\u00B0','\u204E','\u2055','*','\'',',','.','`'];
+  var SUN_RAYS   = ['/','\\','|','\u2014','\u2571','\u2572','\u2502','\u2500','*','+','\u00B7','\u2022\uFE0E','\u2219'];
+  var SUN_CORONA = ['\u00B7','\u2022\uFE0E','\u2219','\u22C5','\u02D9','\u00B0','\u204E','\u2055','*','\'',',','.','`'];
   var SUN_GLOW   = ['.',',','\'','`','\u00B7',' ','\u02D9','\u00B0'];
 
-  /* Moon character sets — 3 concentric zones + phase-specific cores */
+  /* Moon character sets — 3 concentric zones + phase-specific cores
+     VS15 appended to crescent/quarter chars that have emoji variants.       */
   var MOON_CORE_NEW      = ['\u25CF','\u25CB','\u25C9'];
-  var MOON_CORE_CRESCENT = ['\u263D','\u263E','\u25D1','\u25D0'];
+  var MOON_CORE_CRESCENT = ['\u263D\uFE0E','\u263E\uFE0E','\u25D1','\u25D0'];
   var MOON_CORE_QUARTER  = ['\u25D1','\u25D0','\u25D5','\u25D4'];
   var MOON_CORE_GIBBOUS  = ['\u25D5','\u25D4','\u25CE','\u25CB'];
-  var MOON_CORE_FULL     = ['\u25CB','\u25CE','\u25EF','\u25CB','\u263D'];
+  var MOON_CORE_FULL     = ['\u25CB','\u25CE','\u25EF','\u25CB','\u263D\uFE0E'];
   var MOON_SURFACE       = ['\u2218','\u25E6','\u2299','\u229A','\u25CC','\u25CD','\u00B7','\u2219'];
-  var MOON_GLOW          = ['\u00B7','\u2022','\u2219','\u22C5','\u02D9','\u00B0','.',',','\'','`'];
+  var MOON_GLOW          = ['\u00B7','\u2022\uFE0E','\u2219','\u22C5','\u02D9','\u00B0','.',',','\'','`'];
 
   /* Font size multipliers (relative to SUN_CELL) */
   var SUN_SIZES  = { glow: 0.8, corona: 0.9, rays: 0.9, inner: 1.1, core: 1.4 };
@@ -1270,7 +1275,7 @@
         var off = document.createElement('canvas');
         off.width = sz; off.height = sz;
         var o = off.getContext('2d');
-        o.font = fs + 'px "Cormorant Garamond", Georgia, serif';
+        o.font = fs + 'px "Apple Symbols", "Segoe UI Symbol", "Noto Sans Symbols 2", "Cormorant Garamond", Georgia, serif';
         o.textAlign = 'center'; o.textBaseline = 'middle';
         o.fillStyle = colorStr;
         o.fillText(uniq[ci], sz/2, sz/2);
@@ -1307,7 +1312,7 @@
     var s = celestialSprites[key];
     if (s) { ctx.drawImage(s, px - s.width*0.5, py - s.height*0.5); }
     else {
-      ctx.font = fs + 'px "Cormorant Garamond", Georgia, serif';
+      ctx.font = fs + 'px "Apple Symbols", "Segoe UI Symbol", "Noto Sans Symbols 2", "Cormorant Garamond", Georgia, serif';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillStyle = colorStr; ctx.fillText(ch, px, py);
     }
