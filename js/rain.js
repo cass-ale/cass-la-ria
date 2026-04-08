@@ -900,9 +900,8 @@
         .getPropertyValue('--color-text').trim()
       || '#2a1f2d';
 
-    cloudCtx.font = (CLOUD_CELL - 1) + 'px "Cormorant Garamond", Georgia, serif';
-    cloudCtx.textAlign = 'center';
-    cloudCtx.textBaseline = 'middle';
+    /* Font setup removed — cloud characters are now drawn from
+       pre-rendered sprite cache (cloudSprites) via drawImage(). */
 
     var windStretch = 1.0 + Math.abs(currentWind) * 0.08;
 
@@ -965,7 +964,11 @@
           cloudCtx.fillStyle = textColor;
 
           var ch2 = charFromDensity(norm);
-          cloudCtx.fillText(ch2, px + CLOUD_CELL * 0.5, py + CLOUD_CELL * 0.5);
+          var sprite = cloudSprites[ch2];
+          if (sprite) {
+            var halfSz = sprite.width * 0.5;
+            cloudCtx.drawImage(sprite, px + CLOUD_CELL * 0.5 - halfSz, py + CLOUD_CELL * 0.5 - halfSz);
+          }
 
           if (cloudDensityMap) {
             var mapCol = Math.floor(px / CLOUD_CELL);
@@ -1033,14 +1036,19 @@
 
           cloudCtx.globalAlpha = clamp(bridgeDensity * activePreset.cloudOpacity * 0.7, 0, 1);
           cloudCtx.fillStyle = textColor;
-          cloudCtx.fillText(randomItem(CLOUD_CHARS_LIGHT), px + CLOUD_CELL * 0.5, py + CLOUD_CELL * 0.5);
+          var bch = randomItem(CLOUD_CHARS_LIGHT);
+          var bSprite = cloudSprites[bch];
+          if (bSprite) {
+            var bHalf = bSprite.width * 0.5;
+            cloudCtx.drawImage(bSprite, px + CLOUD_CELL * 0.5 - bHalf, py + CLOUD_CELL * 0.5 - bHalf);
+          }
         }
       }
     }
   }
 
   /* ============================================================
-     10. PRE-RENDERED CHARACTER SPRITES (rain + splash)
+     10. PRE-RENDERED CHARACTER SPRITES (rain + splash + cloud)
      ============================================================ */
 
   var charSprites = {};
@@ -1119,6 +1127,34 @@
     }
 
     spriteReady = true;
+  }
+
+  /* Cloud character sprites — cached to eliminate fillText() in the
+     cloud render loop. Same pattern as rain/splash/mist sprites.
+     Keyed by character so charFromDensity() output maps directly. */
+  var cloudSprites = {};
+
+  function buildCloudSprites(color) {
+    cloudSprites = {};
+    var fontSize = CLOUD_CELL - 1;
+    var sz = Math.ceil(fontSize * 1.4);
+    var allCloudChars = CLOUD_CHARS_DENSE.concat(CLOUD_CHARS_MEDIUM, CLOUD_CHARS_LIGHT);
+    /* Deduplicate in case sets overlap */
+    var seen = {};
+    for (var i = 0; i < allCloudChars.length; i++) {
+      var c = allCloudChars[i];
+      if (seen[c]) continue;
+      seen[c] = true;
+      var off = document.createElement('canvas');
+      off.width = sz; off.height = sz;
+      var octx = off.getContext('2d');
+      octx.font = fontSize + 'px "Cormorant Garamond", Georgia, serif';
+      octx.textAlign = 'center';
+      octx.textBaseline = 'middle';
+      octx.fillStyle = color;
+      octx.fillText(c, sz / 2, sz / 2);
+      cloudSprites[c] = off;
+    }
   }
 
   /* ============================================================
@@ -2277,6 +2313,7 @@
         .getPropertyValue('--color-text').trim()
       || '#2a1f2d';
     buildCharSprites(activePreset.charSize, weatherColor);
+    buildCloudSprites(weatherColor);
 
     spawnClouds();
     initDrops();
@@ -2329,6 +2366,7 @@
             .getPropertyValue('--color-text').trim()
           || '#2a1f2d';
         buildCharSprites(activePreset.charSize, resizeColor);
+        buildCloudSprites(resizeColor);
       }
 
       for (var i = 0; i < drops.length; i++) {
@@ -2340,7 +2378,7 @@
   /* ============================================================
      THEME CHANGE DETECTION
      Watch for data-time-theme attribute changes on <html>.
-     When the theme changes, rebuild rain/splash/mist sprites
+     When the theme changes, rebuild rain/splash/mist/cloud sprites
      with the new --color-weather value so they always contrast
      with the background.
      ============================================================ */
@@ -2356,6 +2394,7 @@
     if (newColor !== lastWeatherColor) {
       lastWeatherColor = newColor;
       buildCharSprites(activePreset.charSize, newColor);
+      buildCloudSprites(newColor);
     }
   }
 
