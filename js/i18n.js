@@ -33,18 +33,6 @@ const translations = {
     'error-home-btn': 'Volver al Inicio'
   },
 
-  // Portuguese (PT-BR) - Romance: Warmth and rhythm
-  'pt': {
-    'name': 'Cass la Ria',
-    'skip-link': 'Pular para o conteúdo',
-    'contact-btn': 'Contato',
-    'email-copied': 'E-mail copiado!',
-    'meta-desc': 'Site oficial de Cass la Ria. Uma mente criativa plural — música, vídeo e arte visual.',
-    'meta-title': 'Cass la Ria | Site Oficial',
-    'error-404-message': 'Esta página se perdeu na chuva',
-    'error-home-btn': 'Voltar ao Início'
-  },
-
   // French (FR) - Romance: Euphony and elegance
   'fr': {
     'name': 'Cass la Ria',
@@ -55,6 +43,18 @@ const translations = {
     'meta-title': 'Cass la Ria | Site Officiel',
     'error-404-message': 'Cette page s\u2019est perdue sous la pluie',
     'error-home-btn': 'Retour à l\u2019Accueil'
+  },
+
+  // Indonesian (ID) - Direct, natural, rhythmic
+  'id': {
+    'name': 'Cass la Ria',
+    'skip-link': 'Lanjut ke konten',
+    'contact-btn': 'Kontak',
+    'email-copied': 'Email disalin!',
+    'meta-desc': 'Situs resmi Cass la Ria. Kreator multi-dimensi — musik, video, dan seni visual.',
+    'meta-title': 'Cass la Ria | Situs Resmi',
+    'error-404-message': 'Halaman ini hilang di tengah hujan',
+    'error-home-btn': 'Kembali ke Beranda'
   },
 
   // Japanese (JA) - Yūgen: Say less, mean more. Concrete images.
@@ -81,16 +81,16 @@ const translations = {
     'error-home-btn': '홈으로 돌아가기'
   },
 
-  // Indonesian (ID) - Direct, natural, rhythmic
-  'id': {
+  // Portuguese (PT-BR) - Romance: Warmth and rhythm
+  'pt': {
     'name': 'Cass la Ria',
-    'skip-link': 'Lanjut ke konten',
-    'contact-btn': 'Kontak',
-    'email-copied': 'Email disalin!',
-    'meta-desc': 'Situs resmi Cass la Ria. Kreator multi-dimensi — musik, video, dan seni visual.',
-    'meta-title': 'Cass la Ria | Situs Resmi',
-    'error-404-message': 'Halaman ini hilang di tengah hujan',
-    'error-home-btn': 'Kembali ke Beranda'
+    'skip-link': 'Pular para o conteúdo',
+    'contact-btn': 'Contato',
+    'email-copied': 'E-mail copiado!',
+    'meta-desc': 'Site oficial de Cass la Ria. Uma mente criativa plural — música, vídeo e arte visual.',
+    'meta-title': 'Cass la Ria | Site Oficial',
+    'error-404-message': 'Esta página se perdeu na chuva',
+    'error-home-btn': 'Voltar ao Início'
   },
 
   // Chinese Simplified (ZH) - Qi yun: Compress ruthlessly. Every character must be necessary.
@@ -110,11 +110,11 @@ const translations = {
 const languageNames = {
   'en': 'English',
   'es': 'Español',
-  'pt': 'Português',
   'fr': 'Français',
+  'id': 'Bahasa Indonesia',
   'ja': '日本語',
   'ko': '한국어',
-  'id': 'Bahasa Indonesia',
+  'pt': 'Português',
   'zh': '中文'
 };
 
