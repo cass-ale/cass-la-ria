@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unicode Sun Demo — CJA Weather System</title>
+<style>
+  /* ============================================================
+     BASE STYLES — mirrors the site's theme system
+     ============================================================ */
+  :root {
+    --color-bg: #f2d4d7;
+    --color-text: #2a1f2d;
+    --color-weather: #2a1f2d;
+    --color-accent: #8b3a62;
+  }
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+  }
+  canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* ============================================================
+     CONTROLS PANEL
+     ============================================================ */
+  .controls {
+    position: fixed;
+    top: 12px; right: 12px;
+    z-index: 200;
+    background: color-mix(in srgb, var(--color-bg) 90%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-text) 15%, transparent);
+    border-radius: 8px;
+    padding: 14px 18px;
+    font-size: 13px;
+    max-width: 280px;
+    backdrop-filter: blur(8px);
+  }
+  .controls h3 {
+    margin-bottom: 10px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .controls label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .controls select, .controls input[type="range"] {
+    width: 100%;
+    margin-bottom: 12px;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .controls input[type="range"] {
+    -webkit-appearance: auto;
+    appearance: auto;
+    height: 20px;
+  }
+  .controls .time-display {
+    font-size: 18px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .controls .info {
+    font-size: 11px;
+    opacity: 0.7;
+    margin-top: 8px;
+    line-height: 1.4;
+  }
+  .controls .sun-state {
+    font-size: 12px;
+    margin-top: 6px;
+    padding: 6px 8px;
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    border-radius: 4px;
+    line-height: 1.5;
+  }
+  .fps {
+    position: fixed;
+    bottom: 12px; right: 12px;
+    z-index: 200;
+    font-size: 11px;
+    opacity: 0.5;
+    font-family: monospace;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="sunCanvas"></canvas>
+
+<div class="controls">
+  <h3>Unicode Sun Demo</h3>
+
+  <label for="timeSlider">Time of Day</label>
+  <div class="time-display" id="timeDisplay">12:00</div>
+  <input type="range" id="timeSlider" min="0" max="24" step="0.1" value="12">
+
+  <label for="presetSelect">Weather Preset</label>
+  <select id="presetSelect"></select>
+
+  <label for="themeSelect">Theme</label>
+  <select id="themeSelect">
+    <option value="witching-hour">Witching Hour (3 AM)</option>
+    <option value="dawn">Dawn (6 AM)</option>
+    <option value="morning">Morning (9 AM)</option>
+    <option value="midday" selected>Midday (1 PM)</option>
+    <option value="golden-hour">Golden Hour (4 PM)</option>
+    <option value="sunset">Sunset (6 PM)</option>
+    <option value="dusk">Dusk (8 PM)</option>
+    <option value="night">Night (11 PM)</option>
+  </select>
+
+  <div class="sun-state" id="sunState">—</div>
+
+  <div class="info">
+    Sun follows a sinusoidal arc across the sky based on time.
+    Visibility, color, size, and glow respond to weather presets.
+    Rayleigh scattering colors the sun red-orange at horizon,
+    white-yellow at zenith. Corona and rays pulse with noise.
+  </div>
+</div>
+
+<div class="fps" id="fps">-- fps</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ============================================================
+     1. SIMPLEX NOISE (Stefan Gustavson, 2005)
+     ============================================================ */
+  var SimplexNoise = (function () {
+    var F2 = 0.5 * (Math.sqrt(3) - 1), G2 = (3 - Math.sqrt(3)) / 6;
+    var grad3 = [[1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0],[1,0,1],[-1,0,1],[1,0,-1],[-1,0,-1],[0,1,1],[0,-1,1],[0,1,-1],[0,-1,-1]];
+    function SN(seed) {
+      this.perm = new Uint8Array(512);
+      var p = new Uint8Array(256);
+      for (var i = 0; i < 256; i++) p[i] = i;
+      seed = seed || Math.random() * 65536;
+      for (var i = 255; i > 0; i--) {
+        seed = (seed * 16807 + 0) % 2147483647;
+        var j = seed % (i + 1);
+        var t = p[i]; p[i] = p[j]; p[j] = t;
+      }
+      for (var i = 0; i < 512; i++) this.perm[i] = p[i & 255];
+    }
+    SN.prototype.noise2D = function (x, y) {
+      var s = (x + y) * F2, i = Math.floor(x + s), j = Math.floor(y + s);
+      var t = (i + j) * G2, x0 = x - (i - t), y0 = y - (j - t);
+      var i1 = x0 > y0 ? 1 : 0, j1 = x0 > y0 ? 0 : 1;
+      var x1 = x0 - i1 + G2, y1 = y0 - j1 + G2;
+      var x2 = x0 - 1 + 2 * G2, y2 = y0 - 1 + 2 * G2;
+      var ii = i & 255, jj = j & 255;
+      var n0 = 0, n1 = 0, n2 = 0;
+      var t0 = 0.5 - x0*x0 - y0*y0;
+      if (t0 >= 0) { t0 *= t0; var gi = this.perm[ii + this.perm[jj]] % 12; n0 = t0 * t0 * (grad3[gi][0]*x0 + grad3[gi][1]*y0); }
+      var t1 = 0.5 - x1*x1 - y1*y1;
+      if (t1 >= 0) { t1 *= t1; var gi = this.perm[ii+i1 + this.perm[jj+j1]] % 12; n1 = t1 * t1 * (grad3[gi][0]*x1 + grad3[gi][1]*y1); }
+      var t2 = 0.5 - x2*x2 - y2*y2;
+      if (t2 >= 0) { t2 *= t2; var gi = this.perm[ii+1 + this.perm[jj+1]] % 12; n2 = t2 * t2 * (grad3[gi][0]*x2 + grad3[gi][1]*y2); }
+      return 70 * (n0 + n1 + n2);
+    };
+    return SN;
+  })();
+
+  var noise = new SimplexNoise(42);
+
+  /* ============================================================
+     2. CONFIGURATION
+     ============================================================ */
+
+  /* Sun arc: sunrise at hour 5.5, sunset at hour 18.5 (simplified) */
+  var SUNRISE_HOUR = 5.5;
+  var SUNSET_HOUR  = 18.5;
+  var SUN_CELL = 10;  /* character cell size in px */
+
+  /* Character sets by zone (radial distance from center) */
+  var CHARS_CORE     = ['☀', '☉', '◉', '●', '⊙', '◎', '✹'];
+  var CHARS_INNER    = ['✦', '✧', '✶', '✷', '✸', '❋', '❊', '❉', '✺', '✻', '✼', '※', '⁕'];
+  var CHARS_RAYS     = ['/', '\\', '|', '—', '╱', '╲', '│', '─', '*', '+', '·', '•', '∙'];
+  var CHARS_CORONA   = ['·', '•', '∙', '⋅', '˙', '°', '⁎', '⁕', '*', '\'', ',', '.', '`'];
+  var CHARS_GLOW     = ['.', ',', '\'', '`', '·', ' ', '˙', '°'];
+
+  /* Font size multipliers per zone (relative to SUN_CELL) */
+  var ZONE_SIZES = {
+    glow:   0.8,
+    corona: 0.9,
+    rays:   0.9,   /* base; rays scale up with alignment */
+    inner:  1.1,
+    core:   1.4
+  };
+
+  /* ============================================================
+     3. WEATHER PRESETS — sun visibility mapping
+     ============================================================
+     Based on real meteorology:
+     - Cirrus/thin clouds: sun visible, slightly dimmed
+     - Stratocumulus: partial visibility (gaps)
+     - Stratus/nimbostratus: fully obscured
+     - Cumulonimbus: fully obscured
+     - Fog: diffuse glow visible
+     ============================================================ */
+  var SUN_WEATHER = {
+    gentleMist: {
+      name: 'Gentle Mist',
+      visibility: 0.7,
+      hazeFactor: 0.5,
+      description: 'Visible through thin cirrus — hazy disc with 22° halo'
+    },
+    lightDrizzle: {
+      name: 'Light Drizzle',
+      visibility: 0.35,
+      hazeFactor: 0.6,
+      description: 'Partially obscured — peeks through stratocumulus gaps'
+    },
+    steadyRain: {
+      name: 'Steady Rain',
+      visibility: 0.0,
+      hazeFactor: 1.0,
+      description: 'Fully obscured by stratus blanket'
+    },
+    windyShower: {
+      name: 'Windy Shower',
+      visibility: 0.25,
+      hazeFactor: 0.4,
+      description: 'Brief appearances between cumulus gaps — sunshower possible'
+    },
+    downpour: {
+      name: 'Downpour',
+      visibility: 0.0,
+      hazeFactor: 1.0,
+      description: 'Fully obscured by nimbostratus'
+    },
+    stormFront: {
+      name: 'Storm Front',
+      visibility: 0.0,
+      hazeFactor: 1.0,
+      description: 'Fully obscured by cumulonimbus'
+    },
+    typhoon: {
+      name: 'Typhoon',
+      visibility: 0.0,
+      hazeFactor: 1.0,
+      description: 'Fully obscured — extreme cloud coverage'
+    },
+    monsoon: {
+      name: 'Monsoon',
+      visibility: 0.0,
+      hazeFactor: 1.0,
+      description: 'Fully obscured by continuous nimbostratus'
+    },
+    squallLine: {
+      name: 'Squall Line',
+      visibility: 0.0,
+      hazeFactor: 1.0,
+      description: 'Fully obscured by cumulonimbus wall'
+    },
+    thunderstorm: {
+      name: 'Thunderstorm',
+      visibility: 0.0,
+      hazeFactor: 1.0,
+      description: 'Fully obscured by cumulonimbus'
+    },
+    freezingRain: {
+      name: 'Freezing Rain',
+      visibility: 0.0,
+      hazeFactor: 1.0,
+      description: 'Fully obscured by continuous stratus'
+    },
+    radiationFog: {
+      name: 'Radiation Fog',
+      visibility: 0.3,
+      hazeFactor: 0.85,
+      description: 'Diffuse bright disc glowing through fog layer'
+    },
+    petrichor: {
+      name: 'Petrichor',
+      visibility: 0.85,
+      hazeFactor: 0.2,
+      description: 'Bright and clear — breaking through thinning stratocumulus'
+    }
+  };
+
+  /* ============================================================
+     4. THEME PALETTES (matching time-theme.js anchors)
+     ============================================================ */
+  var THEMES = {
+    'witching-hour': { bg: [0x12,0x0e,0x18], text: [0xd8,0xc8,0xd0], weather: [0xc8,0xb0,0xc0], isDark: true },
+    'dawn':          { bg: [0xe0,0xd4,0xe8], text: [0x2d,0x22,0x35], weather: [0x3a,0x2d,0x45], isDark: false },
+    'morning':       { bg: [0xf5,0xdd,0xd4], text: [0x2d,0x22,0x1f], weather: [0x3a,0x28,0x20], isDark: false },
+    'midday':        { bg: [0xf2,0xd4,0xd7], text: [0x2a,0x1f,0x2d], weather: [0x2a,0x1f,0x2d], isDark: false },
+    'golden-hour':   { bg: [0xf0,0xd0,0xb8], text: [0x2e,0x1f,0x18], weather: [0x3a,0x25,0x18], isDark: false },
+    'sunset':        { bg: [0xe8,0xc0,0xb0], text: [0x2a,0x18,0x18], weather: [0x30,0x18,0x18], isDark: false },
+    'dusk':          { bg: [0x30,0x28,0x38], text: [0xd0,0xc0,0xc8], weather: [0xb0,0xa0,0xb0], isDark: true },
+    'night':         { bg: [0x18,0x14,0x20], text: [0xd0,0xc0,0xc8], weather: [0xb8,0xa8,0xb8], isDark: true }
+  };
+
+  /* ============================================================
+     5. SUN COLOR MODEL (Rayleigh scattering approximation)
+     ============================================================
+     At low elevation angles (horizon), shorter wavelengths are
+     scattered away, leaving red-orange. At zenith, the full
+     spectrum reaches the eye, appearing white-yellow.
+
+     Source: Rayleigh scattering — en.wikipedia.org/wiki/Rayleigh_scattering
+     Source: UW-Madison Meteorology — news.wisc.edu/curiosities
+     ============================================================ */
+  function getSunColor(hour, isDark) {
+    var elevation = Math.max(0, Math.sin((hour - SUNRISE_HOUR) / (SUNSET_HOUR - SUNRISE_HOUR) * Math.PI));
+
+    var r, g, b;
+    if (elevation < 0.15) {
+      r = 220; g = 80 + elevation * 400; b = 40;
+    } else if (elevation < 0.4) {
+      var t = (elevation - 0.15) / 0.25;
+      r = 220 + t * 35; g = 140 + t * 80; b = 40 + t * 60;
+    } else if (elevation < 0.7) {
+      var t = (elevation - 0.4) / 0.3;
+      r = 255; g = 220 + t * 25; b = 100 + t * 80;
+    } else {
+      var t = (elevation - 0.7) / 0.3;
+      r = 255; g = 245 + t * 10; b = 180 + t * 50;
+    }
+
+    if (isDark) {
+      r = Math.min(255, r * 1.2);
+      g = Math.min(255, g * 1.1);
+    }
+
+    return { r: Math.round(r), g: Math.round(g), b: Math.round(b) };
+  }
+
+  /* ============================================================
+     6. SUN POSITION MODEL (sinusoidal arc)
+     ============================================================
+     Source: pveducation.org/pvcdrom/properties-of-sunlight/elevation-angle
+     Source: mathcentral.uregina.ca (sinusoidal elevation model)
+     ============================================================ */
+  function getSunPosition(hour, W, H) {
+    if (hour < SUNRISE_HOUR || hour > SUNSET_HOUR) {
+      return null;
+    }
+
+    var dayFrac = (hour - SUNRISE_HOUR) / (SUNSET_HOUR - SUNRISE_HOUR);
+    var x = W * (0.10 + dayFrac * 0.80);
+    var elevation = Math.sin(dayFrac * Math.PI);
+    var y = H * (0.85 - elevation * 0.77);
+
+    return { x: x, y: y, elevation: elevation, dayFrac: dayFrac };
+  }
+
+  /* ============================================================
+     7. SUN SIZE MODEL
+     ============================================================
+     Source: Moon illusion / Ponzo illusion — atmospheric refraction
+     ============================================================ */
+  function getSunRadius(elevation, baseRadius) {
+    var horizonBoost = 1.35 - 0.35 * elevation;
+    return baseRadius * horizonBoost;
+  }
+
+  /* ============================================================
+     8. SPRITE CACHE (matching rain.js cloud sprite pattern)
+     ============================================================
+     Pre-renders each unique character at each required font size
+     onto offscreen canvases. The render loop uses drawImage()
+     instead of fillText() for a major performance gain.
+
+     Cache is keyed as "char@size" to support multiple zone sizes.
+     Rebuilt whenever the sun color changes (theme/time change).
+
+     Architecture matches rain.js buildCloudSprites():
+     - Offscreen canvas per glyph+size combo
+     - drawImage() in hot path (no font shaping per frame)
+     - Rebuild triggered by color change detection
+     ============================================================ */
+  var sunSpriteCache = {};
+  var lastSpriteColor = '';
+
+  function buildSunSprites(colorStr) {
+    sunSpriteCache = {};
+    var allChars = [].concat(CHARS_CORE, CHARS_INNER, CHARS_RAYS, CHARS_CORONA, CHARS_GLOW);
+    /* Deduplicate */
+    var seen = {};
+    var uniqueChars = [];
+    for (var i = 0; i < allChars.length; i++) {
+      var c = allChars[i];
+      if (c === ' ' || seen[c]) continue;
+      seen[c] = true;
+      uniqueChars.push(c);
+    }
+
+    /* Build sprites at each zone font size */
+    var sizes = [
+      Math.round(SUN_CELL * ZONE_SIZES.glow),
+      Math.round(SUN_CELL * ZONE_SIZES.corona),
+      Math.round(SUN_CELL * ZONE_SIZES.rays),
+      Math.round(SUN_CELL * ZONE_SIZES.inner),
+      Math.round(SUN_CELL * ZONE_SIZES.core)
+    ];
+    /* Also build a few extra sizes for ray scaling (0.9 to 1.2 of SUN_CELL) */
+    for (var s = 9; s <= 14; s++) {
+      sizes.push(s);
+    }
+    /* Deduplicate sizes */
+    var sizeSet = {};
+    var uniqueSizes = [];
+    for (var i = 0; i < sizes.length; i++) {
+      if (!sizeSet[sizes[i]]) {
+        sizeSet[sizes[i]] = true;
+        uniqueSizes.push(sizes[i]);
+      }
+    }
+
+    for (var si = 0; si < uniqueSizes.length; si++) {
+      var fontSize = uniqueSizes[si];
+      var sz = Math.ceil(fontSize * 1.6);
+      for (var ci = 0; ci < uniqueChars.length; ci++) {
+        var c = uniqueChars[ci];
+        var key = c + '@' + fontSize;
+        var off = document.createElement('canvas');
+        off.width = sz; off.height = sz;
+        var octx = off.getContext('2d');
+        octx.font = fontSize + 'px "Cormorant Garamond", Georgia, serif';
+        octx.textAlign = 'center';
+        octx.textBaseline = 'middle';
+        octx.fillStyle = colorStr;
+        octx.fillText(c, sz / 2, sz / 2);
+        sunSpriteCache[key] = off;
+      }
+    }
+  }
+
+  /** Draw a cached sprite. Falls back to fillText if sprite missing. */
+  function drawSprite(ch, fontSize, px, py) {
+    var key = ch + '@' + fontSize;
+    var sprite = sunSpriteCache[key];
+    if (sprite) {
+      var halfSz = sprite.width * 0.5;
+      ctx.drawImage(sprite, px - halfSz, py - halfSz);
+    } else {
+      /* Fallback for uncached sizes (e.g. dynamic ray scaling) */
+      ctx.font = fontSize + 'px "Cormorant Garamond", Georgia, serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(ch, px, py);
+    }
+  }
+
+  /* ============================================================
+     9. CANVAS SETUP
+     ============================================================ */
+  var canvas = document.getElementById('sunCanvas');
+  var ctx = canvas.getContext('2d');
+  var W, H, dpr;
+
+  function resize() {
+    dpr = window.devicePixelRatio || 1;
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+
+  /* ============================================================
+     10. STATE
+     ============================================================ */
+  var currentHour = 12;
+  var currentPresetKey = 'petrichor';
+  var currentThemeKey = 'midday';
+  var timeAccum = 0;
+
+  /* ============================================================
+     11. RENDER SUN
+     ============================================================
+     The sun is rendered as concentric zones of Unicode characters:
+
+     Zone 1 — CORE (0-15% radius): Dense, large chars (☀ ☉ ◉)
+       Represents the photosphere. Bright, high opacity.
+
+     Zone 2 — INNER GLOW (15-35%): Decorative stars (✦ ✧ ✶ ❋)
+       Represents the chromosphere / inner corona.
+       Characters rotate slowly around center.
+
+     Zone 3 — RAYS (35-65%): Directional chars (/ \ | —)
+       Represents crepuscular rays / solar limb.
+       Characters are oriented radially outward.
+       Length and opacity increase at low elevation (horizon).
+
+     Zone 4 — CORONA (65-85%): Dots and sparkles (· • ⁎)
+       Represents the outer corona / atmospheric glow.
+       Pulsates with noise-based shimmer.
+       Expands in hazy/foggy conditions.
+
+     Zone 5 — GLOW (85-120%): Faint dots (. , ' `)
+       Represents scattered light / atmospheric halo.
+       Very low opacity, large radius.
+       Only visible in hazy conditions (Gentle Mist, Radiation Fog).
+     ============================================================ */
+
+  function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  function pickChar(chars, seed) {
+    return chars[Math.abs(Math.floor(seed * 1000)) % chars.length];
+  }
+
+  function renderSun(time) {
+    ctx.clearRect(0, 0, W, H);
+
+    var preset = SUN_WEATHER[currentPresetKey];
+    var theme = THEMES[currentThemeKey];
+
+    /* Check if sun is above horizon */
+    var pos = getSunPosition(currentHour, W, H);
+    if (!pos) {
+      updateStateDisplay('Below horizon — not visible', 0);
+      return;
+    }
+
+    /* Check weather visibility */
+    var visibility = preset.visibility;
+    if (visibility <= 0) {
+      updateStateDisplay(preset.description, 0);
+      return;
+    }
+
+    var hazeFactor = preset.hazeFactor;
+    var elevation = pos.elevation;
+    var sunColor = getSunColor(currentHour, theme.isDark);
+
+    /* Rebuild sprite cache if color changed */
+    var colorStr = 'rgb(' + sunColor.r + ',' + sunColor.g + ',' + sunColor.b + ')';
+    if (colorStr !== lastSpriteColor) {
+      lastSpriteColor = colorStr;
+      buildSunSprites(colorStr);
+    }
+
+    /* Base radius scales with viewport and elevation */
+    var baseRadius = Math.min(W, H) * 0.08;
+    var radius = getSunRadius(elevation, baseRadius);
+
+    /* Haze expands the glow, reduces core sharpness */
+    var glowMultiplier = 1.0 + hazeFactor * 0.6;
+    var coreSharpness = 1.0 - hazeFactor * 0.5;
+
+    /* Ray length increases at low elevation (crepuscular rays at horizon) */
+    var rayLengthMult = 1.0 + (1.0 - elevation) * 0.8;
+
+    /* Flickering visibility for partial presets (sunshower effect) */
+    var flickerVis = visibility;
+    if (visibility > 0 && visibility < 0.5) {
+      var flicker = noise.noise2D(time * 0.15, 0) * 0.5 + 0.5;
+      flickerVis = visibility * (0.5 + flicker * 0.5);
+    }
+
+    var cx = pos.x;
+    var cy = pos.y;
+
+    /* Pre-compute font sizes for each zone */
+    var fsGlow   = Math.round(SUN_CELL * ZONE_SIZES.glow);
+    var fsCorona = Math.round(SUN_CELL * ZONE_SIZES.corona);
+    var fsRays   = Math.round(SUN_CELL * ZONE_SIZES.rays);
+    var fsInner  = Math.round(SUN_CELL * ZONE_SIZES.inner);
+    var fsCore   = Math.round(SUN_CELL * ZONE_SIZES.core);
+
+    /* Set fill style once (sprites are pre-colored) */
+    ctx.fillStyle = colorStr;
+
+    /* ---- Zone 5: GLOW (outermost, rendered first / behind) ---- */
+    var glowRadius = radius * 1.3 * glowMultiplier;
+    var glowCells = Math.ceil(glowRadius * 2 / SUN_CELL);
+    for (var gy = -glowCells; gy <= glowCells; gy++) {
+      for (var gx = -glowCells; gx <= glowCells; gx++) {
+        var px = cx + gx * SUN_CELL;
+        var py = cy + gy * SUN_CELL;
+        var dx = px - cx, dy = py - cy;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        var normDist = dist / glowRadius;
+
+        if (normDist < 0.85 || normDist > 1.2) continue;
+
+        var glowFade = 1.0 - (normDist - 0.85) / 0.35;
+        var shimmer = noise.noise2D(gx * 0.3 + time * 0.08, gy * 0.3 + time * 0.05) * 0.3 + 0.7;
+        var alpha = glowFade * shimmer * flickerVis * 0.15 * (0.5 + hazeFactor * 0.5);
+
+        if (alpha < 0.01) continue;
+
+        var ch = pickChar(CHARS_GLOW, gx * 7 + gy * 13 + Math.floor(time * 0.3));
+        ctx.globalAlpha = alpha;
+        drawSprite(ch, fsGlow, px, py);
+      }
+    }
+
+    /* ---- Zone 4: CORONA ---- */
+    var coronaRadius = radius * 0.95 * glowMultiplier;
+    var coronaCells = Math.ceil(coronaRadius * 2 / SUN_CELL);
+    for (var gy = -coronaCells; gy <= coronaCells; gy++) {
+      for (var gx = -coronaCells; gx <= coronaCells; gx++) {
+        var px = cx + gx * SUN_CELL;
+        var py = cy + gy * SUN_CELL;
+        var dx = px - cx, dy = py - cy;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        var normDist = dist / coronaRadius;
+
+        if (normDist < 0.65 || normDist > 0.90) continue;
+
+        var coronaFade = 1.0 - (normDist - 0.65) / 0.25;
+        var pulse = noise.noise2D(gx * 0.5 + time * 0.12, gy * 0.5 - time * 0.08) * 0.4 + 0.6;
+        var alpha = coronaFade * pulse * flickerVis * 0.35;
+
+        if (alpha < 0.01) continue;
+
+        var ch = pickChar(CHARS_CORONA, gx * 11 + gy * 17 + Math.floor(time * 0.4));
+        ctx.globalAlpha = alpha;
+        drawSprite(ch, fsCorona, px, py);
+      }
+    }
+
+    /* ---- Zone 3: RAYS ---- */
+    var rayRadius = radius * 0.75 * rayLengthMult;
+    var rayCells = Math.ceil(rayRadius * 2 / SUN_CELL);
+    var NUM_RAYS = 16;
+    var rayAngles = [];
+    for (var ri = 0; ri < NUM_RAYS; ri++) {
+      rayAngles.push(ri * Math.PI * 2 / NUM_RAYS + time * 0.02);
+    }
+
+    for (var gy = -rayCells; gy <= rayCells; gy++) {
+      for (var gx = -rayCells; gx <= rayCells; gx++) {
+        var px = cx + gx * SUN_CELL;
+        var py = cy + gy * SUN_CELL;
+        var dx = px - cx, dy = py - cy;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        var normDist = dist / rayRadius;
+
+        if (normDist < 0.35 || normDist > 0.70) continue;
+
+        var angle = Math.atan2(dy, dx);
+        var bestRayAlign = 0;
+        for (var ri = 0; ri < NUM_RAYS; ri++) {
+          var diff = Math.abs(angle - rayAngles[ri]);
+          diff = Math.min(diff, Math.PI * 2 - diff);
+          var rayWidth = (ri % 2 === 0) ? 0.18 : 0.10;
+          var align = Math.max(0, 1.0 - diff / rayWidth);
+          bestRayAlign = Math.max(bestRayAlign, align);
+        }
+
+        if (bestRayAlign < 0.1) continue;
+
+        var radialFade = 1.0 - (normDist - 0.35) / 0.35;
+        var rayNoise = noise.noise2D(gx * 0.8 + time * 0.1, gy * 0.8 + time * 0.06) * 0.3 + 0.7;
+        var alpha = bestRayAlign * radialFade * rayNoise * flickerVis * coreSharpness * 0.55;
+
+        if (alpha < 0.01) continue;
+
+        /* Pick directional char based on angle */
+        var absAngle = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+        var ch;
+        var octant = Math.floor(absAngle / (Math.PI / 4) + 0.5) % 8;
+        var dirChars = ['—', '╲', '|', '╱', '—', '╲', '|', '╱'];
+        ch = dirChars[octant];
+
+        /* Mix in sparkle chars at ray tips */
+        if (normDist > 0.55) {
+          ch = pickChar(CHARS_INNER, gx * 3 + gy * 7 + Math.floor(time * 0.5));
+        }
+
+        /* Use quantized font size for ray scaling to hit cache */
+        var rayFontSize = Math.round(SUN_CELL * (0.9 + bestRayAlign * 0.3));
+        rayFontSize = clamp(rayFontSize, 9, 14);
+
+        ctx.globalAlpha = alpha;
+        drawSprite(ch, rayFontSize, px, py);
+      }
+    }
+
+    /* ---- Zone 2: INNER GLOW ---- */
+    var innerRadius = radius * 0.40;
+    var innerCells = Math.ceil(innerRadius * 2 / SUN_CELL);
+    for (var gy = -innerCells; gy <= innerCells; gy++) {
+      for (var gx = -innerCells; gx <= innerCells; gx++) {
+        var px = cx + gx * SUN_CELL;
+        var py = cy + gy * SUN_CELL;
+        var dx = px - cx, dy = py - cy;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        var normDist = dist / innerRadius;
+
+        if (normDist < 0.15 || normDist > 1.0) continue;
+
+        var orbitAngle = Math.atan2(dy, dx) + time * 0.03;
+        var orbitNoise = noise.noise2D(
+          Math.cos(orbitAngle) * 2 + time * 0.05,
+          Math.sin(orbitAngle) * 2 + time * 0.05
+        ) * 0.3 + 0.7;
+
+        var innerFade = normDist < 0.5 ? 1.0 : 1.0 - (normDist - 0.5) / 0.5;
+        var alpha = innerFade * orbitNoise * flickerVis * coreSharpness * 0.65;
+
+        if (alpha < 0.01) continue;
+
+        var ch = pickChar(CHARS_INNER, gx * 5 + gy * 9 + Math.floor(time * 0.6));
+        ctx.globalAlpha = alpha;
+        drawSprite(ch, fsInner, px, py);
+      }
+    }
+
+    /* ---- Zone 1: CORE ---- */
+    var coreRadius = radius * 0.18;
+    var coreCells = Math.ceil(coreRadius * 2 / SUN_CELL);
+    for (var gy = -coreCells; gy <= coreCells; gy++) {
+      for (var gx = -coreCells; gx <= coreCells; gx++) {
+        var px = cx + gx * SUN_CELL;
+        var py = cy + gy * SUN_CELL;
+        var dx = px - cx, dy = py - cy;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        var normDist = dist / coreRadius;
+
+        if (normDist > 1.0) continue;
+
+        var corePulse = noise.noise2D(time * 0.2, gx * 0.5 + gy * 0.5) * 0.1 + 0.9;
+        var alpha = corePulse * flickerVis * coreSharpness * 0.9;
+
+        var ch = pickChar(CHARS_CORE, gx * 3 + gy * 5 + Math.floor(time * 0.8));
+        ctx.globalAlpha = alpha;
+        drawSprite(ch, fsCore, px, py);
+      }
+    }
+
+    ctx.globalAlpha = 1;
+
+    /* Update state display */
+    var stateText = preset.description;
+    stateText += '\nElevation: ' + (elevation * 90).toFixed(1) + '°';
+    stateText += ' | Color: ' + colorStr;
+    stateText += '\nRadius: ' + radius.toFixed(0) + 'px | Visibility: ' + (flickerVis * 100).toFixed(0) + '%';
+    updateStateDisplay(stateText, flickerVis);
+  }
+
+  /* ============================================================
+     12. UI CONTROLS
+     ============================================================ */
+  var timeSlider = document.getElementById('timeSlider');
+  var timeDisplay = document.getElementById('timeDisplay');
+  var presetSelect = document.getElementById('presetSelect');
+  var themeSelect = document.getElementById('themeSelect');
+  var sunStateEl = document.getElementById('sunState');
+  var fpsEl = document.getElementById('fps');
+
+  /* Populate preset dropdown */
+  var presetKeys = Object.keys(SUN_WEATHER);
+  for (var i = 0; i < presetKeys.length; i++) {
+    var opt = document.createElement('option');
+    opt.value = presetKeys[i];
+    opt.textContent = SUN_WEATHER[presetKeys[i]].name;
+    if (presetKeys[i] === currentPresetKey) opt.selected = true;
+    presetSelect.appendChild(opt);
+  }
+
+  timeSlider.addEventListener('input', function () {
+    currentHour = parseFloat(this.value);
+    var h = Math.floor(currentHour);
+    var m = Math.floor((currentHour - h) * 60);
+    timeDisplay.textContent = (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+  });
+
+  presetSelect.addEventListener('change', function () {
+    currentPresetKey = this.value;
+  });
+
+  themeSelect.addEventListener('change', function () {
+    currentThemeKey = this.value;
+    applyTheme(currentThemeKey);
+    /* Force sprite rebuild on next frame (color changes with theme) */
+    lastSpriteColor = '';
+  });
+
+  function applyTheme(key) {
+    var t = THEMES[key];
+    var root = document.documentElement;
+    root.style.setProperty('--color-bg', 'rgb(' + t.bg.join(',') + ')');
+    root.style.setProperty('--color-text', 'rgb(' + t.text.join(',') + ')');
+    root.style.setProperty('--color-weather', 'rgb(' + t.weather.join(',') + ')');
+  }
+
+  function updateStateDisplay(text, vis) {
+    sunStateEl.textContent = text;
+  }
+
+  /* ============================================================
+     13. ANIMATION LOOP
+     ============================================================ */
+  var lastTime = 0;
+  var frameCount = 0;
+  var fpsTime = 0;
+
+  function animate(timestamp) {
+    var dt = (timestamp - lastTime) / 1000;
+    lastTime = timestamp;
+    timeAccum += dt;
+
+    renderSun(timeAccum);
+
+    /* FPS counter */
+    frameCount++;
+    fpsTime += dt;
+    if (fpsTime >= 1.0) {
+      fpsEl.textContent = Math.round(frameCount / fpsTime) + ' fps';
+      frameCount = 0;
+      fpsTime = 0;
+    }
+
+    requestAnimationFrame(animate);
+  }
+
+  /* ============================================================
+     14. INIT
+     ============================================================ */
+  applyTheme(currentThemeKey);
+  /* Build initial sprite cache */
+  var initColor = getSunColor(12, THEMES[currentThemeKey].isDark);
+  buildSunSprites('rgb(' + initColor.r + ',' + initColor.g + ',' + initColor.b + ')');
+  lastSpriteColor = 'rgb(' + initColor.r + ',' + initColor.g + ',' + initColor.b + ')';
+
+  requestAnimationFrame(function (ts) {
+    lastTime = ts;
+    animate(ts);
+  });
+
+})();
+</script>
+
+</body>
+</html>
