@@ -1,8 +1,9 @@
 /* ============================================================
-   RAIN.JS — Procedural Weather System v4
+   RAIN.JS — Procedural Weather System v5
    Individual cloud entities with depth, drift, collision/merging,
    continuous Unicode rain, AAA wind physics, splash particles,
-   volumetric rain depth, and atmospheric mist.
+   volumetric rain depth, atmospheric mist, and celestial bodies
+   (sun + moon with real lunar calendar sync).
 
    Architecture:
    - Individual cloud objects with unique noise seeds
@@ -16,7 +17,13 @@
    - 3-depth rain layers with parallax (foreground/mid/background)
    - Splash particles on ground impact
    - Atmospheric ground mist for heavy presets
-   - 7 weather presets randomly selected per visit
+   - Unicode sun with 5-zone rendering (core/inner/rays/corona/glow)
+   - Unicode moon with 3-zone rendering (core/surface/glow)
+   - Real lunar phase calculation synced to calendar date
+   - Theme-aware Rayleigh scattering colors with contrast enforcement
+   - Weather interactions: cloud occlusion, rain curtain, fog halos,
+     snow whiteout, dust color shift, wind-shifted cloud gaps
+   - Weather presets randomly selected per visit
    - Umbrella cursor (desktop) / touch deflection (mobile)
 
    Sources & references:
@@ -36,6 +43,14 @@
    - Canvas optimization: MDN Canvas API Tutorial
    - Custom cursor: 14islands.com/journal
    - Device Orientation: MDN DeviceOrientationEvent
+   - Lunar phase: voidware.com/moon_phase.htm, gist.github.com/endel
+   - Moon rise/set by phase: itu.physics.uiowa.edu/labs/observational
+   - Rayleigh scattering: hyperphysics.phy-astr.gsu.edu/hbase/atmos
+   - WCAG contrast: w3.org/TR/WCAG21/#contrast-minimum
+   - Cloud types: NOAA NESDIS
+   - Weather phenomena: NOAA JetStream
+   - Moon through clouds: earthsky.org
+   - Halo/corona optics: fullmoon.info, naturalnavigator.com
    ============================================================ */
 
 (function () {
@@ -155,6 +170,35 @@
 
   /* Ice fragment characters — used for Freezing Rain preset */
   var ICE_SPLASH_CHARS = ['*', '+', '\u2022', '\u00D7', '\u2219', '\u2716'];
+
+  /* ============================================================
+     2b. CELESTIAL BODY CONFIGURATION
+     Sun and moon character sets, sizes, and timing constants.
+     ============================================================ */
+
+  var SUNRISE_HOUR = 5.0;
+  var SUNSET_HOUR  = 20.0;
+  var SUN_CELL = 10;           /* px per character cell for celestial rendering */
+
+  /* Sun character sets — 5 concentric zones */
+  var SUN_CORE   = ['\u2600','\u2609','\u25C9','\u25CF','\u2299','\u25CE','\u2739'];
+  var SUN_INNER  = ['\u2726','\u2727','\u2736','\u2737','\u2738','\u274B','\u274A','\u2749','\u273A','\u273B','\u273C','\u203B','\u2055'];
+  var SUN_RAYS   = ['/','\\','|','\u2014','\u2571','\u2572','\u2502','\u2500','*','+','\u00B7','\u2022','\u2219'];
+  var SUN_CORONA = ['\u00B7','\u2022','\u2219','\u22C5','\u02D9','\u00B0','\u204E','\u2055','*','\'',',','.','`'];
+  var SUN_GLOW   = ['.',',','\'','`','\u00B7',' ','\u02D9','\u00B0'];
+
+  /* Moon character sets — 3 concentric zones + phase-specific cores */
+  var MOON_CORE_NEW      = ['\u25CF','\u25CB','\u25C9'];
+  var MOON_CORE_CRESCENT = ['\u263D','\u263E','\u25D1','\u25D0'];
+  var MOON_CORE_QUARTER  = ['\u25D1','\u25D0','\u25D5','\u25D4'];
+  var MOON_CORE_GIBBOUS  = ['\u25D5','\u25D4','\u25CE','\u25CB'];
+  var MOON_CORE_FULL     = ['\u25CB','\u25CE','\u25EF','\u25CB','\u263D'];
+  var MOON_SURFACE       = ['\u2218','\u25E6','\u2299','\u229A','\u25CC','\u25CD','\u00B7','\u2219'];
+  var MOON_GLOW          = ['\u00B7','\u2022','\u2219','\u22C5','\u02D9','\u00B0','.',',','\'','`'];
+
+  /* Font size multipliers (relative to SUN_CELL) */
+  var SUN_SIZES  = { glow: 0.8, corona: 0.9, rays: 0.9, inner: 1.1, core: 1.4 };
+  var MOON_SIZES = { glow: 0.7, surface: 0.9, core: 1.2 };
 
   /* Umbrella */
   var UMBRELLA_CHAR = '\u2602';
@@ -333,7 +377,11 @@
       cloudDriftSpeed: 8,
       virga: 0.3,
       mistEnabled: false,
-      mistDensity: 0
+      mistDensity: 0,
+      /* Celestial visibility */
+      sunVis: 0.7, moonVis: 0.75, hazeFactor: 0.5,
+      celestialCloudCoverage: 0.2, rainCurtain: 0.0,
+      snowScatter: 0.0, fogHalo: 0.6, celestialCategory: 'fog'
     },
     lightDrizzle: {
       name: 'Light Drizzle',
@@ -351,7 +399,10 @@
       cloudDriftSpeed: 12,
       virga: 0.15,
       mistEnabled: false,
-      mistDensity: 0
+      mistDensity: 0,
+      sunVis: 0.35, moonVis: 0.4, hazeFactor: 0.6,
+      celestialCloudCoverage: 0.5, rainCurtain: 0.15,
+      snowScatter: 0.0, fogHalo: 0.0, celestialCategory: 'rain'
     },
     steadyRain: {
       name: 'Steady Rain',
@@ -369,7 +420,10 @@
       cloudDriftSpeed: 18,
       virga: 0.05,
       mistEnabled: true,
-      mistDensity: 0.3
+      mistDensity: 0.3,
+      sunVis: 0.0, moonVis: 0.0, hazeFactor: 1.0,
+      celestialCloudCoverage: 0.95, rainCurtain: 0.6,
+      snowScatter: 0.0, fogHalo: 0.0, celestialCategory: 'rain'
     },
     windyShower: {
       name: 'Windy Shower',
@@ -387,7 +441,10 @@
       cloudDriftSpeed: 30,
       virga: 0.08,
       mistEnabled: true,
-      mistDensity: 0.4
+      mistDensity: 0.4,
+      sunVis: 0.25, moonVis: 0.3, hazeFactor: 0.4,
+      celestialCloudCoverage: 0.6, rainCurtain: 0.3,
+      snowScatter: 0.0, fogHalo: 0.0, celestialCategory: 'rain'
     },
     downpour: {
       name: 'Downpour',
@@ -405,7 +462,10 @@
       cloudDriftSpeed: 14,
       virga: 0.0,
       mistEnabled: true,
-      mistDensity: 0.6
+      mistDensity: 0.6,
+      sunVis: 0.0, moonVis: 0.0, hazeFactor: 1.0,
+      celestialCloudCoverage: 0.98, rainCurtain: 0.85,
+      snowScatter: 0.0, fogHalo: 0.0, celestialCategory: 'rain'
     },
     stormFront: {
       name: 'Storm Front',
@@ -423,7 +483,10 @@
       cloudDriftSpeed: 40,
       virga: 0.0,
       mistEnabled: true,
-      mistDensity: 0.75
+      mistDensity: 0.75,
+      sunVis: 0.0, moonVis: 0.0, hazeFactor: 1.0,
+      celestialCloudCoverage: 0.95, rainCurtain: 0.7,
+      snowScatter: 0.0, fogHalo: 0.0, celestialCategory: 'rain'
     },
     typhoon: {
       name: 'Typhoon',
@@ -441,7 +504,10 @@
       cloudDriftSpeed: 55,
       virga: 0.0,
       mistEnabled: true,
-      mistDensity: 0.9
+      mistDensity: 0.9,
+      sunVis: 0.0, moonVis: 0.0, hazeFactor: 1.0,
+      celestialCloudCoverage: 1.0, rainCurtain: 0.9,
+      snowScatter: 0.0, fogHalo: 0.0, celestialCategory: 'rain'
     },
 
     /* ---- NEW PRESETS ---- */
@@ -462,7 +528,10 @@
       cloudDriftSpeed: 10,
       virga: 0.0,
       mistEnabled: true,
-      mistDensity: 1.0
+      mistDensity: 1.0,
+      sunVis: 0.0, moonVis: 0.0, hazeFactor: 1.0,
+      celestialCloudCoverage: 1.0, rainCurtain: 0.95,
+      snowScatter: 0.0, fogHalo: 0.0, celestialCategory: 'rain'
     },
     squallLine: {
       name: 'Squall Line',
@@ -482,8 +551,11 @@
       mistEnabled: true,
       mistDensity: 0.7,
       lightningEnabled: true,
-      lightningInterval: [8, 20],   /* less frequent than thunderstorm */
-      lightningBranches: 2          /* simpler bolts */
+      lightningInterval: [8, 20],
+      lightningBranches: 2,
+      sunVis: 0.0, moonVis: 0.0, hazeFactor: 1.0,
+      celestialCloudCoverage: 0.95, rainCurtain: 0.8,
+      snowScatter: 0.0, fogHalo: 0.0, celestialCategory: 'rain'
     },
     thunderstorm: {
       name: 'Thunderstorm',
@@ -503,8 +575,11 @@
       mistEnabled: true,
       mistDensity: 0.6,
       lightningEnabled: true,
-      lightningInterval: [4, 12],  /* seconds between strikes */
-      lightningBranches: 3         /* max branch depth */
+      lightningInterval: [4, 12],
+      lightningBranches: 3,
+      sunVis: 0.0, moonVis: 0.0, hazeFactor: 1.0,
+      celestialCloudCoverage: 0.9, rainCurtain: 0.7,
+      snowScatter: 0.0, fogHalo: 0.0, celestialCategory: 'rain'
     },
     freezingRain: {
       name: 'Freezing Rain',
@@ -523,7 +598,10 @@
       virga: 0.0,
       mistEnabled: false,
       mistDensity: 0,
-      iceSplash: true              /* flag: use ice fragment chars instead of liquid */
+      iceSplash: true,
+      sunVis: 0.0, moonVis: 0.0, hazeFactor: 1.0,
+      celestialCloudCoverage: 0.9, rainCurtain: 0.5,
+      snowScatter: 0.1, fogHalo: 0.0, celestialCategory: 'rain'
     },
     radiationFog: {
       name: 'Radiation Fog',
@@ -542,8 +620,11 @@
       virga: 0,
       mistEnabled: true,
       mistDensity: 1.0,
-      fogMode: true,               /* flag: dense fog filling 70% of viewport */
-      fogZoneFrac: 0.70
+      fogMode: true,
+      fogZoneFrac: 0.70,
+      sunVis: 0.3, moonVis: 0.35, hazeFactor: 0.85,
+      celestialCloudCoverage: 0.3, rainCurtain: 0.0,
+      snowScatter: 0.0, fogHalo: 0.9, celestialCategory: 'fog'
     },
     petrichor: {
       name: 'Petrichor',
@@ -559,9 +640,12 @@
       rainOpacity: 0.15,
       charSize: 12,
       cloudDriftSpeed: 6,
-      virga: 0.25,                 /* some drops evaporate mid-fall */
+      virga: 0.25,
       mistEnabled: true,
-      mistDensity: 0.2
+      mistDensity: 0.2,
+      sunVis: 0.85, moonVis: 0.9, hazeFactor: 0.2,
+      celestialCloudCoverage: 0.25, rainCurtain: 0.05,
+      snowScatter: 0.0, fogHalo: 0.0, celestialCategory: 'clear'
     }
   };
 
@@ -593,6 +677,10 @@
 
   /* Secondary noise instance for wind turbulence — independent seed */
   var windNoise = new SimplexNoise(Math.random() * 65536);
+
+  /* Noise instances for celestial body rendering */
+  var moonNoise = new SimplexNoise(137);
+  var cloudOcclusionNoise = new SimplexNoise(256);
 
   function fbm(x, y, octaves) {
     var v = 0, amp = 0.5, freq = 1;
@@ -1154,6 +1242,74 @@
       octx.fillStyle = color;
       octx.fillText(c, sz / 2, sz / 2);
       cloudSprites[c] = off;
+    }
+  }
+
+  /* ============================================================
+     10b. CELESTIAL BODY SPRITE CACHE
+     ============================================================ */
+
+  var celestialSprites = {};
+  var lastSunColorStr = '';
+  var lastMoonColorStr = '';
+
+  function buildCelestialSprites(colorStr, chars, sizes) {
+    var seen = {}, uniq = [];
+    for (var i = 0; i < chars.length; i++) {
+      if (chars[i] !== ' ' && !seen[chars[i]]) { seen[chars[i]] = true; uniq.push(chars[i]); }
+    }
+    var sSet = {}, uSizes = [];
+    for (var i = 0; i < sizes.length; i++) {
+      if (!sSet[sizes[i]]) { sSet[sizes[i]] = true; uSizes.push(sizes[i]); }
+    }
+    for (var si = 0; si < uSizes.length; si++) {
+      var fs = uSizes[si], sz = Math.ceil(fs * 1.6);
+      for (var ci = 0; ci < uniq.length; ci++) {
+        var key = uniq[ci] + '@' + fs + '@' + colorStr;
+        if (celestialSprites[key]) continue;
+        var off = document.createElement('canvas');
+        off.width = sz; off.height = sz;
+        var o = off.getContext('2d');
+        o.font = fs + 'px "Cormorant Garamond", Georgia, serif';
+        o.textAlign = 'center'; o.textBaseline = 'middle';
+        o.fillStyle = colorStr;
+        o.fillText(uniq[ci], sz/2, sz/2);
+        celestialSprites[key] = off;
+      }
+    }
+  }
+
+  function rebuildSunSprites(colorStr) {
+    if (colorStr === lastSunColorStr) return;
+    lastSunColorStr = colorStr;
+    celestialSprites = {}; /* Clear old sprites to prevent memory growth */
+    lastMoonColorStr = ''; /* Force moon rebuild too since cache was cleared */
+    var all = [].concat(SUN_CORE, SUN_INNER, SUN_RAYS, SUN_CORONA, SUN_GLOW);
+    var sizes = [];
+    for (var k in SUN_SIZES) sizes.push(Math.round(SUN_CELL * SUN_SIZES[k]));
+    for (var s = 9; s <= 14; s++) sizes.push(s); /* ray dynamic sizes */
+    buildCelestialSprites(colorStr, all, sizes);
+  }
+
+  function rebuildMoonSprites(colorStr) {
+    if (colorStr === lastMoonColorStr) return;
+    lastMoonColorStr = colorStr;
+    /* Only clear if sun sprites haven't just been rebuilt (avoid double-clear) */
+    if (lastSunColorStr === '') celestialSprites = {};
+    var all = [].concat(MOON_CORE_NEW, MOON_CORE_CRESCENT, MOON_CORE_QUARTER, MOON_CORE_GIBBOUS, MOON_CORE_FULL, MOON_SURFACE, MOON_GLOW);
+    var sizes = [];
+    for (var k in MOON_SIZES) sizes.push(Math.round(SUN_CELL * MOON_SIZES[k]));
+    buildCelestialSprites(colorStr, all, sizes);
+  }
+
+  function drawCelestialSprite(ch, fs, px, py, colorStr) {
+    var key = ch + '@' + fs + '@' + colorStr;
+    var s = celestialSprites[key];
+    if (s) { ctx.drawImage(s, px - s.width*0.5, py - s.height*0.5); }
+    else {
+      ctx.font = fs + 'px "Cormorant Garamond", Georgia, serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = colorStr; ctx.fillText(ch, px, py);
     }
   }
 
@@ -2127,6 +2283,536 @@
   }
 
   /* ============================================================
+     14c. CELESTIAL BODY SYSTEM
+     Sun and moon rendering with real lunar calendar sync,
+     theme-aware Rayleigh scattering colors, and weather
+     interaction engine.
+
+     Sources:
+     - Lunar phase: voidware.com/moon_phase.htm
+     - Moon rise/set by phase: itu.physics.uiowa.edu
+     - Rayleigh scattering: hyperphysics.phy-astr.gsu.edu
+     - WCAG contrast: w3.org/TR/WCAG21
+     - Cloud occlusion: adapted from cloudEntityNoise() pattern
+     - Fog halos: fullmoon.info, naturalnavigator.com
+     ============================================================ */
+
+  /* --- Utility: pick character deterministically from seed --- */
+  function pickCelestialChar(chars, seed) {
+    return chars[Math.abs(Math.floor(seed * 1000)) % chars.length];
+  }
+
+  /* --- Parse CSS color string to {r,g,b} (hex or rgb()) --- */
+  function parseColor(str) {
+    str = str.trim();
+    var rgbMatch = str.match(/^rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+    if (rgbMatch) return { r: parseInt(rgbMatch[1],10), g: parseInt(rgbMatch[2],10), b: parseInt(rgbMatch[3],10) };
+    var hex = str.replace('#', '');
+    if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+    return { r: parseInt(hex.substr(0,2),16), g: parseInt(hex.substr(2,2),16), b: parseInt(hex.substr(4,2),16) };
+  }
+
+  /* --- WCAG relative luminance --- */
+  function wcagLuminance(r, g, b) {
+    var rs = r/255, gs = g/255, bs = b/255;
+    rs = rs <= 0.03928 ? rs/12.92 : Math.pow((rs+0.055)/1.055, 2.4);
+    gs = gs <= 0.03928 ? gs/12.92 : Math.pow((gs+0.055)/1.055, 2.4);
+    bs = bs <= 0.03928 ? bs/12.92 : Math.pow((bs+0.055)/1.055, 2.4);
+    return 0.2126*rs + 0.7152*gs + 0.0722*bs;
+  }
+
+  /* --- Lunar phase calculator (synced to real calendar) ---
+     Algorithm: voidware.com/moon_phase.htm
+     Returns continuous fraction 0-1 through the synodic month.
+     0 = new moon, 0.5 = full moon. */
+  function getLunarPhase(year, month, day) {
+    year = Math.floor(year); month = Math.floor(month); day = Math.floor(day);
+    var y = year, m = month;
+    if (m < 3) { y--; m += 12; }
+    m++;
+    var c = 365.25 * y;
+    var e = 30.6 * m;
+    var jd = c + e + day - 694039.09;
+    jd /= 29.5305882;
+    return jd - Math.floor(jd);
+  }
+
+  function getPhaseIndex(f) { return Math.round(f * 8) % 8; }
+  function getIllumination(f) { return (1 - Math.cos(f * 2 * Math.PI)) / 2; }
+
+  /* --- Moon rise/set (phase-dependent) ---
+     Source: itu.physics.uiowa.edu/labs/observational */
+  function getMoonRiseSet(f) {
+    return { rise: (6 + f * 24) % 24, set: (18 + f * 24) % 24 };
+  }
+
+  function getMoonPosition(hour, f, cW, cH) {
+    var rs = getMoonRiseSet(f);
+    var rise = rs.rise, set = rs.set;
+    var duration, dayFrac;
+    if (set > rise) {
+      if (hour < rise || hour > set) return null;
+      duration = set - rise;
+      dayFrac = (hour - rise) / duration;
+    } else {
+      if (hour >= rise) {
+        duration = (24 - rise) + set;
+        dayFrac = (hour - rise) / duration;
+      } else if (hour <= set) {
+        duration = (24 - rise) + set;
+        dayFrac = ((24 - rise) + hour) / duration;
+      } else { return null; }
+    }
+    var x = cW * (0.10 + dayFrac * 0.80);
+    var elevation = Math.sin(dayFrac * Math.PI);
+    var y = cH * (0.85 - elevation * 0.77);
+    return { x: x, y: y, elevation: elevation, dayFrac: dayFrac };
+  }
+
+  /* --- Sun position --- */
+  function getSunPosition(hour, cW, cH) {
+    if (hour < SUNRISE_HOUR || hour > SUNSET_HOUR) return null;
+    var dayFrac = (hour - SUNRISE_HOUR) / (SUNSET_HOUR - SUNRISE_HOUR);
+    var x = cW * (0.10 + dayFrac * 0.80);
+    var elevation = Math.sin(dayFrac * Math.PI);
+    var y = cH * (0.85 - elevation * 0.77);
+    return { x: x, y: y, elevation: elevation, dayFrac: dayFrac };
+  }
+
+  function getBodyRadius(elevation, baseRadius) {
+    return baseRadius * (1.35 - 0.35 * elevation);
+  }
+
+  /* --- Theme-aware color model ---
+     Reads --color-weather and --color-bg CSS variables (cached, not per-frame).
+     Blends Rayleigh physics colors with theme for guaranteed contrast. */
+  var cachedWeatherColor = null;
+  var cachedBgColor = null;
+  var celestialThemeDirty = true;
+
+  function refreshCelestialThemeColors() {
+    if (!celestialThemeDirty) return;
+    var raw1 = getComputedStyle(document.documentElement)
+      .getPropertyValue('--color-weather').trim() || '#2a1f2d';
+    cachedWeatherColor = parseColor(raw1);
+    var raw2 = getComputedStyle(document.documentElement)
+      .getPropertyValue('--color-bg').trim() || '#f2d4d7';
+    cachedBgColor = parseColor(raw2);
+    celestialThemeDirty = false;
+  }
+
+  function themeBlendColor(physicsColor, themeColor, blendT) {
+    return {
+      r: Math.round(lerp(physicsColor.r, themeColor.r, blendT)),
+      g: Math.round(lerp(physicsColor.g, themeColor.g, blendT)),
+      b: Math.round(lerp(physicsColor.b, themeColor.b, blendT))
+    };
+  }
+
+  function ensureCelestialContrast(bodyColor, bgColor, weatherColor) {
+    var bgLum = wcagLuminance(bgColor.r, bgColor.g, bgColor.b);
+    var bodyLum = wcagLuminance(bodyColor.r, bodyColor.g, bodyColor.b);
+    var lighter = Math.max(bgLum, bodyLum);
+    var darker = Math.min(bgLum, bodyLum);
+    var ratio = (lighter + 0.05) / (darker + 0.05);
+    if (ratio < 2.0) {
+      return themeBlendColor(bodyColor, weatherColor, 0.6);
+    }
+    return bodyColor;
+  }
+
+  /* Rayleigh scattering color for sun */
+  function getSunPhysicsColor(hour) {
+    var elevation = Math.max(0, Math.sin((hour - SUNRISE_HOUR) / (SUNSET_HOUR - SUNRISE_HOUR) * Math.PI));
+    var r, g, b;
+    if (elevation < 0.15) { r = 220; g = 80 + elevation * 400; b = 40; }
+    else if (elevation < 0.4) { var t = (elevation-0.15)/0.25; r = 220+t*35; g = 140+t*80; b = 40+t*60; }
+    else if (elevation < 0.7) { var t = (elevation-0.4)/0.3; r = 255; g = 220+t*25; b = 100+t*80; }
+    else { var t = (elevation-0.7)/0.3; r = 255; g = 245+t*10; b = 180+t*50; }
+    return { r: Math.round(r), g: Math.round(g), b: Math.round(b) };
+  }
+
+  /* Rayleigh scattering color for moon */
+  function getMoonPhysicsColor(elevation) {
+    var r, g, b;
+    if (elevation < 0.15) { r = 200; g = 160+elevation*300; b = 100; }
+    else if (elevation < 0.4) { var t = (elevation-0.15)/0.25; r = 200+t*20; g = 205+t*25; b = 145+t*40; }
+    else if (elevation < 0.7) { var t = (elevation-0.4)/0.3; r = 220-t*10; g = 230-t*5; b = 185+t*30; }
+    else { var t = (elevation-0.7)/0.3; r = 210-t*10; g = 225-t*5; b = 215+t*25; }
+    return { r: Math.round(r), g: Math.round(g), b: Math.round(b) };
+  }
+
+  function getSunColor(hour) {
+    refreshCelestialThemeColors();
+    var physics = getSunPhysicsColor(hour);
+    var bgLum = wcagLuminance(cachedBgColor.r, cachedBgColor.g, cachedBgColor.b);
+    var blendT = bgLum > 0.3 ? 0.25 : 0.10;
+    var blended = themeBlendColor(physics, cachedWeatherColor, blendT);
+    return ensureCelestialContrast(blended, cachedBgColor, cachedWeatherColor);
+  }
+
+  function getMoonColor(elevation) {
+    refreshCelestialThemeColors();
+    var physics = getMoonPhysicsColor(elevation);
+    var bgLum = wcagLuminance(cachedBgColor.r, cachedBgColor.g, cachedBgColor.b);
+    var blendT = bgLum > 0.3 ? 0.35 : 0.15;
+    var blended = themeBlendColor(physics, cachedWeatherColor, blendT);
+    return ensureCelestialContrast(blended, cachedBgColor, cachedWeatherColor);
+  }
+
+  /* --- Weather interaction engine ---
+     Computes per-frame visibility modifications based on the active
+     preset's celestial parameters. */
+  function computeCelestialWeather(time, preset, bodyX, bodyY) {
+    var result = {
+      visMult: 1.0,
+      haloExpand: 0.0,
+      coreDim: 0.0,
+      colorShift: null
+    };
+
+    /* Cloud occlusion — noise field simulating cloud coverage */
+    var cc = preset.celestialCloudCoverage || 0;
+    if (cc > 0) {
+      var ws = preset.windSpeed || 0.1;
+      var cloudDrift = time * ws * 0.5;
+      var cx = bodyX / W * 4 + cloudDrift;
+      var cy = bodyY / H * 2;
+      var cloudDensity = (cloudOcclusionNoise.noise2D(cx, cy) + 1) * 0.5;
+      cloudDensity = cloudDensity * cc;
+      var gapNoise = windNoise.noise2D(time * ws * 0.3, bodyX * 0.01);
+      var gapFactor = ws > 0.5 ? (gapNoise * 0.5 + 0.5) * 0.3 : 0;
+      cloudDensity = Math.max(0, cloudDensity - gapFactor);
+      result.visMult *= (1.0 - cloudDensity * 0.8);
+      result.coreDim += cloudDensity * 0.4;
+    }
+
+    /* Rain curtain dimming */
+    var rc = preset.rainCurtain || 0;
+    if (rc > 0) {
+      var rainFlicker = noise.noise2D(time * 0.2, 3.7) * 0.15;
+      var curtainDim = rc * (0.85 + rainFlicker);
+      result.visMult *= (1.0 - curtainDim * 0.6);
+      result.coreDim += curtainDim * 0.3;
+    }
+
+    /* Fog halo expansion */
+    var fh = preset.fogHalo || 0;
+    if (fh > 0) {
+      result.haloExpand = fh * 0.5;
+      result.coreDim += fh * 0.2;
+    }
+
+    /* Snow whiteout scatter */
+    var ss = preset.snowScatter || 0;
+    if (ss > 0) {
+      var snowFlicker = noise.noise2D(time * 0.15, 7.3) * 0.2;
+      var scatter = ss * (0.8 + snowFlicker);
+      result.visMult *= (1.0 - scatter * 0.5);
+      result.coreDim += scatter * 0.5;
+      result.haloExpand += scatter * 0.3;
+    }
+
+    /* Dust color shift — pushes toward red/amber */
+    var cat = preset.celestialCategory || 'rain';
+    var hf = preset.hazeFactor || 0;
+    if (cat === 'dust' && hf > 0.5) {
+      result.colorShift = { r: 180, g: 100, b: 50 };
+    }
+
+    result.visMult = clamp(result.visMult, 0, 1);
+    result.coreDim = clamp(result.coreDim, 0, 1);
+    return result;
+  }
+
+  /* --- Celestial state (initialized in init()) --- */
+  var celestialHour = 12;
+  var lunarFraction = 0;
+  var celestialTimeAccum = 0;
+
+  function initCelestial() {
+    var now = new Date();
+    celestialHour = now.getHours() + now.getMinutes() / 60;
+    lunarFraction = getLunarPhase(now.getFullYear(), now.getMonth() + 1, now.getDate());
+  }
+
+  /* Update celestial hour from real clock (called once per minute) */
+  var celestialUpdateTimer = 0;
+  function updateCelestialTime(dtSec) {
+    celestialUpdateTimer += dtSec;
+    if (celestialUpdateTimer > 60) {
+      celestialUpdateTimer = 0;
+      var now = new Date();
+      celestialHour = now.getHours() + now.getMinutes() / 60;
+      /* Recalculate lunar phase at midnight */
+      if (celestialHour < 0.02) {
+        lunarFraction = getLunarPhase(now.getFullYear(), now.getMonth() + 1, now.getDate());
+      }
+    }
+  }
+
+  /* --- Render Sun (5 zones) --- */
+  function renderSun(time) {
+    var preset = activePreset;
+    var sunVis = preset.sunVis;
+    if (typeof sunVis === 'undefined') sunVis = 0.5; /* fallback for presets without celestial params */
+    if (sunVis <= 0) return;
+
+    var pos = getSunPosition(celestialHour, W, H);
+    if (!pos) return;
+
+    var wx = computeCelestialWeather(time, preset, pos.x, pos.y);
+    var effectiveVis = sunVis * wx.visMult;
+    if (effectiveVis < 0.01) return;
+
+    var elevation = pos.elevation;
+    var sunColor = getSunColor(celestialHour);
+    if (wx.colorShift) {
+      var hf = preset.hazeFactor || 0;
+      sunColor = themeBlendColor(sunColor, wx.colorShift, hf * 0.4);
+    }
+    var colorStr = 'rgb(' + sunColor.r + ',' + sunColor.g + ',' + sunColor.b + ')';
+    rebuildSunSprites(colorStr);
+
+    var hazeFactor = preset.hazeFactor || 0;
+    var baseRadius = Math.min(W, H) * 0.08;
+    var radius = getBodyRadius(elevation, baseRadius);
+    var glowMult = 1.0 + hazeFactor * 0.6 + wx.haloExpand;
+    var coreSharp = Math.max(0.1, 1.0 - hazeFactor * 0.5 - wx.coreDim * 0.3);
+    var rayLenMult = 1.0 + (1.0 - elevation) * 0.8;
+
+    /* Flickering for partial visibility */
+    var flickerVis = effectiveVis;
+    if (effectiveVis > 0.05 && effectiveVis < 0.6) {
+      var wf = windNoise.noise2D(time * (preset.windSpeed || 0.1) * 0.4, 0.5);
+      flickerVis = effectiveVis * (0.6 + wf * 0.4);
+    }
+    flickerVis = clamp(flickerVis, 0, 1);
+
+    var cx = pos.x, cy = pos.y;
+    var fsGlow = Math.round(SUN_CELL * SUN_SIZES.glow);
+    var fsCorona = Math.round(SUN_CELL * SUN_SIZES.corona);
+    var fsInner = Math.round(SUN_CELL * SUN_SIZES.inner);
+    var fsCore = Math.round(SUN_CELL * SUN_SIZES.core);
+
+    /* Zone 5: GLOW */
+    var glowR = radius * 1.3 * glowMult;
+    var glowC = Math.ceil(glowR * 2 / SUN_CELL);
+    for (var gy = -glowC; gy <= glowC; gy++) {
+      for (var gx = -glowC; gx <= glowC; gx++) {
+        var px = cx + gx * SUN_CELL, py = cy + gy * SUN_CELL;
+        var dx = px - cx, dy = py - cy, dist = Math.sqrt(dx*dx+dy*dy);
+        var nd = dist / glowR;
+        if (nd < 0.85 || nd > 1.2) continue;
+        var fade = 1.0 - (nd - 0.85) / 0.35;
+        var shim = noise.noise2D(gx*0.3+time*0.08, gy*0.3+time*0.05) * 0.3 + 0.7;
+        var a = fade * shim * flickerVis * 0.15 * (0.5 + hazeFactor*0.5 + wx.haloExpand*0.5);
+        if (a < 0.01) continue;
+        ctx.globalAlpha = a;
+        drawCelestialSprite(pickCelestialChar(SUN_GLOW, gx*7+gy*13+Math.floor(time*0.3)), fsGlow, px, py, colorStr);
+      }
+    }
+
+    /* Zone 4: CORONA */
+    var corR = radius * 0.95 * glowMult;
+    var corC = Math.ceil(corR * 2 / SUN_CELL);
+    for (var gy = -corC; gy <= corC; gy++) {
+      for (var gx = -corC; gx <= corC; gx++) {
+        var px = cx + gx * SUN_CELL, py = cy + gy * SUN_CELL;
+        var dx = px-cx, dy = py-cy, dist = Math.sqrt(dx*dx+dy*dy);
+        var nd = dist / corR;
+        if (nd < 0.65 || nd > 0.90) continue;
+        var fade = 1.0 - (nd-0.65)/0.25;
+        var pulse = noise.noise2D(gx*0.5+time*0.12, gy*0.5-time*0.08) * 0.4 + 0.6;
+        var a = fade * pulse * flickerVis * 0.35;
+        if (a < 0.01) continue;
+        ctx.globalAlpha = a;
+        drawCelestialSprite(pickCelestialChar(SUN_CORONA, gx*11+gy*17+Math.floor(time*0.4)), fsCorona, px, py, colorStr);
+      }
+    }
+
+    /* Zone 3: RAYS */
+    var rayR = radius * 0.75 * rayLenMult;
+    var rayC = Math.ceil(rayR * 2 / SUN_CELL);
+    var NUM_RAYS = 16, rayAngles = [];
+    for (var ri = 0; ri < NUM_RAYS; ri++) rayAngles.push(ri*Math.PI*2/NUM_RAYS + time*0.02);
+    for (var gy = -rayC; gy <= rayC; gy++) {
+      for (var gx = -rayC; gx <= rayC; gx++) {
+        var px = cx+gx*SUN_CELL, py = cy+gy*SUN_CELL;
+        var dx = px-cx, dy = py-cy, dist = Math.sqrt(dx*dx+dy*dy);
+        var nd = dist / rayR;
+        if (nd < 0.35 || nd > 0.70) continue;
+        var angle = Math.atan2(dy, dx), bestAlign = 0;
+        for (var ri = 0; ri < NUM_RAYS; ri++) {
+          var diff = Math.abs(angle - rayAngles[ri]);
+          diff = Math.min(diff, Math.PI*2-diff);
+          bestAlign = Math.max(bestAlign, Math.max(0, 1.0-diff/((ri%2===0)?0.18:0.10)));
+        }
+        if (bestAlign < 0.1) continue;
+        var radFade = 1.0-(nd-0.35)/0.35;
+        var rn = noise.noise2D(gx*0.8+time*0.1, gy*0.8+time*0.06)*0.3+0.7;
+        var a = bestAlign * radFade * rn * flickerVis * coreSharp * 0.55;
+        if (a < 0.01) continue;
+        var absA = ((angle%(Math.PI*2))+Math.PI*2)%(Math.PI*2);
+        var oct = Math.floor(absA/(Math.PI/4)+0.5)%8;
+        var ch = ['\u2014','\u2572','|','\u2571','\u2014','\u2572','|','\u2571'][oct];
+        if (nd > 0.55) ch = pickCelestialChar(SUN_INNER, gx*3+gy*7+Math.floor(time*0.5));
+        var rfs = clamp(Math.round(SUN_CELL*(0.9+bestAlign*0.3)), 9, 14);
+        ctx.globalAlpha = a;
+        drawCelestialSprite(ch, rfs, px, py, colorStr);
+      }
+    }
+
+    /* Zone 2: INNER */
+    var innR = radius * 0.40;
+    var innC = Math.ceil(innR * 2 / SUN_CELL);
+    for (var gy = -innC; gy <= innC; gy++) {
+      for (var gx = -innC; gx <= innC; gx++) {
+        var px = cx+gx*SUN_CELL, py = cy+gy*SUN_CELL;
+        var dx = px-cx, dy = py-cy, dist = Math.sqrt(dx*dx+dy*dy);
+        var nd = dist / innR;
+        if (nd < 0.15 || nd > 1.0) continue;
+        var oA = Math.atan2(dy,dx)+time*0.03;
+        var oN = noise.noise2D(Math.cos(oA)*2+time*0.05, Math.sin(oA)*2+time*0.05)*0.3+0.7;
+        var iFade = nd < 0.5 ? 1.0 : 1.0-(nd-0.5)/0.5;
+        var a = iFade * oN * flickerVis * coreSharp * 0.65;
+        if (a < 0.01) continue;
+        ctx.globalAlpha = a;
+        drawCelestialSprite(pickCelestialChar(SUN_INNER, gx*5+gy*9+Math.floor(time*0.6)), fsInner, px, py, colorStr);
+      }
+    }
+
+    /* Zone 1: CORE */
+    var coreR = radius * 0.18;
+    var coreC = Math.ceil(coreR * 2 / SUN_CELL);
+    for (var gy = -coreC; gy <= coreC; gy++) {
+      for (var gx = -coreC; gx <= coreC; gx++) {
+        var px = cx+gx*SUN_CELL, py = cy+gy*SUN_CELL;
+        var dx = px-cx, dy = py-cy;
+        if (Math.sqrt(dx*dx+dy*dy)/coreR > 1.0) continue;
+        var cp = noise.noise2D(time*0.2, gx*0.5+gy*0.5)*0.1+0.9;
+        ctx.globalAlpha = cp * flickerVis * coreSharp * 0.9;
+        drawCelestialSprite(pickCelestialChar(SUN_CORE, gx*3+gy*5+Math.floor(time*0.8)), fsCore, px, py, colorStr);
+      }
+    }
+
+    ctx.globalAlpha = 1;
+  }
+
+  /* --- Render Moon (3 zones) --- */
+  function renderMoon(time) {
+    var preset = activePreset;
+    var moonVis = preset.moonVis;
+    if (typeof moonVis === 'undefined') moonVis = 0.5;
+    if (moonVis <= 0) return;
+
+    var pos = getMoonPosition(celestialHour, lunarFraction, W, H);
+    if (!pos) return;
+
+    var illumination = getIllumination(lunarFraction);
+    if (illumination < 0.02) return; /* New moon — not visible */
+
+    var wx = computeCelestialWeather(time, preset, pos.x, pos.y);
+    var effectiveVis = moonVis * wx.visMult;
+    if (effectiveVis < 0.01) return;
+
+    var elevation = pos.elevation;
+    var moonColor = getMoonColor(elevation);
+    if (wx.colorShift) {
+      var hf = preset.hazeFactor || 0;
+      moonColor = themeBlendColor(moonColor, wx.colorShift, hf * 0.3);
+    }
+    var colorStr = 'rgb(' + moonColor.r + ',' + moonColor.g + ',' + moonColor.b + ')';
+    rebuildMoonSprites(colorStr);
+
+    var hazeFactor = preset.hazeFactor || 0;
+    var baseRadius = Math.min(W, H) * 0.055;
+    var radius = getBodyRadius(elevation, baseRadius);
+    var glowMult = 1.0 + hazeFactor * 0.8 + wx.haloExpand;
+    var coreSharp = Math.max(0.1, 1.0 - hazeFactor * 0.4 - wx.coreDim * 0.3);
+
+    var flickerVis = effectiveVis;
+    if (effectiveVis > 0.05 && effectiveVis < 0.6) {
+      var wf = windNoise.noise2D(time * (preset.windSpeed || 0.1) * 0.35, 2.5);
+      flickerVis = effectiveVis * (0.6 + wf * 0.4);
+    }
+    flickerVis = clamp(flickerVis, 0, 1);
+
+    var cx = pos.x, cy = pos.y;
+    var fsGlow = Math.round(SUN_CELL * MOON_SIZES.glow);
+    var fsSurf = Math.round(SUN_CELL * MOON_SIZES.surface);
+    var fsCore = Math.round(SUN_CELL * MOON_SIZES.core);
+
+    /* Zone 3: GLOW */
+    var glowR = radius * 1.4 * glowMult;
+    var glowC = Math.ceil(glowR * 2 / SUN_CELL);
+    for (var gy = -glowC; gy <= glowC; gy++) {
+      for (var gx = -glowC; gx <= glowC; gx++) {
+        var px = cx + gx * SUN_CELL, py = cy + gy * SUN_CELL;
+        var dx = px-cx, dy = py-cy, dist = Math.sqrt(dx*dx+dy*dy);
+        var nd = dist / glowR;
+        if (nd < 0.7 || nd > 1.15) continue;
+        var fade = 1.0-(nd-0.7)/0.45;
+        var shim = moonNoise.noise2D(gx*0.25+time*0.06, gy*0.25+time*0.04)*0.3+0.7;
+        var a = fade * shim * flickerVis * illumination * 0.12 * (0.3+hazeFactor*0.7+wx.haloExpand*0.5);
+        if (a < 0.01) continue;
+        ctx.globalAlpha = a;
+        drawCelestialSprite(pickCelestialChar(MOON_GLOW, gx*7+gy*11+Math.floor(time*0.25)), fsGlow, px, py, colorStr);
+      }
+    }
+
+    /* Zone 2: SURFACE */
+    var surfR = radius * 0.55;
+    var surfC = Math.ceil(surfR * 2 / SUN_CELL);
+    for (var gy = -surfC; gy <= surfC; gy++) {
+      for (var gx = -surfC; gx <= surfC; gx++) {
+        var px = cx+gx*SUN_CELL, py = cy+gy*SUN_CELL;
+        var dx = px-cx, dy = py-cy, dist = Math.sqrt(dx*dx+dy*dy);
+        var nd = dist / surfR;
+        if (nd < 0.2 || nd > 1.0) continue;
+        var cellAngle = Math.atan2(dy, dx);
+        var phaseMask = 1.0;
+        if (lunarFraction < 0.5) {
+          phaseMask = clamp(0.5 + Math.cos(cellAngle) * illumination, 0, 1);
+        } else {
+          phaseMask = clamp(0.5 + Math.cos(cellAngle - Math.PI) * illumination, 0, 1);
+        }
+        var sf = nd < 0.5 ? 1.0 : 1.0-(nd-0.5)/0.5;
+        var sn = moonNoise.noise2D(gx*0.6+time*0.04, gy*0.6+time*0.03)*0.2+0.8;
+        var a = sf * sn * phaseMask * flickerVis * coreSharp * illumination * 0.5;
+        if (a < 0.01) continue;
+        ctx.globalAlpha = a;
+        drawCelestialSprite(pickCelestialChar(MOON_SURFACE, gx*5+gy*7+Math.floor(time*0.15)), fsSurf, px, py, colorStr);
+      }
+    }
+
+    /* Zone 1: CORE */
+    var coreR = radius * 0.22;
+    var coreC = Math.ceil(coreR * 2 / SUN_CELL);
+    var phaseIdx = getPhaseIndex(lunarFraction);
+    var coreChars;
+    switch (phaseIdx) {
+      case 0: coreChars = MOON_CORE_NEW; break;
+      case 1: case 7: coreChars = MOON_CORE_CRESCENT; break;
+      case 2: case 6: coreChars = MOON_CORE_QUARTER; break;
+      case 3: case 5: coreChars = MOON_CORE_GIBBOUS; break;
+      default: coreChars = MOON_CORE_FULL;
+    }
+    for (var gy = -coreC; gy <= coreC; gy++) {
+      for (var gx = -coreC; gx <= coreC; gx++) {
+        var px = cx+gx*SUN_CELL, py = cy+gy*SUN_CELL;
+        var dx = px-cx, dy = py-cy;
+        if (Math.sqrt(dx*dx+dy*dy)/coreR > 1.0) continue;
+        var cp = moonNoise.noise2D(time*0.15, gx*0.4+gy*0.4)*0.08+0.92;
+        ctx.globalAlpha = cp * flickerVis * coreSharp * illumination * 0.85;
+        drawCelestialSprite(pickCelestialChar(coreChars, gx*3+gy*5+Math.floor(time*0.3)), fsCore, px, py, colorStr);
+      }
+    }
+
+    ctx.globalAlpha = 1;
+  }
+
+  /* ============================================================
      15. ANIMATION LOOP
      ============================================================ */
 
@@ -2157,6 +2843,12 @@
       cloudFieldTimer = 0;
     }
     ctx.drawImage(cloudCanvas, 0, 0, W * dpi, cloudZoneH * dpi, 0, 0, W, cloudZoneH);
+
+    /* Celestial bodies (behind rain and mist, on top of clouds) */
+    updateCelestialTime(dtSec);
+    celestialTimeAccum += dtSec;
+    renderSun(celestialTimeAccum);
+    renderMoon(celestialTimeAccum);
 
     /* Mist (behind rain for depth) */
     updateMist(dtFactor, dtSec);
@@ -2321,6 +3013,7 @@
     initMistPool();
     initWindState();
     initLightning();
+    initCelestial();
     setupInteraction();
     setupTilt();
 
@@ -2396,6 +3089,11 @@
       buildCharSprites(activePreset.charSize, newColor);
       buildCloudSprites(newColor);
     }
+
+    /* Invalidate celestial color cache so sun/moon colors update */
+    celestialThemeDirty = true;
+    lastSunColorStr = '';
+    lastMoonColorStr = '';
   }
 
   /* MutationObserver on <html> to detect data-time-theme changes */
@@ -2419,7 +3117,15 @@
     presets: WEATHER_PRESETS,
     getPreset: function () { return activePreset; },
     getPresets: function () { return WEATHER_PRESETS; },
-    getWind: function () { return currentWind; }
+    getWind: function () { return currentWind; },
+    getCelestial: function () {
+      return {
+        hour: celestialHour,
+        lunarFraction: lunarFraction,
+        illumination: getIllumination(lunarFraction),
+        phaseIndex: getPhaseIndex(lunarFraction)
+      };
+    }
   };
 
   if (document.readyState === 'loading') {

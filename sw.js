@@ -8,12 +8,15 @@
    to the cached assets. Navigation requests that fail now serve
    the offline page instead of a browser error.
 
+   v3: Celestial body system (sun + moon) added to rain.js.
+   Cache bump forces all clients to pick up the new weather engine.
+
    Reference: https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API
    Reference: https://web.dev/articles/service-workers-cache-storage
    Reference: https://web.dev/articles/offline-fallback-page
    ============================================================ */
 
-const CACHE_NAME = 'casslaria-v2';
+const CACHE_NAME = 'casslaria-v3';
 
 const CORE_ASSETS = [
   '/',

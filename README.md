@@ -52,7 +52,7 @@ The physics model is grounded in real meteorology:
 - **Virga effect** — in light presets, some drops fade before reaching the ground (evaporation).
 - **Depth parallax** — far clouds drift slower than near clouds, creating a layered sky.
 
-One of **13 weather presets** is randomly selected each time a visitor loads the page:
+One of **15 weather presets** is randomly selected each time a visitor loads the page:
 
 | Preset | Rain | Wind | Gusts | Mood |
 |---|---|---|---|---|
@@ -69,6 +69,30 @@ One of **13 weather presets** is randomly selected each time a visitor loads the
 | Freezing Rain | Moderate | Slight | No | Slow, heavy drops |
 | Radiation Fog | Very light | None | No | Ground-level mist |
 | Petrichor | Light | None | No | Post-rain calm |
+
+Each preset also defines **celestial visibility parameters** (sun/moon visibility, cloud coverage, haze factor, rain curtain, fog halo, snow scatter) that control how the sun and moon interact with the weather conditions.
+
+### Celestial Body System
+
+A Unicode sun and moon render in the sky behind the weather layer, following physically accurate mechanics:
+
+| Feature | Description |
+|---|---|
+| Sun arc | Sinusoidal arc from east (sunrise 5:00 AM) to west (sunset 8:00 PM) |
+| Moon arc | Phase-dependent rise/set times synced to the real lunar calendar |
+| Lunar phase | Calculated from the current date using the voidware algorithm — matches the real moon |
+| Rayleigh scattering | Both bodies shift from amber-orange at the horizon to white/silver at zenith |
+| Theme-aware colors | Celestial colors blend with `--color-weather` CSS variable for guaranteed contrast |
+| WCAG contrast | Automatic contrast enforcement pushes colors toward the weather variable if ratio < 2.0 |
+| 5-zone sun | Core, inner, rays, corona, glow — each with unique Unicode character sets |
+| 3-zone moon | Core (phase-specific characters), surface detail, glow |
+| Cloud occlusion | Noise-based cloud density field partially blocks sun/moon |
+| Rain curtain | Dimming proportional to drop count and fall speed |
+| Fog halo | Forward scattering expands apparent disc, creates corona effect |
+| Snow whiteout | Scatter-based contrast reduction |
+| Dust color shift | Pushes sun toward blood-red/amber in dust presets |
+| Wind-shifted gaps | Higher wind = more turbulent = more frequent visibility gaps |
+| Sprite cache | Pre-rendered character sprites for 60fps performance |
 
 ### Umbrella Cursor (Desktop)
 
@@ -187,7 +211,7 @@ cass-la-ria/
 │   └── editable.css        ← Inline editing UI (tooltip, pencil, mobile bar, toast)
 ├── js/
 │   ├── main.js             ← Viewport fix, deep linking, mailto fallback, i18n switcher
-│   ├── rain.js             ← Rain animation engine (clouds, drops, wind, presets, tilt, collision)
+│   ├── rain.js             ← Weather engine (clouds, drops, wind, sun, moon, presets, tilt, collision)
 │   ├── time-theme.js       ← Time-based colour theme (updates CSS variables every minute)
 │   ├── i18n.js             ← Translation strings for all 8 languages
 │   ├── editable.js         ← Inline editing module (localStorage + Google Sheet + spam detection)
@@ -214,7 +238,7 @@ cass-la-ria/
 | Colours, fonts, spacing | `css/variables.css` |
 | Name text or social links | `index.html` |
 | Button/icon styles | `css/components.css` |
-| Rain behaviour or presets | `js/rain.js` |
+| Rain/weather/sun/moon behaviour | `js/rain.js` |
 | Time-based theme palettes | `js/time-theme.js` |
 | Translation strings | `js/i18n.js` |
 | Editing system behaviour | `js/editable.js` |
@@ -259,6 +283,19 @@ Key techniques: `clamp()` fluid typography, `100dvh` dynamic viewport height, JS
 ## Changelog
 
 All notable changes to this project, in reverse chronological order.
+
+### 2026-04-08 — Celestial Body System (Sun + Moon)
+
+- **Unicode sun**: 5-zone rendering (core, inner, rays, corona, glow) with Rayleigh scattering colors that shift from amber-orange at horizon to white-yellow at zenith.
+- **Unicode moon**: 3-zone rendering (core with phase-specific characters, surface detail, glow) synced to the real lunar calendar via the voidware algorithm.
+- **Real lunar phase**: Moon phase calculated from the current date — the moon in the animation matches the real moon in the sky.
+- **Phase-dependent rise/set**: Moon rise and set times shift with the lunar phase (e.g., full moon rises at sunset, third quarter rises at midnight).
+- **Theme-aware colors**: Both celestial bodies blend Rayleigh physics colors with the `--color-weather` CSS variable, with WCAG-inspired contrast enforcement.
+- **Weather interactions**: Cloud occlusion, rain curtain dimming, fog halo expansion, snow whiteout, dust color shift, and wind-shifted cloud gaps.
+- **2 new weather presets**: Radiation Fog and Petrichor added to the preset pool.
+- **Sprite cache**: Pre-rendered character sprites with cache invalidation on theme change for 60fps performance.
+- **Service worker cache bump**: `casslaria-v3` forces all clients to pick up the new weather engine.
+- **Code audit**: Comprehensive audit for stability, performance, memory, edge cases, visual quality, and cross-browser compatibility.
 
 ### 2026-04-05 — Code Audit, Spam Detection, and Form Optimization
 
