@@ -389,8 +389,24 @@
     return { r: Math.round(r), g: Math.round(g), b: Math.round(b) };
   }
 
-  /* Rayleigh scattering color for moon */
-  function getMoonPhysicsColor(elevation) {
+  /* Rayleigh scattering color for moon.
+     Computes physical elevation from hour and lunar fraction (like
+     getSunPhysicsColor) so the color depends on the true atmospheric
+     path length, not the power-curved display position. */
+  function getMoonPhysicsColor(hour, f) {
+    var rs = getMoonRiseSet(f);
+    var rise = rs.rise, set = rs.set;
+    var dayFrac;
+    if (set > rise) {
+      dayFrac = (hour - rise) / (set - rise);
+    } else {
+      var duration = (24 - rise) + set;
+      dayFrac = (hour >= rise)
+        ? (hour - rise) / duration
+        : ((24 - rise) + hour) / duration;
+    }
+    dayFrac = Math.max(0, Math.min(1, dayFrac));
+    var elevation = Math.sin(dayFrac * Math.PI); /* true physical elevation */
     var r, g, b;
     if (elevation < 0.15) { r = 200; g = 160+elevation*300; b = 100; }
     else if (elevation < 0.4) { var t = (elevation-0.15)/0.25; r = 200+t*20; g = 205+t*25; b = 145+t*40; }
@@ -413,8 +429,8 @@
   }
 
   /** Get final theme-aware moon color */
-  function getMoonColor(elevation) {
-    var physics = getMoonPhysicsColor(elevation);
+  function getMoonColor(hour, f) {
+    var physics = getMoonPhysicsColor(hour, f);
     var weather = getThemeWeatherColor();
     var bg = getThemeBgColor();
     var bgLum = luminance(bg.r, bg.g, bg.b);
@@ -1017,7 +1033,7 @@
     if (effectiveVis < 0.01) { updateMoonState(preset.moonDesc + ' (cloud occluded)'); return; }
 
     var elevation = pos.elevation;
-    var moonColor = getMoonColor(elevation);
+    var moonColor = getMoonColor(currentHour, lunarFraction);
 
     if (wx.colorShift) {
       moonColor = themeBlendColor(moonColor, wx.colorShift, preset.hazeFactor * 0.3);
