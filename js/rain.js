@@ -2369,8 +2369,10 @@
       } else { return null; }
     }
     var x = cW * (0.10 + dayFrac * 0.80);
-    var elevation = Math.sin(dayFrac * Math.PI);
-    var y = cH * (0.85 - elevation * 0.77);
+    /* Power curve (^0.55) flattens the top of the arc so the moon
+       spends more time in the upper viewport. Horizon at 65%, peak at 7%. */
+    var elevation = Math.pow(Math.sin(dayFrac * Math.PI), 0.55);
+    var y = cH * (0.65 - elevation * 0.58);
     return { x: x, y: y, elevation: elevation, dayFrac: dayFrac };
   }
 
@@ -2379,8 +2381,10 @@
     if (hour < SUNRISE_HOUR || hour > SUNSET_HOUR) return null;
     var dayFrac = (hour - SUNRISE_HOUR) / (SUNSET_HOUR - SUNRISE_HOUR);
     var x = cW * (0.10 + dayFrac * 0.80);
-    var elevation = Math.sin(dayFrac * Math.PI);
-    var y = cH * (0.85 - elevation * 0.77);
+    /* Power curve (^0.55) flattens the top of the arc so the sun
+       spends more time in the upper viewport. Horizon at 65%, peak at 7%. */
+    var elevation = Math.pow(Math.sin(dayFrac * Math.PI), 0.55);
+    var y = cH * (0.65 - elevation * 0.58);
     return { x: x, y: y, elevation: elevation, dayFrac: dayFrac };
   }
 

@@ -285,8 +285,8 @@
       } else { return null; }
     }
     var x = W * (0.10 + dayFrac * 0.80);
-    var elevation = Math.sin(dayFrac * Math.PI);
-    var y = H * (0.85 - elevation * 0.77);
+    var elevation = Math.pow(Math.sin(dayFrac * Math.PI), 0.55);
+    var y = H * (0.65 - elevation * 0.58);
     return { x: x, y: y, elevation: elevation, dayFrac: dayFrac };
   }
 
@@ -297,8 +297,8 @@
     if (hour < SUNRISE_HOUR || hour > SUNSET_HOUR) return null;
     var dayFrac = (hour - SUNRISE_HOUR) / (SUNSET_HOUR - SUNRISE_HOUR);
     var x = W * (0.10 + dayFrac * 0.80);
-    var elevation = Math.sin(dayFrac * Math.PI);
-    var y = H * (0.85 - elevation * 0.77);
+    var elevation = Math.pow(Math.sin(dayFrac * Math.PI), 0.55);
+    var y = H * (0.65 - elevation * 0.58);
     return { x: x, y: y, elevation: elevation, dayFrac: dayFrac };
   }
 
