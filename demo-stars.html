@@ -3,11 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Starry Night Sky Demo — Tokyo (35.68°N) — CJA Weather System</title>
+<title>Starry Night Sky — CJA Weather System</title>
+<!-- Made by CAPRI la Ria -->
 <style>
-  /* ============================================================
-     BASE STYLES — mirrors the site's theme system
-     ============================================================ */
   :root {
     --color-bg: #0d0e1a;
     --color-text: #c8c0d0;
@@ -28,11 +26,8 @@
     top: 0; left: 0;
     width: 100%; height: 100%;
     z-index: 0;
+    pointer-events: none;
   }
-
-  /* ============================================================
-     CONTROLS PANEL
-     ============================================================ */
   .controls {
     position: fixed;
     top: 12px; right: 12px;
@@ -42,7 +37,7 @@
     border-radius: 8px;
     padding: 14px 18px;
     font-size: 13px;
-    max-width: 320px;
+    max-width: 280px;
     backdrop-filter: blur(8px);
     max-height: calc(100vh - 24px);
     overflow-y: auto;
@@ -51,7 +46,7 @@
   .controls h3 { margin-bottom: 10px; font-size: 15px; font-weight: 600; }
   .controls label {
     display: block; margin-bottom: 4px; font-weight: 600;
-    font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
   }
   .controls select, .controls input[type="range"] {
     width: 100%; margin-bottom: 12px; font-family: inherit; font-size: 13px; cursor: pointer;
@@ -60,9 +55,6 @@
   .controls .time-display {
     font-size: 18px; font-weight: 700; text-align: center;
     margin-bottom: 4px; font-variant-numeric: tabular-nums;
-  }
-  .controls .info {
-    font-size: 11px; opacity: 0.7; margin-top: 8px; line-height: 1.4;
   }
   .controls .state-box {
     font-size: 11px; margin-top: 6px; padding: 6px 8px;
@@ -80,7 +72,7 @@
 <canvas id="sky"></canvas>
 
 <div class="controls">
-  <h3>Starry Night Sky — Tokyo</h3>
+  <h3>Starry Night Sky</h3>
 
   <label>Time of Night</label>
   <div class="time-display" id="timeDisplay">21:00</div>
@@ -109,32 +101,10 @@
     <option value="starryNight">Starry Night (pristine)</option>
   </select>
 
-  <label>Show Constellations</label>
-  <select id="constSelect">
-    <option value="lines" selected>Lines + Labels</option>
-    <option value="linesOnly">Lines Only</option>
-    <option value="off">Off</option>
-  </select>
-
-  <label>Star Density</label>
-  <select id="densitySelect">
-    <option value="full" selected>Full (mag ≤ 5.5)</option>
-    <option value="bright">Bright only (mag ≤ 3.5)</option>
-    <option value="naked">Naked eye limit (mag ≤ 6.5)</option>
-  </select>
-
   <div class="state-box" id="stateBox">
     <strong>Star Field</strong>
     Stars visible: —
-    Constellations: —
-    Weather visibility: —
-  </div>
-
-  <div class="info">
-    Real star positions from the Hipparcos catalog for Tokyo (35.68°N, 139.65°E).
-    Spectral colors: O=blue, B=blue-white, A=white, F=yellow-white, G=yellow, K=orange, M=red.
-    Scintillation amplitude increases near the horizon (longer atmospheric path).
-    No light pollution — only weather/clouds affect visibility.
+    Weather: —
   </div>
 </div>
 
@@ -142,21 +112,26 @@
 
 <script>
 /* ============================================================
-   STARRY NIGHT SKY DEMO
+   STARRY NIGHT SKY — UNICODE / NOISE RENDERING
    ============================================================
    Real star data from the Hipparcos catalog, filtered for
    visibility from Tokyo (latitude 35.68°N).
    
+   Stars rendered with the same Unicode character / noise-driven
+   animation system as the sun and moon in rain.js.
+   
+   Constellation cohesion: stars in the same constellation share
+   a synchronized twinkling phase and a faint shared glow field,
+   creating visual grouping without explicit lines.
+   
    References:
    - Hipparcos catalog (ESA, 1997)
    - Atlas of the Universe: atlasoftheuniverse.com/stars.html
-   - MSU Brightest Stars: web.pa.msu.edu/people/horvatin/
    - Scintillation physics: en.wikipedia.org/wiki/Twinkling
-   - Iowa Physics Lab: itu.physics.uiowa.edu
    ============================================================ */
 
 /* ============================================================
-   1. SIMPLEX NOISE (same as weather system)
+   1. SIMPLEX NOISE
    ============================================================ */
 var SimplexNoise = (function() {
   var F2 = 0.5 * (Math.sqrt(3) - 1), G2 = (3 - Math.sqrt(3)) / 6;
@@ -194,343 +169,208 @@ var SimplexNoise = (function() {
   return SN;
 })();
 
-var noise = new SimplexNoise(42);
-var twinkleNoise = new SimplexNoise(137);
-var cloudNoise = new SimplexNoise(256);
+var twinkleNoise = new SimplexNoise(42);
+var charNoise    = new SimplexNoise(137);
+var cloudNoise   = new SimplexNoise(256);
+var glowNoise    = new SimplexNoise(389);
+var constNoise   = new SimplexNoise(512);
 
 /* ============================================================
-   2. TOKYO OBSERVER PARAMETERS
+   2. TOKYO OBSERVER
    ============================================================ */
-var TOKYO_LAT = 35.6762;  /* degrees north */
-var TOKYO_LON = 139.6503; /* degrees east */
+var TOKYO_LAT = 35.6762;
+var TOKYO_LON = 139.6503;
 var LAT_RAD = TOKYO_LAT * Math.PI / 180;
 
 /* ============================================================
-   3. STAR CATALOG — Hipparcos data for stars visible from Tokyo
+   3. STAR CATALOG — Hipparcos data for Tokyo
    ============================================================
-   Format: [name, RA_hours, Dec_degrees, magnitude, spectralClass]
-   RA in decimal hours (0-24), Dec in degrees (-90 to +90)
-   Only stars with Dec > -54.3° (visible from 35.68°N)
-   ============================================================ */
-var STAR_CATALOG = [
-  /* === Magnitude < 0 === */
-  ['Sirius',       6.752, -16.72, -1.46, 'A'],
-  ['Canopus',      6.399, -52.70, -0.73, 'F'],
-  ['Arcturus',    14.261,  19.18, -0.05, 'K'],
-  ['Vega',        18.616,  38.78,  0.03, 'A'],
-  ['Capella',      5.278,  46.00,  0.07, 'G'],
-  ['Rigel',        5.242,  -8.20,  0.15, 'B'],
-  ['Procyon',      7.655,   5.22,  0.36, 'F'],
-  ['Betelgeuse',   5.919,   7.41,  0.55, 'M'],
-  /* === Magnitude 0-1 === */
-  ['Altair',      19.846,   8.87,  0.77, 'A'],
-  ['Aldebaran',    4.599,  16.51,  0.86, 'K'],
-  ['Antares',     16.490, -26.43,  0.95, 'M'],
-  ['Spica',       13.420, -11.16,  0.97, 'B'],
-  ['Pollux',       7.755,  28.03,  1.14, 'K'],
-  ['Fomalhaut',   22.961, -29.62,  1.15, 'A'],
-  ['Deneb',       20.690,  45.28,  1.24, 'A'],
-  /* === Magnitude 1-2 === */
-  ['Regulus',     10.140,  11.97,  1.36, 'B'],
-  ['Adhara',       6.977, -28.97,  1.50, 'B'],
-  ['Castor',       7.577,  31.89,  1.58, 'A'],
-  ['Shaula',      17.560, -37.10,  1.62, 'B'],
-  ['Bellatrix',    5.419,   6.35,  1.64, 'B'],
-  ['Elnath',       5.438,  28.61,  1.66, 'B'],
-  ['Alnilam',      5.603,  -1.20,  1.69, 'B'],
-  ['Alnitak',      5.679,  -1.94,  1.75, 'O'],
-  ['Alioth',      12.900,  55.96,  1.77, 'A'],
-  ['Mirfak',       3.405,  49.86,  1.80, 'F'],
-  ['Dubhe',       11.062,  61.75,  1.80, 'K'],
-  ['Kaus Australis',18.403,-34.38, 1.84, 'B'],
-  ['Alkaid',      13.793,  49.31,  1.86, 'B'],
-  ['Menkalinan',   5.992,  44.95,  1.90, 'A'],
-  ['Alhena',       6.628,  16.40,  1.93, 'A'],
-  ['Polaris',      2.530,  89.26,  1.99, 'F'],
-  /* === Magnitude 2-3 === */
-  ['Alphard',      9.460,  -8.66,  1.98, 'K'],
-  ['Mirzam',       6.378, -17.96,  1.98, 'B'],
-  ['Algieba',     10.333,  19.84,  2.00, 'K'],
-  ['Hamal',        2.120,  23.46,  2.01, 'K'],
-  ['Diphda',       0.726, -17.99,  2.04, 'K'],
-  ['Nunki',       18.921, -26.30,  2.05, 'B'],
-  ['Alpheratz',    0.140,  29.09,  2.07, 'B'],
-  ['Mirach',       1.163,  35.62,  2.07, 'M'],
-  ['Saiph',        5.796,  -9.67,  2.07, 'B'],
-  ['Kochab',      14.845,  74.16,  2.07, 'K'],
-  ['Rasalhague',  17.582,  12.56,  2.08, 'A'],
-  ['Algol',        3.136,  40.96,  2.09, 'B'],
-  ['Almach',       2.065,  42.33,  2.10, 'K'],
-  ['Denebola',    11.818,  14.57,  2.14, 'A'],
-  ['Tiaki',       22.711, -46.88,  2.07, 'M'],
-  ['Sadr',        20.370,  40.26,  2.23, 'F'],
-  ['Wezen',        7.140, -26.39,  1.83, 'F'],
-  ['Naos',         8.059, -40.00,  2.21, 'O'],
-  ['Mizar',       13.399,  54.93,  2.23, 'A'],
-  ['Schedar',      0.675,  56.54,  2.24, 'K'],
-  ['Eltanin',     17.943,  51.49,  2.24, 'K'],
-  ['Mintaka',      5.533,  -0.30,  2.25, 'O'],
-  ['Caph',         0.153,  59.15,  2.28, 'F'],
-  ['Dschubba',    16.006, -22.62,  2.29, 'B'],
-  ['Epsilon Pegasi',21.736, 9.88,  2.38, 'K'],
-  ['Alphecca',    15.578,  26.71,  2.22, 'A'],
-  ['Etamin',      17.943,  51.49,  2.24, 'K'],
-  ['Merak',       11.031,  56.38,  2.34, 'A'],
-  ['Izar',        14.750,  27.07,  2.35, 'K'],
-  ['Ankaa',        0.438, -42.31,  2.40, 'K'],
-  ['Phecda',      11.897,  53.69,  2.41, 'A'],
-  ['Scheat',      23.063,  28.08,  2.44, 'M'],
-  ['Markab',      23.079,  15.21,  2.49, 'B'],
-  ['Alderamin',   21.310,  62.59,  2.45, 'A'],
-  ['Enif',        21.736,   9.88,  2.38, 'K'],
-  ['Acrab',       16.091, -19.81,  2.56, 'B'],
-  ['Sabik',       17.173, -15.72,  2.43, 'A'],
-  ['Zubeneschamali',15.283,-9.38,  2.61, 'B'],
-  ['Unukalhai',   15.738,   6.43,  2.63, 'K'],
-  ['Kornephoros',  16.503,  21.49,  2.78, 'G'],
-  ['Deneb Kaitos', 0.726, -17.99,  2.04, 'K'],
-  ['Rasalgethi',  17.244,  14.39,  2.78, 'M'],
-  ['Albireo',     19.512,  27.96,  3.05, 'K'],
-  ['Thuban',      14.073,  64.38,  3.67, 'A'],
-  /* === Magnitude 3-4 (fill stars for density) === */
-  ['Megrez',      12.257,  57.03,  3.32, 'A'],
-  ['Alcor',       13.421,  54.99,  3.99, 'A'],
-  ['Navi',         0.945,  60.72,  2.15, 'B'],
-  ['Ruchbah',      1.430,  60.24,  2.66, 'A'],
-  ['Segin',        1.907,  63.67,  3.35, 'B'],
-  /* Orion belt + sword region */
-  ['Meissa',       5.585,   9.93,  3.33, 'O'],
-  ['Hatsya',       5.591,  -5.91,  2.75, 'O'],
-  /* Scorpius tail */
-  ['Sargas',      17.622, -43.00,  1.86, 'F'],
-  ['Lesath',      17.531, -37.30,  2.70, 'B'],
-  ['Girtab',      17.793, -37.04,  2.39, 'B'],
-  /* Sagittarius teapot */
-  ['Ascella',     19.043, -29.88,  2.60, 'A'],
-  ['Kaus Media',  18.350, -29.83,  2.72, 'K'],
-  ['Kaus Borealis',18.466,-25.42,  2.82, 'K'],
-  ['Rukbat',      19.398, -40.62,  3.96, 'B'],
-  /* Big Dipper extra */
-  ['Muscida',      8.504,  60.72,  3.35, 'G'],
-  /* Leo extra */
-  ['Zosma',       11.235,  20.52,  2.56, 'A'],
-  ['Chertan',     11.237,  15.43,  3.33, 'A'],
-  ['Adhafera',    10.278,  23.42,  3.44, 'F'],
-  /* Cygnus cross */
-  ['Gienah Cygni',20.770,  33.97,  2.48, 'K'],
-  ['Fawaris',     19.750,  45.13,  2.87, 'B'],
-  /* Pegasus square */
-  ['Algenib',      0.220,  15.18,  2.83, 'B'],
-  /* Perseus */
-  ['Atik',         3.964,  31.88,  2.85, 'B'],
-  /* Andromeda */
-  ['Nembus',       0.656,  30.86,  3.27, 'G'],
-  /* Taurus */
-  ['Ain',          4.477,  19.18,  3.53, 'G'],
-  ['Alcyone',      3.791,  24.10,  2.87, 'B'],
-  ['Atlas',        3.819,  24.05,  3.63, 'B'],
-  ['Electra',      3.745,  24.11,  3.70, 'B'],
-  ['Maia',         3.764,  24.37,  3.87, 'B'],
-  ['Merope',       3.772,  23.95,  4.18, 'B'],
-  ['Taygeta',      3.753,  24.47,  4.30, 'B'],
-  /* Hyades cluster stars */
-  ['Theta2 Tau',   4.478,  15.96,  3.40, 'A'],
-  ['Gamma Tau',    4.330,  15.63,  3.65, 'G'],
-  ['Delta1 Tau',   4.382,  17.54,  3.76, 'G'],
-  ['Epsilon Tau',  4.477,  19.18,  3.53, 'K'],
-  /* Gemini extra */
-  ['Mebsuta',      6.383,  25.13,  3.06, 'G'],
-  ['Tejat',        6.383,  22.51,  2.87, 'M'],
-  ['Propus',       6.248,  22.51,  3.31, 'M'],
-  /* Canis Major extra */
-  ['Aludra',       7.402, -29.30,  2.45, 'B'],
-  ['Furud',        6.338, -30.06,  3.02, 'B'],
-  /* Auriga extra */
-  ['Hassaleh',     4.950,  33.17,  2.69, 'F'],
-  ['Almaaz',       5.033,  43.82,  2.99, 'F'],
-  ['Saclateni',    5.108,  41.23,  3.17, 'G'],
-  /* Lyra extra */
-  ['Sheliak',     18.835,  33.36,  3.52, 'B'],
-  ['Sulafat',     18.982,  32.69,  3.25, 'B'],
-  /* Aquila extra */
-  ['Tarazed',     19.771,  10.61,  2.72, 'K'],
-  ['Alshain',     19.922,   6.41,  3.71, 'G'],
-  /* Corona Borealis */
-  ['Nusakan',     15.464,  29.11,  3.66, 'F'],
-  /* Bootes extra */
-  ['Muphrid',     13.912,  18.40,  2.68, 'G'],
-  ['Nekkar',      15.032,  40.39,  3.49, 'G'],
-  /* Virgo extra */
-  ['Vindemiatrix',13.036,  10.96,  2.83, 'G'],
-  ['Porrima',     12.694,  -1.45,  2.74, 'F'],
-  /* Libra */
-  ['Zubenelgenubi',14.848, -16.04, 2.75, 'A'],
-  /* Ophiuchus */
-  ['Cebalrai',    17.724,   4.57,  2.76, 'K'],
-  ['Yed Prior',   16.239,  -3.69,  2.73, 'M'],
-  /* Hercules */
-  ['Zeta Her',    16.688,  31.60,  2.81, 'G'],
-  ['Pi Her',      17.251,  36.81,  3.16, 'K'],
-  ['Eta Her',     16.715,  38.92,  3.48, 'G'],
-  ['Mu Her',      17.774,  27.72,  3.42, 'G'],
-  /* Draco */
-  ['Rastaban',    17.507,  52.30,  2.79, 'G'],
-  ['Grumium',     17.892,  56.87,  3.75, 'K'],
-  /* Ursa Minor extra */
-  ['Pherkad',     15.346,  71.83,  3.00, 'A'],
-  ['Yildun',      17.537,  86.59,  4.35, 'A'],
-  /* Cassiopeia extra */
-  ['Fulu',         1.180,  58.23,  4.54, 'B'],
-  /* Aries extra */
-  ['Sheratan',     1.911,  20.81,  2.64, 'A'],
-  ['Mesarthim',    1.898,  19.29,  3.88, 'B'],
-  /* Pisces */
-  ['Eta Psc',      1.525,  15.35,  3.62, 'G'],
-  /* Aquarius */
-  ['Sadalsuud',   21.526,  -5.57,  2.90, 'G'],
-  ['Sadalmelik',  22.096,  -0.32,  2.95, 'G'],
-  /* Capricornus */
-  ['Deneb Algedi',21.784, -16.13,  2.85, 'A'],
-  ['Dabih',       20.350, -14.78,  3.05, 'F'],
-  /* Cetus */
-  ['Menkar',       3.038,   4.09,  2.54, 'M'],
-  ['Mira',         2.323,  -2.98,  3.04, 'M'],
-  /* Eridanus */
-  ['Cursa',        5.131,  -5.09,  2.78, 'A'],
-  ['Zaurak',       3.967, -13.51,  2.97, 'M'],
-  /* Lepus */
-  ['Arneb',        5.545, -17.82,  2.58, 'F'],
-  ['Nihal',        5.471, -20.76,  2.81, 'G'],
-  /* Columba */
-  ['Phact',        5.661, -34.07,  2.65, 'B'],
-  /* Puppis */
-  ['Naos',         8.059, -40.00,  2.21, 'O'],
-  /* Hydra extra */
-  ['Gamma Hya',   13.315, -23.17,  3.00, 'G'],
-  /* Corvus */
-  ['Gienah',      12.263, -17.54,  2.58, 'B'],
-  ['Kraz',        12.573, -23.40,  2.65, 'G'],
-  ['Algorab',     12.497, -16.52,  2.94, 'A'],
-  ['Minkar',      12.168, -22.62,  3.02, 'G'],
-];
-
-/* ============================================================
-   4. CONSTELLATION LINE PATTERNS
-   ============================================================
-   Each constellation: { name, lines: [[starName1, starName2], ...] }
-   ============================================================ */
+   Format: [name, RA_hours, Dec_degrees, magnitude, spectralClass, constellationIdx]
+   constellationIdx: -1 = no constellation, 0+ = index into CONSTELLATIONS */
 var CONSTELLATIONS = [
-  { name: 'Orion', lines: [
-    ['Betelgeuse','Bellatrix'],['Betelgeuse','Meissa'],['Bellatrix','Meissa'],
-    ['Betelgeuse','Alnilam'],['Bellatrix','Mintaka'],
-    ['Alnilam','Mintaka'],['Alnilam','Alnitak'],
-    ['Alnitak','Saiph'],['Mintaka','Rigel'],
-    ['Saiph','Rigel']
-  ]},
-  { name: 'Ursa Major', lines: [
-    ['Dubhe','Merak'],['Merak','Phecda'],['Phecda','Megrez'],
-    ['Megrez','Alioth'],['Alioth','Mizar'],['Mizar','Alkaid'],
-    ['Megrez','Dubhe']
-  ]},
-  { name: 'Cassiopeia', lines: [
-    ['Caph','Schedar'],['Schedar','Navi'],['Navi','Ruchbah'],['Ruchbah','Segin']
-  ]},
-  { name: 'Cygnus', lines: [
-    ['Deneb','Sadr'],['Sadr','Albireo'],
-    ['Sadr','Gienah Cygni'],['Sadr','Fawaris']
-  ]},
-  { name: 'Leo', lines: [
-    ['Regulus','Adhafera'],['Adhafera','Algieba'],
-    ['Regulus','Chertan'],['Chertan','Zosma'],['Zosma','Denebola'],
-    ['Algieba','Zosma']
-  ]},
-  { name: 'Scorpius', lines: [
-    ['Antares','Dschubba'],['Antares','Acrab'],['Dschubba','Acrab'],
-    ['Antares','Shaula'],['Shaula','Lesath'],['Shaula','Sargas'],
-    ['Antares','Girtab']
-  ]},
-  { name: 'Gemini', lines: [
-    ['Castor','Pollux'],['Castor','Mebsuta'],['Pollux','Tejat'],
-    ['Mebsuta','Tejat'],['Tejat','Propus'],['Mebsuta','Alhena']
-  ]},
-  { name: 'Lyra', lines: [
-    ['Vega','Sheliak'],['Vega','Sulafat'],['Sheliak','Sulafat']
-  ]},
-  { name: 'Aquila', lines: [
-    ['Altair','Tarazed'],['Altair','Alshain']
-  ]},
-  { name: 'Taurus', lines: [
-    ['Aldebaran','Elnath'],['Aldebaran','Ain'],
-    ['Ain','Alcyone']
-  ]},
-  { name: 'Canis Major', lines: [
-    ['Sirius','Mirzam'],['Sirius','Adhara'],['Sirius','Wezen'],
-    ['Adhara','Wezen'],['Adhara','Aludra'],['Sirius','Furud']
-  ]},
-  { name: 'Auriga', lines: [
-    ['Capella','Menkalinan'],['Capella','Hassaleh'],
-    ['Menkalinan','Almaaz'],['Almaaz','Saclateni'],['Saclateni','Hassaleh']
-  ]},
-  { name: 'Bootes', lines: [
-    ['Arcturus','Izar'],['Arcturus','Muphrid'],
-    ['Izar','Nekkar'],['Arcturus','Alphecca']
-  ]},
-  { name: 'Corona Borealis', lines: [
-    ['Alphecca','Nusakan']
-  ]},
-  { name: 'Pegasus', lines: [
-    ['Markab','Scheat'],['Scheat','Alpheratz'],['Alpheratz','Algenib'],
-    ['Algenib','Markab']
-  ]},
-  { name: 'Andromeda', lines: [
-    ['Alpheratz','Mirach'],['Mirach','Almach']
-  ]},
-  { name: 'Perseus', lines: [
-    ['Mirfak','Algol'],['Mirfak','Atik']
-  ]},
-  { name: 'Ursa Minor', lines: [
-    ['Polaris','Kochab'],['Kochab','Pherkad']
-  ]},
-  { name: 'Corvus', lines: [
-    ['Gienah','Kraz'],['Kraz','Algorab'],['Algorab','Minkar'],['Minkar','Gienah']
-  ]},
-  { name: 'Hercules', lines: [
-    ['Kornephoros','Zeta Her'],['Zeta Her','Eta Her'],['Eta Her','Pi Her'],
-    ['Pi Her','Kornephoros'],['Kornephoros','Rasalgethi']
-  ]},
-  { name: 'Virgo', lines: [
-    ['Spica','Porrima'],['Porrima','Vindemiatrix'],['Porrima','Denebola']
-  ]},
-  { name: 'Aries', lines: [
-    ['Hamal','Sheratan'],['Sheratan','Mesarthim']
-  ]},
+  'Ursa Major', 'Ursa Minor', 'Cassiopeia', 'Orion', 'Cygnus',
+  'Lyra', 'Aquila', 'Scorpius', 'Leo', 'Gemini',
+  'Bootes', 'Pegasus', 'Andromeda', 'Perseus', 'Auriga'
+];
+
+var STAR_CATALOG = [
+  /* mag < 0 */
+  ['Sirius',       6.752, -16.72, -1.46, 'A', 3],
+  ['Canopus',      6.399, -52.70, -0.73, 'F', -1],
+  ['Arcturus',    14.261,  19.18, -0.05, 'K', 10],
+  ['Vega',        18.616,  38.78,  0.03, 'A', 5],
+  ['Capella',      5.278,  46.00,  0.07, 'G', 14],
+  ['Rigel',        5.242,  -8.20,  0.15, 'B', 3],
+  ['Procyon',      7.655,   5.22,  0.36, 'F', -1],
+  ['Betelgeuse',   5.919,   7.41,  0.55, 'M', 3],
+  /* mag 0-1 */
+  ['Altair',      19.846,   8.87,  0.77, 'A', 6],
+  ['Aldebaran',    4.599,  16.51,  0.86, 'K', -1],
+  ['Antares',     16.490, -26.43,  0.95, 'M', 7],
+  ['Spica',       13.420, -11.16,  0.97, 'B', -1],
+  ['Pollux',       7.755,  28.03,  1.14, 'K', 9],
+  ['Fomalhaut',   22.961, -29.62,  1.15, 'A', -1],
+  ['Deneb',       20.690,  45.28,  1.24, 'A', 4],
+  /* mag 1-2 */
+  ['Regulus',     10.140,  11.97,  1.36, 'B', 8],
+  ['Adhara',       6.977, -28.97,  1.50, 'B', -1],
+  ['Castor',       7.577,  31.89,  1.58, 'A', 9],
+  ['Shaula',      17.560, -37.10,  1.62, 'B', 7],
+  ['Bellatrix',    5.419,   6.35,  1.64, 'B', 3],
+  ['Elnath',       5.438,  28.61,  1.66, 'B', 14],
+  ['Alnilam',      5.603,  -1.20,  1.69, 'B', 3],
+  ['Alnitak',      5.679,  -1.94,  1.75, 'O', 3],
+  ['Alioth',      12.900,  55.96,  1.77, 'A', 0],
+  ['Mirfak',       3.405,  49.86,  1.80, 'F', 13],
+  ['Dubhe',       11.062,  61.75,  1.80, 'K', 0],
+  ['Kaus Australis',18.403,-34.38, 1.84, 'B', 7],
+  ['Alkaid',      13.793,  49.31,  1.86, 'B', 0],
+  ['Menkalinan',   5.992,  44.95,  1.90, 'A', 14],
+  ['Alhena',       6.628,  16.40,  1.93, 'A', 9],
+  ['Polaris',      2.530,  89.26,  1.99, 'F', 1],
+  /* mag 2-3 */
+  ['Alphard',      9.460,  -8.66,  1.98, 'K', -1],
+  ['Mirzam',       6.378, -17.96,  1.98, 'B', -1],
+  ['Algieba',     10.333,  19.84,  2.00, 'K', 8],
+  ['Hamal',        2.120,  23.46,  2.01, 'K', -1],
+  ['Diphda',       0.726, -17.99,  2.04, 'K', -1],
+  ['Nunki',       18.921, -26.30,  2.05, 'B', 7],
+  ['Alpheratz',    0.140,  29.09,  2.07, 'B', 12],
+  ['Mirach',       1.163,  35.62,  2.07, 'M', 12],
+  ['Saiph',        5.796,  -9.67,  2.07, 'B', 3],
+  ['Kochab',      14.845,  74.16,  2.07, 'K', 1],
+  ['Rasalhague',  17.582,  12.56,  2.08, 'A', -1],
+  ['Algol',        3.136,  40.96,  2.09, 'B', 13],
+  ['Almach',       2.065,  42.33,  2.10, 'K', 12],
+  ['Denebola',    11.818,  14.57,  2.14, 'A', 8],
+  ['Sadr',        20.370,  40.26,  2.23, 'F', 4],
+  ['Wezen',        7.140, -26.39,  1.83, 'F', -1],
+  ['Naos',         8.059, -40.00,  2.21, 'O', -1],
+  ['Mizar',       13.399,  54.93,  2.23, 'A', 0],
+  ['Schedar',      0.675,  56.54,  2.24, 'K', 2],
+  ['Eltanin',     17.944,  51.49,  2.24, 'K', -1],
+  ['Mintaka',      5.533,  -0.30,  2.25, 'O', 3],
+  ['Caph',         0.153,  59.15,  2.28, 'F', 2],
+  ['Merak',       11.031,  56.38,  2.34, 'A', 0],
+  ['Izar',        14.750,  27.07,  2.35, 'K', 10],
+  ['Enif',        21.736,   9.88,  2.38, 'K', 11],
+  ['Phecda',      11.897,  53.69,  2.41, 'A', 0],
+  ['Scheat',      23.063,  28.08,  2.44, 'M', 11],
+  ['Alderamin',   21.310,  62.59,  2.45, 'A', -1],
+  ['Markab',      23.079,  15.21,  2.49, 'B', 11],
+  ['Navi',         0.945,  60.72,  2.47, 'B', 2],
+  ['Gienah',      12.263, -17.54,  2.58, 'B', -1],
+  ['Zubeneschamali',15.283,-9.38,  2.61, 'B', -1],
+  ['Albireo',     19.512,  27.96,  3.05, 'K', 4],
+  ['Ruchbah',      1.358,  60.24,  2.66, 'A', 2],
+  ['Tarazed',     19.771,  10.61,  2.72, 'K', 6],
+  ['Pherkad',     15.346,  71.83,  3.00, 'A', 1],
+  ['Megrez',      12.257,  57.03,  3.31, 'A', 0],
+  ['Algenib',      0.220,  15.18,  2.83, 'B', 11],
+  ['Gienah Cygni',20.770,  33.97,  2.48, 'K', 4],
+  /* mag 3-4 — fainter stars for density */
+  ['Mebsuta',      6.383,  25.13,  3.06, 'G', 9],
+  ['Tejat',        6.383,  22.51,  3.06, 'M', 9],
+  ['Wasat',        7.335,  21.98,  3.53, 'F', 9],
+  ['Propus',       6.248,  22.51,  3.31, 'M', 9],
+  ['Zosma',       11.235,  20.52,  2.56, 'A', 8],
+  ['Chertan',     11.237,  15.43,  3.33, 'A', 8],
+  ['Graffias',    16.091, -19.81,  2.56, 'B', 7],
+  ['Dschubba',    16.005, -22.62,  2.29, 'B', 7],
+  ['Acrab',       16.091, -19.81,  2.56, 'B', 7],
+  ['Sargas',      17.622, -42.99,  1.86, 'F', 7],
+  ['Lesath',      17.530, -37.29,  2.69, 'B', 7],
+  ['Girtab',      17.793, -37.04,  2.41, 'B', 7],
+  ['Epsilon Cyg', 20.770,  33.97,  2.48, 'K', 4],
+  ['Delta Cyg',   19.749,  45.13,  2.87, 'B', 4],
+  ['Sheliak',     18.835,  33.36,  3.52, 'B', 5],
+  ['Sulafat',     18.982,  32.69,  3.25, 'B', 5],
+  ['Eta Aql',     19.874,   1.01,  3.87, 'F', 6],
+  ['Delta Aql',   19.425,   3.11,  3.36, 'F', 6],
+  /* mag 4-5.5 — faint field stars (no constellation) */
+  ['HD 4628',      0.813,   5.37,  3.74, 'K', -1],
+  ['HD 9270',      1.525,  15.35,  4.01, 'K', -1],
+  ['HD 10700',     1.735, -15.94,  3.50, 'G', -1],
+  ['HD 16895',     2.720,   5.99,  4.11, 'F', -1],
+  ['HD 20630',     3.327,   3.22,  4.84, 'G', -1],
+  ['HD 22049',     3.549,  -9.46,  3.73, 'K', -1],
+  ['HD 30652',     4.830,   5.60,  3.19, 'F', -1],
+  ['HD 34411',     5.335,  40.51,  4.69, 'G', -1],
+  ['HD 39587',     5.943,  20.28,  4.39, 'G', -1],
+  ['HD 48915B',    6.752, -16.72,  8.44, 'A', -1],
+  ['HD 62509',     7.755,  28.03,  1.14, 'K', 9],
+  ['HD 71155',     8.427,  -3.90,  3.90, 'A', -1],
+  ['HD 82328',     9.548,  51.68,  3.17, 'F', 0],
+  ['HD 89449',    10.361,  23.75,  4.78, 'F', 8],
+  ['HD 95418',    11.031,  56.38,  2.34, 'A', 0],
+  ['HD 102870',   11.845,   1.76,  3.61, 'F', -1],
+  ['HD 109358',   12.562,  38.32,  4.26, 'G', -1],
+  ['HD 114710',   13.197,  27.88,  4.24, 'F', 10],
+  ['HD 120136',   13.793,  17.46,  4.50, 'F', -1],
+  ['HD 126660',   14.418,  46.09,  4.04, 'F', 10],
+  ['HD 131156',   14.852,  19.10,  4.55, 'G', 10],
+  ['HD 142860',   15.961,  15.66,  3.85, 'F', -1],
+  ['HD 150680',   16.688,  31.60,  2.81, 'G', -1],
+  ['HD 157214',   17.380,  14.39,  5.38, 'G', -1],
+  ['HD 160269',   17.625,  27.72,  5.20, 'G', -1],
+  ['HD 168913',   18.350,  39.67,  5.00, 'A', 5],
+  ['HD 173667',   18.746,  20.55,  4.19, 'F', -1],
+  ['HD 182572',   19.370,  11.85,  5.17, 'G', 6],
+  ['HD 185144',   19.632,  50.22,  4.68, 'K', 4],
+  ['HD 190248',   20.078, -27.04,  3.56, 'G', -1],
+  ['HD 197692',   20.793, -27.04,  4.13, 'F', -1],
+  ['HD 203280',   21.310,  62.59,  2.45, 'A', -1],
+  ['HD 209100',   22.035, -43.32,  4.69, 'K', -1],
+  ['HD 215648',   22.780,  -4.39,  4.20, 'F', -1],
+  ['HD 219134',   23.222,  57.17,  5.57, 'K', 2],
+  /* Additional faint field stars for richness */
+  ['Mu Gem',       6.383,  22.51,  2.87, 'M', 9],
+  ['Eta Gem',      6.248,  22.51,  3.31, 'M', 9],
+  ['Xi UMa',      11.303,  31.53,  3.79, 'F', 0],
+  ['Nu UMa',      11.530,  33.09,  3.49, 'K', 0],
+  ['Psi UMa',     11.161,  44.50,  3.01, 'K', 0],
+  ['Theta Boo',   14.420,  51.85,  4.05, 'F', 10],
+  ['Rho Boo',     14.530,  30.37,  3.58, 'K', 10],
+  ['Eta Cas',      0.817,  57.82,  3.44, 'F', 2],
+  ['Zeta Cas',     0.614,  53.90,  3.66, 'B', 2],
+  ['Epsilon Per',  3.964,  40.01,  2.90, 'B', 13],
+  ['Zeta Per',     3.902,  31.88,  2.86, 'B', 13],
+  ['Delta Per',    3.715,  47.79,  3.01, 'B', 13],
+  ['Theta Aur',    5.995,  37.21,  2.62, 'A', 14],
+  ['Beta Aur',     5.992,  44.95,  1.90, 'A', 14],
+  ['Iota Aur',     4.950,  33.17,  2.69, 'K', 14],
+  ['Epsilon Sco',  16.836, -34.29,  2.29, 'K', 7],
+  ['Mu Sco',      16.864, -38.05,  3.04, 'B', 7],
+  ['Zeta Sco',    16.897, -42.36,  3.62, 'B', 7],
+  ['Lambda Sco',  17.560, -37.10,  1.62, 'B', 7],
+  ['Theta Sco',   17.622, -42.99,  1.86, 'F', 7],
 ];
 
 /* ============================================================
-   5. SPECTRAL TYPE → RGB COLOR
+   4. SPECTRAL TYPE -> RGB COLOR
    ============================================================ */
 var SPECTRAL_COLORS = {
-  'O': { r: 155, g: 176, b: 255 },  /* blue */
-  'B': { r: 170, g: 191, b: 255 },  /* blue-white */
-  'A': { r: 202, g: 215, b: 255 },  /* white */
-  'F': { r: 248, g: 247, b: 255 },  /* yellow-white */
-  'G': { r: 255, g: 244, b: 234 },  /* yellow */
-  'K': { r: 255, g: 210, b: 161 },  /* orange */
-  'M': { r: 255, g: 204, b: 111 },  /* red-orange */
+  'O': { r: 155, g: 176, b: 255 },
+  'B': { r: 170, g: 191, b: 255 },
+  'A': { r: 202, g: 215, b: 255 },
+  'F': { r: 248, g: 247, b: 255 },
+  'G': { r: 255, g: 244, b: 234 },
+  'K': { r: 255, g: 210, b: 161 },
+  'M': { r: 255, g: 204, b: 111 },
 };
 
 /* ============================================================
-   6. THEME PALETTES (nighttime only)
+   5. THEME PALETTES
    ============================================================ */
 var THEMES = {
-  night:    { bg: '#0d0e1a', text: '#c8c0d0', weather: '#c8c0d0', name: 'Night' },
-  witching: { bg: '#0a0a14', text: '#9088a0', weather: '#9088a0', name: 'Witching Hour' },
-  dawn:     { bg: '#1a1520', text: '#b0a0b8', weather: '#b0a0b8', name: 'Pre-Dawn' },
-  dusk:     { bg: '#1a1018', text: '#c0a8b0', weather: '#c0a8b0', name: 'Dusk' },
+  night:    { bg: '#0d0e1a', text: '#c8c0d0', weather: '#c8c0d0' },
+  witching: { bg: '#0a0a14', text: '#9088a0', weather: '#9088a0' },
+  dawn:     { bg: '#1a1520', text: '#b0a0b8', weather: '#b0a0b8' },
+  dusk:     { bg: '#1a1018', text: '#c0a8b0', weather: '#c0a8b0' },
 };
 
 /* ============================================================
-   7. WEATHER PRESETS — star visibility
+   6. WEATHER PRESETS
    ============================================================ */
 var WEATHER_PRESETS = {
   clear:        { starVis: 1.0, cloudCover: 0.0, fogDim: 0.0, desc: 'Clear Sky' },
@@ -543,75 +383,67 @@ var WEATHER_PRESETS = {
   haze:         { starVis: 0.3, cloudCover: 0.1, fogDim: 0.4, desc: 'Haze' },
   lightSnow:    { starVis: 0.2, cloudCover: 0.6, fogDim: 0.2, desc: 'Light Snow' },
   blizzard:     { starVis: 0.0, cloudCover: 1.0, fogDim: 0.5, desc: 'Blizzard' },
-  starryNight:  { starVis: 1.0, cloudCover: 0.0, fogDim: 0.0, desc: 'Starry Night (pristine)' },
+  starryNight:  { starVis: 1.0, cloudCover: 0.0, fogDim: 0.0, desc: 'Starry Night' },
 };
 
 /* ============================================================
-   8. UNICODE CHARACTERS FOR STARS
+   7. UNICODE CHARACTER SETS — noise-driven cycling
    ============================================================
-   Different characters for different magnitudes/sizes.
-   Using VS15 (U+FE0E) to prevent emoji rendering. */
-var STAR_CHARS = {
-  brilliant: ['\u2726', '\u2605\uFE0E', '\u2736', '\u2734'],  /* ✦ ★ ✶ ✴ */
-  bright:    ['\u2726', '\u2727', '\u2605\uFE0E', '\u2736'],   /* ✦ ✧ ★ ✶ */
-  medium:    ['\u2727', '\u00B7', '\u2022\uFE0E', '\u2219'],   /* ✧ · • ∙ */
-  dim:       ['\u00B7', '\u2219', '\u2027', '\u002E'],          /* · ∙ ‧ . */
-  faint:     ['\u2027', '\u002E', '\u00B7', '\u2219'],          /* ‧ . · ∙ */
-  cluster:   ['\u2059', '\u2058', '\u205A', '\u2234'],          /* ⁙ ⁘ ⁚ ∴ */
-};
+   Stars cycle through characters driven by noise, matching
+   the rain.js sun/moon rendering approach. VS15 (U+FE0E)
+   prevents emoji rendering on mobile. */
+var STAR_CHARS_BRILLIANT = [
+  '\u2726', '\u2605\uFE0E', '\u2736', '\u2734', '\u2739',
+  '\u2605\uFE0E', '\u2726', '\u2734'
+];
+var STAR_CHARS_BRIGHT = [
+  '\u2726', '\u2727', '\u2736', '\u2734', '\u2726', '\u2727'
+];
+var STAR_CHARS_MEDIUM = [
+  '\u2727', '\u2726', '\u2219', '\u2022\uFE0E', '\u2727', '\u00B7'
+];
+var STAR_CHARS_DIM = [
+  '\u00B7', '\u2219', '\u2027', '\u2022\uFE0E', '\u00B7', '\u2219'
+];
+var STAR_CHARS_FAINT = [
+  '\u2027', '\u002E', '\u00B7', '\u2219', '\u002E', '\u2027'
+];
+
+var STAR_FONT = '"Apple Symbols", "Segoe UI Symbol", "Noto Sans Symbols 2", "Cormorant Garamond", Georgia, serif';
 
 /* ============================================================
-   9. COORDINATE TRANSFORMS
-   ============================================================
-   Convert RA/Dec to altitude/azimuth for Tokyo at a given LST.
-   Then project onto the canvas viewport. */
-
+   8. COORDINATE TRANSFORMS
+   ============================================================ */
 function getLocalSiderealTime(hour) {
-  /* Approximate LST for Tokyo on a mid-year date.
-     LST ≈ hour + TOKYO_LON/15 + offset for date.
-     For a general demo, we use a simplified model. */
-  var lst = (hour + TOKYO_LON / 15.0 + 12.0) % 24.0;
-  return lst;
+  return (hour + TOKYO_LON / 15.0 + 12.0) % 24.0;
 }
 
 function equatorialToHorizontal(raHours, decDeg, lstHours) {
-  var ha = (lstHours - raHours) * 15.0 * Math.PI / 180.0; /* hour angle in radians */
+  var ha = (lstHours - raHours) * 15.0 * Math.PI / 180.0;
   var dec = decDeg * Math.PI / 180.0;
   var lat = LAT_RAD;
-
   var sinAlt = Math.sin(dec) * Math.sin(lat) + Math.cos(dec) * Math.cos(lat) * Math.cos(ha);
   var alt = Math.asin(Math.max(-1, Math.min(1, sinAlt)));
-
   var cosAz = (Math.sin(dec) - Math.sin(alt) * Math.sin(lat)) / (Math.cos(alt) * Math.cos(lat));
   cosAz = Math.max(-1, Math.min(1, cosAz));
   var az = Math.acos(cosAz);
   if (Math.sin(ha) > 0) az = 2 * Math.PI - az;
-
-  return { alt: alt, az: az }; /* radians */
+  return { alt: alt, az: az };
 }
 
 function horizontalToScreen(alt, az, cW, cH) {
-  /* Stereographic projection — maps the hemisphere onto a disc.
-     North is up, East is left (mirror of typical sky chart).
-     Zenith is center of canvas. */
-  if (alt < 0) return null; /* below horizon */
-
+  if (alt < 0) return null;
   var zenithDist = Math.PI / 2 - alt;
-  var r = zenithDist / (Math.PI / 2); /* 0 at zenith, 1 at horizon */
-
-  /* Scale to fill the viewport — horizon at edge */
+  var r = zenithDist / (Math.PI / 2);
   var maxR = Math.min(cW, cH) * 0.48;
   var screenR = r * maxR;
-
-  /* Azimuth: 0=North (up), 90=East (left), 180=South (down), 270=West (right) */
   var x = cW / 2 - screenR * Math.sin(az);
   var y = cH / 2 - screenR * Math.cos(az);
-
   return { x: x, y: y, r: r };
 }
 
 /* ============================================================
-   10. CANVAS SETUP
+   9. CANVAS SETUP
    ============================================================ */
 var canvas = document.getElementById('sky');
 var ctx = canvas.getContext('2d');
@@ -626,20 +458,19 @@ function resizeCanvas() {
   canvas.style.width = W + 'px';
   canvas.style.height = H + 'px';
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  spriteCache = {};
 }
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
 /* ============================================================
-   11. SPRITE CACHE (same pattern as rain.js)
+   10. SPRITE CACHE (same pattern as rain.js)
    ============================================================ */
-var starSpriteCache = {};
-var STAR_FONT = '"Apple Symbols", "Segoe UI Symbol", "Noto Sans Symbols 2", "Cormorant Garamond", Georgia, serif';
+var spriteCache = {};
 
-function getStarSprite(ch, size, colorStr) {
+function getSprite(ch, size, colorStr) {
   var key = ch + '|' + size + '|' + colorStr;
-  if (starSpriteCache[key]) return starSpriteCache[key];
-
+  if (spriteCache[key]) return spriteCache[key];
   var pad = 4;
   var sc = document.createElement('canvas');
   sc.width = size + pad * 2;
@@ -650,67 +481,114 @@ function getStarSprite(ch, size, colorStr) {
   sctx.textAlign = 'center';
   sctx.textBaseline = 'middle';
   sctx.fillText(ch, sc.width / 2, sc.height / 2);
-  starSpriteCache[key] = sc;
+  spriteCache[key] = sc;
   return sc;
 }
 
-function clearSpriteCache() {
-  starSpriteCache = {};
-}
-
 /* ============================================================
-   12. SCINTILLATION MODEL
+   11. NOISE-DRIVEN SCINTILLATION
    ============================================================
-   Based on atmospheric turbulence physics:
-   - Amplitude increases with zenith distance (longer path)
-   - Frequency: 5-20 Hz for intensity
-   - Brighter stars have slightly less scintillation
-   - Color shifts (chromatic scintillation) for bright stars
-   Reference: en.wikipedia.org/wiki/Twinkling */
+   Multi-layer noise produces natural twinkling:
+   - Fast layer (8 Hz) — atmospheric turbulence
+   - Medium layer (3 Hz) — wind-shifted cells
+   - Slow layer (0.5 Hz) — seeing conditions
+   
+   Constellation cohesion: stars in the same constellation
+   share a slow "breathing" phase from constNoise, making
+   them brighten and dim together subtly. */
 
-function getScintillation(starIdx, time, zenithDist, magnitude) {
-  /* zenithDist: 0 at zenith, 1 at horizon */
-  var ampBase = 0.05 + zenithDist * zenithDist * 0.45; /* 5% at zenith, 50% at horizon */
-
-  /* Brighter stars scintillate slightly less */
-  var magFactor = 1.0 - Math.max(0, (2.0 - magnitude) * 0.05);
+function getScintillation(starIdx, time, zenithDist, magnitude, constIdx) {
+  var ampBase = 0.08 + zenithDist * zenithDist * 0.50;
+  var magFactor = 1.0 - Math.max(0, (2.0 - magnitude) * 0.04);
   ampBase *= magFactor;
 
-  /* Multi-frequency twinkling (simulates turbulent layers) */
-  var fast = twinkleNoise.noise2D(starIdx * 7.3 + time * 8.0, starIdx * 3.1) * 0.6;
-  var medium = twinkleNoise.noise2D(starIdx * 11.7 + time * 3.0, starIdx * 5.9 + 100) * 0.3;
-  var slow = twinkleNoise.noise2D(starIdx * 2.1 + time * 0.5, starIdx * 8.7 + 200) * 0.1;
+  /* Multi-frequency twinkling */
+  var fast   = twinkleNoise.noise2D(starIdx * 7.3 + time * 8.0, starIdx * 3.1) * 0.55;
+  var medium = twinkleNoise.noise2D(starIdx * 11.7 + time * 3.0, starIdx * 5.9 + 100) * 0.30;
+  var slow   = twinkleNoise.noise2D(starIdx * 2.1 + time * 0.5, starIdx * 8.7 + 200) * 0.15;
 
-  var scintValue = fast + medium + slow; /* -1 to +1 */
+  var scintValue = fast + medium + slow;
   var brightness = 1.0 + scintValue * ampBase;
 
-  /* Chromatic scintillation for bright stars (color shifts) */
+  /* Constellation cohesion — shared slow breathing phase.
+     Stars in the same constellation share a noise seed, so they
+     brighten and dim together with a subtle synchronized rhythm. */
+  if (constIdx >= 0) {
+    var constBreath = constNoise.noise2D(constIdx * 17.3 + time * 0.25, constIdx * 7.1);
+    brightness += constBreath * 0.08; /* subtle ±8% shared modulation */
+  }
+
+  /* Chromatic scintillation for bright stars near horizon */
   var colorShift = { r: 0, g: 0, b: 0 };
   if (magnitude < 2.0 && zenithDist > 0.3) {
-    var chromAmp = zenithDist * 0.15;
-    colorShift.r = twinkleNoise.noise2D(starIdx * 13.3 + time * 12.0, 300) * chromAmp * 30;
-    colorShift.g = twinkleNoise.noise2D(starIdx * 17.7 + time * 11.0, 400) * chromAmp * 20;
-    colorShift.b = twinkleNoise.noise2D(starIdx * 19.1 + time * 13.0, 500) * chromAmp * 40;
+    var chromAmp = zenithDist * 0.12;
+    colorShift.r = twinkleNoise.noise2D(starIdx * 13.3 + time * 12.0, 300) * chromAmp * 25;
+    colorShift.g = twinkleNoise.noise2D(starIdx * 17.7 + time * 11.0, 400) * chromAmp * 15;
+    colorShift.b = twinkleNoise.noise2D(starIdx * 19.1 + time * 13.0, 500) * chromAmp * 35;
   }
 
   return { brightness: Math.max(0.1, brightness), colorShift: colorShift };
 }
 
 /* ============================================================
-   13. CLOUD OCCLUSION FIELD
+   12. NOISE-DRIVEN CHARACTER SELECTION
    ============================================================
-   Perlin noise field that simulates patchy cloud coverage.
-   Stars behind dense cloud patches are dimmed or hidden. */
+   Characters cycle based on noise, not frame count.
+   This produces organic, non-periodic character changes
+   matching the rain.js approach. */
 
+function getStarChar(starIdx, time, magClass) {
+  var chars;
+  if (magClass === 0) chars = STAR_CHARS_BRILLIANT;
+  else if (magClass === 1) chars = STAR_CHARS_BRIGHT;
+  else if (magClass === 2) chars = STAR_CHARS_MEDIUM;
+  else if (magClass === 3) chars = STAR_CHARS_DIM;
+  else chars = STAR_CHARS_FAINT;
+
+  /* Noise-driven index — changes organically, not periodically */
+  var n = charNoise.noise2D(starIdx * 5.7 + time * 0.4, starIdx * 3.3 + 50);
+  var idx = Math.floor(((n + 1) * 0.5) * chars.length) % chars.length;
+  return chars[idx];
+}
+
+function getMagClass(mag) {
+  if (mag < 0.5) return 0;  /* brilliant */
+  if (mag < 1.5) return 1;  /* bright */
+  if (mag < 2.5) return 2;  /* medium */
+  if (mag < 3.5) return 3;  /* dim */
+  return 4;                  /* faint */
+}
+
+function getMagSize(mag) {
+  if (mag < -0.5) return 16;
+  if (mag < 0.5) return 14;
+  if (mag < 1.5) return 11;
+  if (mag < 2.5) return 9;
+  if (mag < 3.5) return 7;
+  if (mag < 4.5) return 5;
+  return 4;
+}
+
+function getMagAlpha(mag) {
+  if (mag < 0) return 1.0;
+  if (mag < 1) return 0.92;
+  if (mag < 2) return 0.80;
+  if (mag < 3) return 0.62;
+  if (mag < 4) return 0.42;
+  if (mag < 5) return 0.28;
+  return 0.16;
+}
+
+/* ============================================================
+   13. CLOUD OCCLUSION
+   ============================================================ */
 function getCloudOcclusion(x, y, time, cloudCover) {
-  if (cloudCover <= 0) return 1.0; /* fully clear */
+  if (cloudCover <= 0) return 1.0;
   var cx = x / W * 6 + time * 0.02;
   var cy = y / H * 4;
   var density = (cloudNoise.noise2D(cx, cy) + 1) * 0.5;
-  /* Add a second octave for more natural cloud shapes */
   density += (cloudNoise.noise2D(cx * 2.5, cy * 2.5) + 1) * 0.25;
   density /= 1.5;
-  /* Threshold based on cloud coverage */
   var threshold = 1.0 - cloudCover;
   if (density > threshold) {
     var occlude = (density - threshold) / (1.0 - threshold);
@@ -720,20 +598,68 @@ function getCloudOcclusion(x, y, time, cloudCover) {
 }
 
 /* ============================================================
-   14. STATE
+   14. CONSTELLATION GLOW FIELD
+   ============================================================
+   Instead of lines, constellation stars share a faint ambient
+   glow that creates a subtle visual region. The glow is a soft
+   radial gradient centered on the constellation's centroid,
+   modulated by the shared breathing noise. */
+
+var constCentroids = {}; /* computed per frame */
+
+function computeConstellationCentroids(visibleStars) {
+  constCentroids = {};
+  for (var i = 0; i < visibleStars.length; i++) {
+    var ci = visibleStars[i].constIdx;
+    if (ci < 0) continue;
+    if (!constCentroids[ci]) constCentroids[ci] = { x: 0, y: 0, count: 0, minAlpha: 1 };
+    constCentroids[ci].x += visibleStars[i].x;
+    constCentroids[ci].y += visibleStars[i].y;
+    constCentroids[ci].count++;
+    constCentroids[ci].minAlpha = Math.min(constCentroids[ci].minAlpha, visibleStars[i].alpha);
+  }
+  for (var ci in constCentroids) {
+    constCentroids[ci].x /= constCentroids[ci].count;
+    constCentroids[ci].y /= constCentroids[ci].count;
+  }
+}
+
+function renderConstellationGlow(time, bgLum) {
+  for (var ci in constCentroids) {
+    var c = constCentroids[ci];
+    if (c.count < 2 || c.minAlpha < 0.05) continue;
+
+    /* Shared breathing modulation */
+    var breath = constNoise.noise2D(ci * 17.3 + time * 0.25, ci * 7.1);
+    var glowAlpha = c.minAlpha * 0.025 * (1.0 + breath * 0.4);
+    if (glowAlpha < 0.003) continue;
+
+    /* Compute spread radius from the constellation's extent */
+    var maxDist = 0;
+    /* We can't iterate visibleStars here, so use a fixed radius */
+    var radius = Math.min(W, H) * 0.08 * (1.0 + c.count * 0.02);
+
+    var grad = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, radius);
+    var glowColor = bgLum < 0.3 ? '180,170,210' : '60,50,80';
+    grad.addColorStop(0, 'rgba(' + glowColor + ',' + glowAlpha + ')');
+    grad.addColorStop(0.6, 'rgba(' + glowColor + ',' + (glowAlpha * 0.3) + ')');
+    grad.addColorStop(1, 'rgba(' + glowColor + ',0)');
+
+    ctx.fillStyle = grad;
+    ctx.fillRect(c.x - radius, c.y - radius, radius * 2, radius * 2);
+  }
+}
+
+/* ============================================================
+   15. STATE
    ============================================================ */
 var currentHour = 21;
 var currentTheme = 'night';
 var currentWeather = 'clear';
-var constMode = 'lines';
 var magLimit = 5.5;
 
-/* Build star name lookup */
-var starByName = {};
-STAR_CATALOG.forEach(function(s, i) { starByName[s[0]] = i; });
-
 /* ============================================================
-   15. THEME APPLICATION
+   16. THEME APPLICATION
    ============================================================ */
 function applyTheme(themeKey) {
   var t = THEMES[themeKey];
@@ -742,89 +668,39 @@ function applyTheme(themeKey) {
   root.style.setProperty('--color-bg', t.bg);
   root.style.setProperty('--color-text', t.text);
   root.style.setProperty('--color-weather', t.weather);
-  clearSpriteCache();
+  spriteCache = {};
 }
 
 /* ============================================================
-   16. RENDERING
+   17. MAIN RENDER
    ============================================================ */
-
-function getMagnitudeClass(mag) {
-  if (mag < 0.5) return 'brilliant';
-  if (mag < 1.5) return 'bright';
-  if (mag < 2.5) return 'medium';
-  if (mag < 3.5) return 'dim';
-  return 'faint';
-}
-
-function getMagnitudeSize(mag) {
-  /* Font size in pixels based on magnitude */
-  if (mag < -0.5) return 18;
-  if (mag < 0.5) return 15;
-  if (mag < 1.5) return 12;
-  if (mag < 2.5) return 10;
-  if (mag < 3.5) return 8;
-  if (mag < 4.5) return 6;
-  return 5;
-}
-
-function getMagnitudeAlpha(mag) {
-  /* Base opacity based on magnitude */
-  if (mag < 0) return 1.0;
-  if (mag < 1) return 0.95;
-  if (mag < 2) return 0.85;
-  if (mag < 3) return 0.70;
-  if (mag < 4) return 0.50;
-  if (mag < 5) return 0.35;
-  return 0.20;
-}
-
 function renderFrame(time) {
   var timeSec = time / 1000;
   var lst = getLocalSiderealTime(currentHour);
   var preset = WEATHER_PRESETS[currentWeather];
   var theme = THEMES[currentTheme];
 
-  /* Clear canvas */
   ctx.clearRect(0, 0, W, H);
 
-  /* Parse background color for contrast checks */
+  /* Parse background for contrast */
   var bgHex = theme.bg;
   var bgR = parseInt(bgHex.substr(1, 2), 16);
   var bgG = parseInt(bgHex.substr(3, 2), 16);
   var bgB = parseInt(bgHex.substr(5, 2), 16);
   var bgLum = (0.299 * bgR + 0.587 * bgG + 0.114 * bgB) / 255;
 
-  /* Draw horizon line */
-  var horizY = H / 2 + Math.min(W, H) * 0.48;
-  ctx.strokeStyle = 'rgba(' + (bgLum < 0.3 ? '80,70,90' : '40,35,45') + ',0.15)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(0, horizY);
-  ctx.lineTo(W, horizY);
-  ctx.stroke();
-
-  /* Draw cardinal direction labels */
-  ctx.font = '11px ' + STAR_FONT;
-  ctx.fillStyle = 'rgba(' + (bgLum < 0.3 ? '150,140,160' : '80,70,90') + ',0.3)';
-  ctx.textAlign = 'center';
-  ctx.fillText('N', W / 2, horizY + 14);
-  ctx.fillText('S', W / 2, H / 2 - Math.min(W, H) * 0.48 - 4);
-  ctx.fillText('E', W / 2 - Math.min(W, H) * 0.46, H / 2 + 4);
-  ctx.fillText('W', W / 2 + Math.min(W, H) * 0.46, H / 2 + 4);
-
-  /* Compute star positions and visibility */
+  /* Compute all visible stars */
   var visibleStars = [];
   var starsRendered = 0;
 
   for (var i = 0; i < STAR_CATALOG.length; i++) {
     var star = STAR_CATALOG[i];
-    var name = star[0], ra = star[1], dec = star[2], mag = star[3], spec = star[4];
+    var name = star[0], ra = star[1], dec = star[2], mag = star[3], spec = star[4], constIdx = star[5];
 
     if (mag > magLimit) continue;
 
     var horiz = equatorialToHorizontal(ra, dec, lst);
-    if (horiz.alt <= 0) continue; /* below horizon */
+    if (horiz.alt <= 0) continue;
 
     var screen = horizontalToScreen(horiz.alt, horiz.az, W, H);
     if (!screen) continue;
@@ -837,59 +713,60 @@ function renderFrame(time) {
     var totalVis = weatherVis * cloudOcc * fogFactor;
     if (totalVis < 0.01) continue;
 
-    /* Scintillation */
-    var zenithDist = screen.r; /* 0 at zenith, 1 at horizon */
-    var scint = getScintillation(i, timeSec, zenithDist, mag);
+    /* Scintillation with constellation cohesion */
+    var zenithDist = screen.r;
+    var scint = getScintillation(i, timeSec, zenithDist, mag, constIdx);
 
-    /* Star color */
+    /* Star color with chromatic scintillation */
     var baseColor = SPECTRAL_COLORS[spec] || SPECTRAL_COLORS['A'];
     var r = Math.round(Math.min(255, Math.max(0, baseColor.r + scint.colorShift.r)));
     var g = Math.round(Math.min(255, Math.max(0, baseColor.g + scint.colorShift.g)));
     var b = Math.round(Math.min(255, Math.max(0, baseColor.b + scint.colorShift.b)));
 
-    /* Theme blending — ensure contrast with background */
+    /* Theme contrast */
     if (bgLum > 0.3) {
-      /* Light background: darken stars slightly */
-      r = Math.round(r * 0.6);
-      g = Math.round(g * 0.6);
-      b = Math.round(b * 0.6);
+      r = Math.round(r * 0.55);
+      g = Math.round(g * 0.55);
+      b = Math.round(b * 0.55);
     }
 
     var colorStr = 'rgb(' + r + ',' + g + ',' + b + ')';
-    var alpha = getMagnitudeAlpha(mag) * scint.brightness * totalVis;
+    var alpha = getMagAlpha(mag) * scint.brightness * totalVis;
     alpha = Math.max(0, Math.min(1, alpha));
-
     if (alpha < 0.02) continue;
 
-    var size = getMagnitudeSize(mag);
-    var magClass = getMagnitudeClass(mag);
-    var chars = STAR_CHARS[magClass];
-    var ch = chars[(i + Math.floor(timeSec * 0.3)) % chars.length];
+    /* Noise-driven character selection */
+    var magClass = getMagClass(mag);
+    var ch = getStarChar(i, timeSec, magClass);
+    var size = getMagSize(mag);
 
-    /* Draw the star */
+    /* Draw the star via sprite cache */
     ctx.globalAlpha = alpha;
-    var sprite = getStarSprite(ch, size, colorStr);
+    var sprite = getSprite(ch, size, colorStr);
     ctx.drawImage(sprite, screen.x - sprite.width / 2, screen.y - sprite.height / 2);
 
-    /* Glow for bright stars */
-    if (mag < 1.5 && alpha > 0.3) {
-      var glowAlpha = alpha * 0.15 * (1.5 - mag) / 2.0;
-      ctx.globalAlpha = glowAlpha;
-      var glowSize = size * 2.5;
-      var glowSprite = getStarSprite('\u2727', Math.round(glowSize), colorStr);
-      ctx.drawImage(glowSprite, screen.x - glowSprite.width / 2, screen.y - glowSprite.height / 2);
+    /* Glow halo for bright stars — noise-modulated size */
+    if (mag < 1.5 && alpha > 0.25) {
+      var glowPulse = glowNoise.noise2D(i * 4.3 + timeSec * 0.6, i * 2.7);
+      var glowAlpha = alpha * 0.12 * (1.5 - mag) / 2.0 * (0.8 + glowPulse * 0.2);
+      if (glowAlpha > 0.005) {
+        ctx.globalAlpha = glowAlpha;
+        var glowSize = Math.round(size * (2.2 + glowPulse * 0.5));
+        var glowCh = '\u2727'; /* ✧ — always a soft diamond for glow */
+        var glowSprite = getSprite(glowCh, glowSize, colorStr);
+        ctx.drawImage(glowSprite, screen.x - glowSprite.width / 2, screen.y - glowSprite.height / 2);
+      }
     }
 
-    /* Extra sparkle for the brightest stars (mag < 0) */
-    if (mag < 0 && alpha > 0.5) {
-      var sparklePhase = twinkleNoise.noise2D(i * 5.5 + timeSec * 2.0, 600);
-      if (sparklePhase > 0.3) {
-        var sparkAlpha = alpha * 0.2 * (sparklePhase - 0.3) / 0.7;
-        ctx.globalAlpha = sparkAlpha;
-        /* Draw cross-shaped diffraction spikes */
+    /* Diffraction spikes for the very brightest (mag < 0) — noise-gated */
+    if (mag < 0 && alpha > 0.4) {
+      var spikeGate = glowNoise.noise2D(i * 9.1 + timeSec * 1.5, 700);
+      if (spikeGate > 0.15) {
+        var spikeAlpha = alpha * 0.15 * (spikeGate - 0.15) / 0.85;
+        ctx.globalAlpha = spikeAlpha;
         ctx.strokeStyle = colorStr;
         ctx.lineWidth = 0.5;
-        var spikeLen = size * 1.5 * scint.brightness;
+        var spikeLen = size * 1.2 * scint.brightness;
         ctx.beginPath();
         ctx.moveTo(screen.x - spikeLen, screen.y);
         ctx.lineTo(screen.x + spikeLen, screen.y);
@@ -901,156 +778,63 @@ function renderFrame(time) {
 
     visibleStars.push({
       name: name, x: screen.x, y: screen.y, mag: mag,
-      alpha: alpha, colorStr: colorStr, idx: i
+      alpha: alpha, colorStr: colorStr, constIdx: constIdx
     });
     starsRendered++;
   }
 
-  /* Draw constellation lines */
-  if (constMode !== 'off') {
-    ctx.lineWidth = 0.8;
-    var constCount = 0;
-
-    for (var ci = 0; ci < CONSTELLATIONS.length; ci++) {
-      var c = CONSTELLATIONS[ci];
-      var drawn = false;
-
-      for (var li = 0; li < c.lines.length; li++) {
-        var line = c.lines[li];
-        var s1 = null, s2 = null;
-
-        for (var vi = 0; vi < visibleStars.length; vi++) {
-          if (visibleStars[vi].name === line[0]) s1 = visibleStars[vi];
-          if (visibleStars[vi].name === line[1]) s2 = visibleStars[vi];
-          if (s1 && s2) break;
-        }
-
-        if (s1 && s2) {
-          var lineAlpha = Math.min(s1.alpha, s2.alpha) * 0.25;
-          if (lineAlpha < 0.02) continue;
-          ctx.globalAlpha = lineAlpha;
-          ctx.strokeStyle = bgLum < 0.3 ? 'rgba(150,140,180,0.5)' : 'rgba(60,50,70,0.5)';
-          ctx.beginPath();
-          ctx.moveTo(s1.x, s1.y);
-          ctx.lineTo(s2.x, s2.y);
-          ctx.stroke();
-          drawn = true;
-        }
-      }
-
-      /* Constellation label */
-      if (drawn && constMode === 'lines') {
-        /* Find centroid of visible stars in this constellation */
-        var cx = 0, cy = 0, count = 0, minAlpha = 1;
-        var constStarNames = [];
-        c.lines.forEach(function(l) {
-          if (constStarNames.indexOf(l[0]) === -1) constStarNames.push(l[0]);
-          if (constStarNames.indexOf(l[1]) === -1) constStarNames.push(l[1]);
-        });
-        for (var vi = 0; vi < visibleStars.length; vi++) {
-          if (constStarNames.indexOf(visibleStars[vi].name) !== -1) {
-            cx += visibleStars[vi].x;
-            cy += visibleStars[vi].y;
-            minAlpha = Math.min(minAlpha, visibleStars[vi].alpha);
-            count++;
-          }
-        }
-        if (count > 0) {
-          cx /= count; cy /= count;
-          ctx.globalAlpha = minAlpha * 0.35;
-          ctx.font = '10px ' + STAR_FONT;
-          ctx.fillStyle = bgLum < 0.3 ? 'rgba(180,170,200,0.7)' : 'rgba(60,50,80,0.7)';
-          ctx.textAlign = 'center';
-          ctx.fillText(c.name, cx, cy - 12);
-        }
-        constCount++;
-      }
-    }
-  }
-
-  /* Draw star names for bright stars */
-  if (constMode === 'lines') {
-    ctx.font = '9px ' + STAR_FONT;
-    ctx.textAlign = 'left';
-    for (var vi = 0; vi < visibleStars.length; vi++) {
-      var vs = visibleStars[vi];
-      if (vs.mag < 1.5 && vs.alpha > 0.3) {
-        ctx.globalAlpha = vs.alpha * 0.4;
-        ctx.fillStyle = bgLum < 0.3 ? 'rgba(200,190,220,0.6)' : 'rgba(50,40,60,0.6)';
-        ctx.fillText(vs.name, vs.x + getMagnitudeSize(vs.mag) + 3, vs.y + 3);
-      }
-    }
-  }
+  /* Constellation glow fields — subtle ambient regions */
+  computeConstellationCentroids(visibleStars);
+  renderConstellationGlow(timeSec, bgLum);
 
   ctx.globalAlpha = 1;
 
   /* Update state display */
-  var stateBox = document.getElementById('stateBox');
-  stateBox.innerHTML = '<strong>Star Field</strong>\n' +
+  document.getElementById('stateBox').innerHTML =
+    '<strong>Star Field</strong>\n' +
     'Stars visible: ' + starsRendered + ' / ' + STAR_CATALOG.length + '\n' +
-    'Weather: ' + preset.desc + ' (vis: ' + (preset.starVis * 100).toFixed(0) + '%)\n' +
-    'Cloud cover: ' + (preset.cloudCover * 100).toFixed(0) + '%\n' +
-    'Mag limit: ' + magLimit.toFixed(1);
+    'Weather: ' + preset.desc + ' (vis: ' + (preset.starVis * 100).toFixed(0) + '%)';
 }
 
 /* ============================================================
-   17. ANIMATION LOOP
+   18. ANIMATION LOOP
    ============================================================ */
 var frameCount = 0, lastFpsTime = 0;
 
 function animate(timestamp) {
   renderFrame(timestamp);
-
   frameCount++;
   if (timestamp - lastFpsTime > 1000) {
     document.getElementById('fps').textContent = frameCount + ' fps';
     frameCount = 0;
     lastFpsTime = timestamp;
   }
-
   requestAnimationFrame(animate);
 }
 
 /* ============================================================
-   18. UI CONTROLS
+   19. UI CONTROLS
    ============================================================ */
-var timeSlider = document.getElementById('timeSlider');
-var timeDisplay = document.getElementById('timeDisplay');
-var themeSelect = document.getElementById('themeSelect');
-var weatherSelect = document.getElementById('weatherSelect');
-var constSelect = document.getElementById('constSelect');
-var densitySelect = document.getElementById('densitySelect');
-
-timeSlider.addEventListener('input', function() {
+document.getElementById('timeSlider').addEventListener('input', function() {
   var val = parseFloat(this.value);
-  currentHour = val > 24 ? val - 24 : val; /* wrap for 24-30 range */
-  var displayHour = Math.floor(val > 24 ? val - 24 : val);
-  var displayMin = Math.floor((val % 1) * 60);
-  timeDisplay.textContent = (displayHour < 10 ? '0' : '') + displayHour + ':' + (displayMin < 10 ? '0' : '') + displayMin;
+  currentHour = val > 24 ? val - 24 : val;
+  var dh = Math.floor(val > 24 ? val - 24 : val);
+  var dm = Math.floor((val % 1) * 60);
+  document.getElementById('timeDisplay').textContent =
+    (dh < 10 ? '0' : '') + dh + ':' + (dm < 10 ? '0' : '') + dm;
 });
 
-themeSelect.addEventListener('change', function() {
+document.getElementById('themeSelect').addEventListener('change', function() {
   currentTheme = this.value;
   applyTheme(currentTheme);
 });
 
-weatherSelect.addEventListener('change', function() {
+document.getElementById('weatherSelect').addEventListener('change', function() {
   currentWeather = this.value;
 });
 
-constSelect.addEventListener('change', function() {
-  constMode = this.value;
-});
-
-densitySelect.addEventListener('change', function() {
-  var v = this.value;
-  if (v === 'full') magLimit = 5.5;
-  else if (v === 'bright') magLimit = 3.5;
-  else magLimit = 6.5;
-});
-
 /* ============================================================
-   19. INIT
+   20. INIT
    ============================================================ */
 applyTheme(currentTheme);
 requestAnimationFrame(animate);
