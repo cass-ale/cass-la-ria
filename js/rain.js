@@ -384,7 +384,7 @@
       mistEnabled: false,
       mistDensity: 0,
       /* Celestial visibility */
-      sunVis: 0.7, moonVis: 0.75, hazeFactor: 0.5,
+      sunVis: 0.7, moonVis: 0.75, starVis: 0.6, hazeFactor: 0.5,
       celestialCloudCoverage: 0.2, rainCurtain: 0.0,
       snowScatter: 0.0, fogHalo: 0.6, celestialCategory: 'fog'
     },
@@ -405,7 +405,7 @@
       virga: 0.15,
       mistEnabled: false,
       mistDensity: 0,
-      sunVis: 0.35, moonVis: 0.4, hazeFactor: 0.6,
+      sunVis: 0.35, moonVis: 0.4, starVis: 0.2, hazeFactor: 0.6,
       celestialCloudCoverage: 0.5, rainCurtain: 0.15,
       snowScatter: 0.0, fogHalo: 0.0, celestialCategory: 'rain'
     },
@@ -426,7 +426,7 @@
       virga: 0.05,
       mistEnabled: true,
       mistDensity: 0.3,
-      sunVis: 0.0, moonVis: 0.0, hazeFactor: 1.0,
+      sunVis: 0.0, moonVis: 0.0, starVis: 0.0, hazeFactor: 1.0,
       celestialCloudCoverage: 0.95, rainCurtain: 0.6,
       snowScatter: 0.0, fogHalo: 0.0, celestialCategory: 'rain'
     },
@@ -447,7 +447,7 @@
       virga: 0.08,
       mistEnabled: true,
       mistDensity: 0.4,
-      sunVis: 0.25, moonVis: 0.3, hazeFactor: 0.4,
+      sunVis: 0.25, moonVis: 0.3, starVis: 0.15, hazeFactor: 0.4,
       celestialCloudCoverage: 0.6, rainCurtain: 0.3,
       snowScatter: 0.0, fogHalo: 0.0, celestialCategory: 'rain'
     },
@@ -468,7 +468,7 @@
       virga: 0.0,
       mistEnabled: true,
       mistDensity: 0.6,
-      sunVis: 0.0, moonVis: 0.0, hazeFactor: 1.0,
+      sunVis: 0.0, moonVis: 0.0, starVis: 0.0, hazeFactor: 1.0,
       celestialCloudCoverage: 0.98, rainCurtain: 0.85,
       snowScatter: 0.0, fogHalo: 0.0, celestialCategory: 'rain'
     },
@@ -489,7 +489,7 @@
       virga: 0.0,
       mistEnabled: true,
       mistDensity: 0.75,
-      sunVis: 0.0, moonVis: 0.0, hazeFactor: 1.0,
+      sunVis: 0.0, moonVis: 0.0, starVis: 0.0, hazeFactor: 1.0,
       celestialCloudCoverage: 0.95, rainCurtain: 0.7,
       snowScatter: 0.0, fogHalo: 0.0, celestialCategory: 'rain'
     },
@@ -510,7 +510,7 @@
       virga: 0.0,
       mistEnabled: true,
       mistDensity: 0.9,
-      sunVis: 0.0, moonVis: 0.0, hazeFactor: 1.0,
+      sunVis: 0.0, moonVis: 0.0, starVis: 0.0, hazeFactor: 1.0,
       celestialCloudCoverage: 1.0, rainCurtain: 0.9,
       snowScatter: 0.0, fogHalo: 0.0, celestialCategory: 'rain'
     },
@@ -534,7 +534,7 @@
       virga: 0.0,
       mistEnabled: true,
       mistDensity: 1.0,
-      sunVis: 0.0, moonVis: 0.0, hazeFactor: 1.0,
+      sunVis: 0.0, moonVis: 0.0, starVis: 0.0, hazeFactor: 1.0,
       celestialCloudCoverage: 1.0, rainCurtain: 0.95,
       snowScatter: 0.0, fogHalo: 0.0, celestialCategory: 'rain'
     },
@@ -558,7 +558,7 @@
       lightningEnabled: true,
       lightningInterval: [8, 20],
       lightningBranches: 2,
-      sunVis: 0.0, moonVis: 0.0, hazeFactor: 1.0,
+      sunVis: 0.0, moonVis: 0.0, starVis: 0.0, hazeFactor: 1.0,
       celestialCloudCoverage: 0.95, rainCurtain: 0.8,
       snowScatter: 0.0, fogHalo: 0.0, celestialCategory: 'rain'
     },
@@ -582,7 +582,7 @@
       lightningEnabled: true,
       lightningInterval: [4, 12],
       lightningBranches: 3,
-      sunVis: 0.0, moonVis: 0.0, hazeFactor: 1.0,
+      sunVis: 0.0, moonVis: 0.0, starVis: 0.0, hazeFactor: 1.0,
       celestialCloudCoverage: 0.9, rainCurtain: 0.7,
       snowScatter: 0.0, fogHalo: 0.0, celestialCategory: 'rain'
     },
@@ -604,7 +604,7 @@
       mistEnabled: false,
       mistDensity: 0,
       iceSplash: true,
-      sunVis: 0.0, moonVis: 0.0, hazeFactor: 1.0,
+      sunVis: 0.0, moonVis: 0.0, starVis: 0.0, hazeFactor: 1.0,
       celestialCloudCoverage: 0.9, rainCurtain: 0.5,
       snowScatter: 0.1, fogHalo: 0.0, celestialCategory: 'rain'
     },
@@ -627,7 +627,7 @@
       mistDensity: 1.0,
       fogMode: true,
       fogZoneFrac: 0.70,
-      sunVis: 0.3, moonVis: 0.35, hazeFactor: 0.85,
+      sunVis: 0.3, moonVis: 0.35, starVis: 0.1, hazeFactor: 0.85,
       celestialCloudCoverage: 0.3, rainCurtain: 0.0,
       snowScatter: 0.0, fogHalo: 0.9, celestialCategory: 'fog'
     },
@@ -648,7 +648,7 @@
       virga: 0.25,
       mistEnabled: true,
       mistDensity: 0.2,
-      sunVis: 0.85, moonVis: 0.9, hazeFactor: 0.2,
+      sunVis: 0.85, moonVis: 0.9, starVis: 0.8, hazeFactor: 0.2,
       celestialCloudCoverage: 0.25, rainCurtain: 0.05,
       snowScatter: 0.0, fogHalo: 0.0, celestialCategory: 'clear'
     },
@@ -672,7 +672,7 @@
       virga: 0,
       mistEnabled: false,
       mistDensity: 0,
-      sunVis: 1.0, moonVis: 1.0, hazeFactor: 0.0,
+      sunVis: 1.0, moonVis: 1.0, starVis: 1.0, hazeFactor: 0.0,
       celestialCloudCoverage: 0.0, rainCurtain: 0.0,
       snowScatter: 0.0, fogHalo: 0.0, celestialCategory: 'clear'
     },
@@ -693,7 +693,7 @@
       virga: 0,
       mistEnabled: false,
       mistDensity: 0,
-      sunVis: 0.6, moonVis: 0.65, hazeFactor: 0.1,
+      sunVis: 0.6, moonVis: 0.65, starVis: 0.4, hazeFactor: 0.1,
       celestialCloudCoverage: 0.4, rainCurtain: 0.0,
       snowScatter: 0.0, fogHalo: 0.0, celestialCategory: 'clear'
     },
@@ -714,7 +714,7 @@
       virga: 0,
       mistEnabled: false,
       mistDensity: 0,
-      sunVis: 0.15, moonVis: 0.2, hazeFactor: 0.7,
+      sunVis: 0.15, moonVis: 0.2, starVis: 0.05, hazeFactor: 0.7,
       celestialCloudCoverage: 0.85, rainCurtain: 0.0,
       snowScatter: 0.0, fogHalo: 0.0, celestialCategory: 'rain'
     },
@@ -735,7 +735,7 @@
       virga: 0,
       mistEnabled: true,
       mistDensity: 0.5,
-      sunVis: 0.5, moonVis: 0.55, hazeFactor: 0.6,
+      sunVis: 0.5, moonVis: 0.55, starVis: 0.25, hazeFactor: 0.6,
       celestialCloudCoverage: 0.1, rainCurtain: 0.0,
       snowScatter: 0.0, fogHalo: 0.4, celestialCategory: 'fog'
     },
@@ -756,7 +756,7 @@
       virga: 0,
       mistEnabled: true,
       mistDensity: 0.8,
-      sunVis: 0.2, moonVis: 0.15, hazeFactor: 0.9,
+      sunVis: 0.2, moonVis: 0.15, starVis: 0.05, hazeFactor: 0.9,
       celestialCloudCoverage: 0.7, rainCurtain: 0.0,
       snowScatter: 0.0, fogHalo: 0.3, celestialCategory: 'dust'
     },
@@ -778,7 +778,7 @@
       mistEnabled: false,
       mistDensity: 0,
       snowMode: true,
-      sunVis: 0.4, moonVis: 0.45, hazeFactor: 0.4,
+      sunVis: 0.4, moonVis: 0.45, starVis: 0.2, hazeFactor: 0.4,
       celestialCloudCoverage: 0.5, rainCurtain: 0.0,
       snowScatter: 0.3, fogHalo: 0.0, celestialCategory: 'snow'
     },
@@ -800,7 +800,7 @@
       mistEnabled: true,
       mistDensity: 0.9,
       snowMode: true,
-      sunVis: 0.0, moonVis: 0.0, hazeFactor: 1.0,
+      sunVis: 0.0, moonVis: 0.0, starVis: 0.0, hazeFactor: 1.0,
       celestialCloudCoverage: 1.0, rainCurtain: 0.0,
       snowScatter: 0.9, fogHalo: 0.0, celestialCategory: 'snow'
     },
@@ -823,7 +823,7 @@
       mistDensity: 1.0,
       fogMode: true,
       fogZoneFrac: 0.80,
-      sunVis: 0.15, moonVis: 0.2, hazeFactor: 0.9,
+      sunVis: 0.15, moonVis: 0.2, starVis: 0.05, hazeFactor: 0.9,
       celestialCloudCoverage: 0.4, rainCurtain: 0.0,
       snowScatter: 0.1, fogHalo: 0.95, celestialCategory: 'fog'
     },
@@ -844,7 +844,7 @@
       virga: 0,
       mistEnabled: false,
       mistDensity: 0,
-      sunVis: 1.0, moonVis: 1.0, hazeFactor: 0.0,
+      sunVis: 1.0, moonVis: 1.0, starVis: 1.0, hazeFactor: 0.0,
       celestialCloudCoverage: 0.0, rainCurtain: 0.0,
       snowScatter: 0.0, fogHalo: 0.0, celestialCategory: 'clear'
     }
@@ -3034,6 +3034,447 @@
   }
 
   /* ============================================================
+     14d. STARRY SKY SYSTEM
+     Real star data from the Hipparcos catalog, filtered for
+     visibility from Tokyo (latitude 35.68°N). Stars rendered
+     with noise-driven Unicode character cycling and multi-layer
+     scintillation. Constellation cohesion via shared breathing
+     noise and faint centroid glow fields.
+
+     References:
+     - Hipparcos catalog (ESA, 1997)
+     - Atlas of the Universe: atlasoftheuniverse.com/stars.html
+     - Scintillation physics: en.wikipedia.org/wiki/Twinkling
+     - US Naval Observatory twilight definitions
+     ============================================================ */
+
+  /* --- Tokyo observer --- */
+  var TOKYO_LAT = 35.6762;
+  var TOKYO_LON = 139.6503;
+  var TOKYO_LAT_RAD = TOKYO_LAT * Math.PI / 180;
+
+  /* --- Star character sets (VS15 for emoji prevention) --- */
+  var STAR_CHARS_BRILLIANT = ['\u2726','\u2605\uFE0E','\u2736','\u2734','\u2739','\u2605\uFE0E','\u2726','\u2734'];
+  var STAR_CHARS_BRIGHT    = ['\u2726','\u2727','\u2736','\u2734','\u2726','\u2727'];
+  var STAR_CHARS_MEDIUM    = ['\u2727','\u2726','\u2219','\u2022\uFE0E','\u2727','\u00B7'];
+  var STAR_CHARS_DIM       = ['\u00B7','\u2219','\u2027','\u2022\uFE0E','\u00B7','\u2219'];
+  var STAR_CHARS_FAINT     = ['\u2027','\u002E','\u00B7','\u2219','\u002E','\u2027'];
+
+  /* --- Spectral type to RGB color --- */
+  var SPECTRAL_COLORS = {
+    'O': { r: 155, g: 176, b: 255 },
+    'B': { r: 170, g: 191, b: 255 },
+    'A': { r: 202, g: 215, b: 255 },
+    'F': { r: 248, g: 247, b: 255 },
+    'G': { r: 255, g: 244, b: 234 },
+    'K': { r: 255, g: 210, b: 161 },
+    'M': { r: 255, g: 204, b: 111 }
+  };
+
+  /* --- Star catalog: [name, RA_hours, Dec_degrees, magnitude, spectralClass, constellationIdx]
+     constellationIdx: -1 = no constellation, 0+ = index into STAR_CONSTELLATIONS --- */
+  var STAR_CONSTELLATIONS = [
+    'Ursa Major','Ursa Minor','Cassiopeia','Orion','Cygnus',
+    'Lyra','Aquila','Scorpius','Leo','Gemini',
+    'Bootes','Pegasus','Andromeda','Perseus','Auriga'
+  ];
+
+  var STAR_CATALOG = [
+    ['Sirius',6.752,-16.72,-1.46,'A',3],['Canopus',6.399,-52.70,-0.73,'F',-1],
+    ['Arcturus',14.261,19.18,-0.05,'K',10],['Vega',18.616,38.78,0.03,'A',5],
+    ['Capella',5.278,46.00,0.07,'G',14],['Rigel',5.242,-8.20,0.15,'B',3],
+    ['Procyon',7.655,5.22,0.36,'F',-1],['Betelgeuse',5.919,7.41,0.55,'M',3],
+    ['Altair',19.846,8.87,0.77,'A',6],['Aldebaran',4.599,16.51,0.86,'K',-1],
+    ['Antares',16.490,-26.43,0.95,'M',7],['Spica',13.420,-11.16,0.97,'B',-1],
+    ['Pollux',7.755,28.03,1.14,'K',9],['Fomalhaut',22.961,-29.62,1.15,'A',-1],
+    ['Deneb',20.690,45.28,1.24,'A',4],['Regulus',10.140,11.97,1.36,'B',8],
+    ['Adhara',6.977,-28.97,1.50,'B',-1],['Castor',7.577,31.89,1.58,'A',9],
+    ['Shaula',17.560,-37.10,1.62,'B',7],['Bellatrix',5.419,6.35,1.64,'B',3],
+    ['Elnath',5.438,28.61,1.66,'B',14],['Alnilam',5.603,-1.20,1.69,'B',3],
+    ['Alnitak',5.679,-1.94,1.75,'O',3],['Alioth',12.900,55.96,1.77,'A',0],
+    ['Mirfak',3.405,49.86,1.80,'F',13],['Dubhe',11.062,61.75,1.80,'K',0],
+    ['Kaus Australis',18.403,-34.38,1.84,'B',7],['Alkaid',13.793,49.31,1.86,'B',0],
+    ['Menkalinan',5.992,44.95,1.90,'A',14],['Alhena',6.628,16.40,1.93,'A',9],
+    ['Polaris',2.530,89.26,1.99,'F',1],['Alphard',9.460,-8.66,1.98,'K',-1],
+    ['Mirzam',6.378,-17.96,1.98,'B',-1],['Algieba',10.333,19.84,2.00,'K',8],
+    ['Hamal',2.120,23.46,2.01,'K',-1],['Diphda',0.726,-17.99,2.04,'K',-1],
+    ['Nunki',18.921,-26.30,2.05,'B',7],['Alpheratz',0.140,29.09,2.07,'B',12],
+    ['Mirach',1.163,35.62,2.07,'M',12],['Saiph',5.796,-9.67,2.07,'B',3],
+    ['Kochab',14.845,74.16,2.07,'K',1],['Rasalhague',17.582,12.56,2.08,'A',-1],
+    ['Algol',3.136,40.96,2.09,'B',13],['Almach',2.065,42.33,2.10,'K',12],
+    ['Denebola',11.818,14.57,2.14,'A',8],['Sadr',20.370,40.26,2.23,'F',4],
+    ['Wezen',7.140,-26.39,1.83,'F',-1],['Naos',8.059,-40.00,2.21,'O',-1],
+    ['Mizar',13.399,54.93,2.23,'A',0],['Schedar',0.675,56.54,2.24,'K',2],
+    ['Eltanin',17.944,51.49,2.24,'K',-1],['Mintaka',5.533,-0.30,2.25,'O',3],
+    ['Caph',0.153,59.15,2.28,'F',2],['Merak',11.031,56.38,2.34,'A',0],
+    ['Izar',14.750,27.07,2.35,'K',10],['Enif',21.736,9.88,2.38,'K',11],
+    ['Phecda',11.897,53.69,2.41,'A',0],['Scheat',23.063,28.08,2.44,'M',11],
+    ['Alderamin',21.310,62.59,2.45,'A',-1],['Markab',23.079,15.21,2.49,'B',11],
+    ['Navi',0.945,60.72,2.47,'B',2],['Gienah',12.263,-17.54,2.58,'B',-1],
+    ['Zubeneschamali',15.283,-9.38,2.61,'B',-1],['Albireo',19.512,27.96,3.05,'K',4],
+    ['Ruchbah',1.358,60.24,2.66,'A',2],['Tarazed',19.771,10.61,2.72,'K',6],
+    ['Pherkad',15.346,71.83,3.00,'A',1],['Megrez',12.257,57.03,3.31,'A',0],
+    ['Algenib',0.220,15.18,2.83,'B',11],['Gienah Cygni',20.770,33.97,2.48,'K',4],
+    ['Mebsuta',6.383,25.13,3.06,'G',9],['Tejat',6.383,22.51,3.06,'M',9],
+    ['Wasat',7.335,21.98,3.53,'F',9],['Propus',6.248,22.51,3.31,'M',9],
+    ['Zosma',11.235,20.52,2.56,'A',8],['Chertan',11.237,15.43,3.33,'A',8],
+    ['Graffias',16.091,-19.81,2.56,'B',7],['Dschubba',16.005,-22.62,2.29,'B',7],
+    ['Sargas',17.622,-42.99,1.86,'F',7],['Lesath',17.530,-37.29,2.69,'B',7],
+    ['Girtab',17.793,-37.04,2.41,'B',7],['Delta Cyg',19.749,45.13,2.87,'B',4],
+    ['Sheliak',18.835,33.36,3.52,'B',5],['Sulafat',18.982,32.69,3.25,'B',5],
+    ['Eta Aql',19.874,1.01,3.87,'F',6],['Delta Aql',19.425,3.11,3.36,'F',6],
+    ['HD 4628',0.813,5.37,3.74,'K',-1],['HD 10700',1.735,-15.94,3.50,'G',-1],
+    ['HD 16895',2.720,5.99,4.11,'F',-1],['HD 22049',3.549,-9.46,3.73,'K',-1],
+    ['HD 30652',4.830,5.60,3.19,'F',-1],['HD 34411',5.335,40.51,4.69,'G',-1],
+    ['HD 39587',5.943,20.28,4.39,'G',-1],['HD 71155',8.427,-3.90,3.90,'A',-1],
+    ['HD 82328',9.548,51.68,3.17,'F',0],['HD 102870',11.845,1.76,3.61,'F',-1],
+    ['HD 109358',12.562,38.32,4.26,'G',-1],['HD 114710',13.197,27.88,4.24,'F',10],
+    ['HD 120136',13.793,17.46,4.50,'F',-1],['HD 126660',14.418,46.09,4.04,'F',10],
+    ['HD 131156',14.852,19.10,4.55,'G',10],['HD 142860',15.961,15.66,3.85,'F',-1],
+    ['HD 150680',16.688,31.60,2.81,'G',-1],['HD 157214',17.380,14.39,5.38,'G',-1],
+    ['HD 168913',18.350,39.67,5.00,'A',5],['HD 173667',18.746,20.55,4.19,'F',-1],
+    ['HD 182572',19.370,11.85,5.17,'G',6],['HD 185144',19.632,50.22,4.68,'K',4],
+    ['HD 203280',21.310,62.59,2.45,'A',-1],['HD 215648',22.780,-4.39,4.20,'F',-1],
+    ['HD 219134',23.222,57.17,5.57,'K',2],['Mu Gem',6.383,22.51,2.87,'M',9],
+    ['Xi UMa',11.303,31.53,3.79,'F',0],['Nu UMa',11.530,33.09,3.49,'K',0],
+    ['Psi UMa',11.161,44.50,3.01,'K',0],['Theta Boo',14.420,51.85,4.05,'F',10],
+    ['Rho Boo',14.530,30.37,3.58,'K',10],['Eta Cas',0.817,57.82,3.44,'F',2],
+    ['Zeta Cas',0.614,53.90,3.66,'B',2],['Epsilon Per',3.964,40.01,2.90,'B',13],
+    ['Zeta Per',3.902,31.88,2.86,'B',13],['Delta Per',3.715,47.79,3.01,'B',13],
+    ['Theta Aur',5.995,37.21,2.62,'A',14],['Beta Aur',5.992,44.95,1.90,'A',14],
+    ['Iota Aur',4.950,33.17,2.69,'K',14],['Epsilon Sco',16.836,-34.29,2.29,'K',7],
+    ['Mu Sco',16.864,-38.05,3.04,'B',7],['Zeta Sco',16.897,-42.36,3.62,'B',7],
+    ['Lambda Sco',17.560,-37.10,1.62,'B',7],['Theta Sco',17.622,-42.99,1.86,'F',7]
+  ];
+
+  /* --- Noise instances for stars --- */
+  var starTwinkleNoise = new SimplexNoise(42);
+  var starCharNoise    = new SimplexNoise(137);
+  var starCloudNoise   = new SimplexNoise(256);
+  var starGlowNoise    = new SimplexNoise(389);
+  var starConstNoise   = new SimplexNoise(512);
+
+  /* --- Star sprite cache (separate from celestial body sprites) --- */
+  var starSprites = {};
+  var lastStarThemeKey = '';
+
+  function getStarSprite(ch, size, colorStr) {
+    var key = ch + '|' + size + '|' + colorStr;
+    if (starSprites[key]) return starSprites[key];
+    var pad = 4;
+    var sc = document.createElement('canvas');
+    sc.width = size + pad * 2;
+    sc.height = size + pad * 2;
+    var sctx = sc.getContext('2d');
+    sctx.font = size + 'px "Apple Symbols", "Segoe UI Symbol", "Noto Sans Symbols 2", "Cormorant Garamond", Georgia, serif';
+    sctx.fillStyle = colorStr;
+    sctx.textAlign = 'center';
+    sctx.textBaseline = 'middle';
+    sctx.fillText(ch, sc.width / 2, sc.height / 2);
+    starSprites[key] = sc;
+    return sc;
+  }
+
+  function invalidateStarSprites() {
+    starSprites = {};
+    lastStarThemeKey = '';
+  }
+
+  /* --- Coordinate transforms --- */
+  function getLocalSiderealTime(hour) {
+    return (hour + TOKYO_LON / 15.0 + 12.0) % 24.0;
+  }
+
+  function equatorialToHorizontal(raHours, decDeg, lstHours) {
+    var ha = (lstHours - raHours) * 15.0 * Math.PI / 180.0;
+    var dec = decDeg * Math.PI / 180.0;
+    var lat = TOKYO_LAT_RAD;
+    var sinAlt = Math.sin(dec) * Math.sin(lat) + Math.cos(dec) * Math.cos(lat) * Math.cos(ha);
+    var alt = Math.asin(Math.max(-1, Math.min(1, sinAlt)));
+    var cosAz = (Math.sin(dec) - Math.sin(alt) * Math.sin(lat)) / (Math.cos(alt) * Math.cos(lat));
+    cosAz = Math.max(-1, Math.min(1, cosAz));
+    var az = Math.acos(cosAz);
+    if (Math.sin(ha) > 0) az = 2 * Math.PI - az;
+    return { alt: alt, az: az };
+  }
+
+  function horizontalToScreen(alt, az, cW, cH) {
+    if (alt < 0) return null;
+    var zenithDist = Math.PI / 2 - alt;
+    var r = zenithDist / (Math.PI / 2);
+    var maxR = Math.min(cW, cH) * 0.48;
+    var screenR = r * maxR;
+    var x = cW / 2 - screenR * Math.sin(az);
+    var y = cH / 2 - screenR * Math.cos(az);
+    return { x: x, y: y, r: r };
+  }
+
+  /* --- Solar altitude & twilight model --- */
+  var SOLAR_NOON = (SUNRISE_HOUR + SUNSET_HOUR) / 2;
+  var DAY_LENGTH = SUNSET_HOUR - SUNRISE_HOUR;
+
+  function getSunAltitude(hour) {
+    var maxAlt = 70; /* Tokyo latitude */
+    var dayFrac = (hour - SUNRISE_HOUR) / DAY_LENGTH;
+    if (hour >= SUNRISE_HOUR && hour <= SUNSET_HOUR) {
+      return maxAlt * Math.sin(dayFrac * Math.PI);
+    }
+    if (hour < SUNRISE_HOUR) {
+      var nightFrac = (SUNRISE_HOUR - hour) / (24 - DAY_LENGTH);
+      return -maxAlt * Math.sin(nightFrac * Math.PI);
+    }
+    var nightFrac = (hour - SUNSET_HOUR) / (24 - DAY_LENGTH);
+    return -maxAlt * Math.sin(nightFrac * Math.PI);
+  }
+
+  function getTwilightMagLimit(sunAlt) {
+    if (sunAlt >= 0) return -99;
+    if (sunAlt > -6) { var t = -sunAlt / 6; return -1.5 + t * 2.5; }
+    if (sunAlt > -12) { var t = (-sunAlt - 6) / 6; return 1.0 + t * 2.0; }
+    if (sunAlt > -18) { var t = (-sunAlt - 12) / 6; return 3.0 + t * 2.5; }
+    return 6.5;
+  }
+
+  function getTwilightDimming(sunAlt) {
+    if (sunAlt >= 0) return 0;
+    if (sunAlt > -6) return 0.15 + (-sunAlt / 6) * 0.35;
+    if (sunAlt > -12) return 0.50 + ((-sunAlt - 6) / 6) * 0.30;
+    if (sunAlt > -18) return 0.80 + ((-sunAlt - 12) / 6) * 0.20;
+    return 1.0;
+  }
+
+  /* --- Scintillation (multi-layer noise twinkling) --- */
+  function getStarScintillation(starIdx, time, zenithDist, magnitude, constIdx) {
+    var ampBase = 0.08 + zenithDist * zenithDist * 0.50;
+    var magFactor = 1.0 - Math.max(0, (2.0 - magnitude) * 0.04);
+    ampBase *= magFactor;
+    var fast   = starTwinkleNoise.noise2D(starIdx * 7.3 + time * 8.0, starIdx * 3.1) * 0.55;
+    var medium = starTwinkleNoise.noise2D(starIdx * 11.7 + time * 3.0, starIdx * 5.9 + 100) * 0.30;
+    var slow   = starTwinkleNoise.noise2D(starIdx * 2.1 + time * 0.5, starIdx * 8.7 + 200) * 0.15;
+    var brightness = 1.0 + (fast + medium + slow) * ampBase;
+    if (constIdx >= 0) {
+      var constBreath = starConstNoise.noise2D(constIdx * 17.3 + time * 0.25, constIdx * 7.1);
+      brightness += constBreath * 0.08;
+    }
+    var colorShift = { r: 0, g: 0, b: 0 };
+    if (magnitude < 2.0 && zenithDist > 0.3) {
+      var chromAmp = zenithDist * 0.12;
+      colorShift.r = starTwinkleNoise.noise2D(starIdx * 13.3 + time * 12.0, 300) * chromAmp * 25;
+      colorShift.g = starTwinkleNoise.noise2D(starIdx * 17.7 + time * 11.0, 400) * chromAmp * 15;
+      colorShift.b = starTwinkleNoise.noise2D(starIdx * 19.1 + time * 13.0, 500) * chromAmp * 35;
+    }
+    return { brightness: Math.max(0.1, brightness), colorShift: colorShift };
+  }
+
+  /* --- Noise-driven character selection --- */
+  function getStarChar(starIdx, time, magClass) {
+    var chars;
+    if (magClass === 0) chars = STAR_CHARS_BRILLIANT;
+    else if (magClass === 1) chars = STAR_CHARS_BRIGHT;
+    else if (magClass === 2) chars = STAR_CHARS_MEDIUM;
+    else if (magClass === 3) chars = STAR_CHARS_DIM;
+    else chars = STAR_CHARS_FAINT;
+    var n = starCharNoise.noise2D(starIdx * 5.7 + time * 0.4, starIdx * 3.3 + 50);
+    var idx = Math.floor(((n + 1) * 0.5) * chars.length) % chars.length;
+    return chars[idx];
+  }
+
+  function getStarMagClass(mag) {
+    if (mag < 0.5) return 0;
+    if (mag < 1.5) return 1;
+    if (mag < 2.5) return 2;
+    if (mag < 3.5) return 3;
+    return 4;
+  }
+
+  function getStarSize(mag) {
+    if (mag < -0.5) return 16;
+    if (mag < 0.5) return 14;
+    if (mag < 1.5) return 11;
+    if (mag < 2.5) return 9;
+    if (mag < 3.5) return 7;
+    if (mag < 4.5) return 5;
+    return 4;
+  }
+
+  function getStarAlpha(mag) {
+    if (mag < 0) return 1.0;
+    if (mag < 1) return 0.92;
+    if (mag < 2) return 0.80;
+    if (mag < 3) return 0.62;
+    if (mag < 4) return 0.42;
+    if (mag < 5) return 0.28;
+    return 0.16;
+  }
+
+  /* --- Cloud occlusion for stars --- */
+  function getStarCloudOcclusion(x, y, time, cloudCover) {
+    if (cloudCover <= 0) return 1.0;
+    var cx = x / W * 6 + time * 0.02;
+    var cy = y / H * 4;
+    var density = (starCloudNoise.noise2D(cx, cy) + 1) * 0.5;
+    density += (starCloudNoise.noise2D(cx * 2.5, cy * 2.5) + 1) * 0.25;
+    density /= 1.5;
+    var threshold = 1.0 - cloudCover;
+    if (density > threshold) {
+      var occlude = (density - threshold) / (1.0 - threshold);
+      return Math.max(0, 1.0 - occlude * 0.95);
+    }
+    return 1.0;
+  }
+
+  /* --- Constellation glow field --- */
+  var starConstCentroids = {};
+
+  function computeStarConstellationCentroids(visibleStars) {
+    starConstCentroids = {};
+    for (var i = 0; i < visibleStars.length; i++) {
+      var ci = visibleStars[i].constIdx;
+      if (ci < 0) continue;
+      if (!starConstCentroids[ci]) starConstCentroids[ci] = { x: 0, y: 0, count: 0, minAlpha: 1 };
+      starConstCentroids[ci].x += visibleStars[i].x;
+      starConstCentroids[ci].y += visibleStars[i].y;
+      starConstCentroids[ci].count++;
+      starConstCentroids[ci].minAlpha = Math.min(starConstCentroids[ci].minAlpha, visibleStars[i].alpha);
+    }
+    for (var ci in starConstCentroids) {
+      starConstCentroids[ci].x /= starConstCentroids[ci].count;
+      starConstCentroids[ci].y /= starConstCentroids[ci].count;
+    }
+  }
+
+  function renderConstellationGlow(time, bgLum) {
+    for (var ci in starConstCentroids) {
+      var c = starConstCentroids[ci];
+      if (c.count < 2 || c.minAlpha < 0.05) continue;
+      var breath = starConstNoise.noise2D(ci * 17.3 + time * 0.25, ci * 7.1);
+      var glowAlpha = c.minAlpha * 0.025 * (1.0 + breath * 0.4);
+      if (glowAlpha < 0.003) continue;
+      var radius = Math.min(W, H) * 0.08 * (1.0 + c.count * 0.02);
+      var grad = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, radius);
+      var glowColor = bgLum < 0.3 ? '180,170,210' : '60,50,80';
+      grad.addColorStop(0, 'rgba(' + glowColor + ',' + glowAlpha + ')');
+      grad.addColorStop(0.6, 'rgba(' + glowColor + ',' + (glowAlpha * 0.3) + ')');
+      grad.addColorStop(1, 'rgba(' + glowColor + ',0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(c.x - radius, c.y - radius, radius * 2, radius * 2);
+    }
+  }
+
+  /* --- Main star rendering function --- */
+  function renderStars(time) {
+    var preset = activePreset;
+    var starVis = typeof preset.starVis !== 'undefined' ? preset.starVis : 0.5;
+    if (starVis <= 0) return;
+
+    /* Twilight model */
+    var sunAlt = getSunAltitude(celestialHour);
+    var twilightMagLimit = getTwilightMagLimit(sunAlt);
+    var twilightDim = getTwilightDimming(sunAlt);
+    if (twilightDim <= 0) return; /* Daytime — no stars */
+
+    var lst = getLocalSiderealTime(celestialHour);
+    var cloudCover = preset.celestialCloudCoverage || 0;
+    var fogDim = 1.0 - (preset.fogHalo || 0) * 0.6;
+    var hazeDim = 1.0 - (preset.hazeFactor || 0) * 0.4;
+
+    /* Theme-aware color setup */
+    refreshCelestialThemeColors();
+    var bgLum = wcagLuminance(cachedBgColor.r, cachedBgColor.g, cachedBgColor.b);
+    var blendT = bgLum > 0.3 ? 0.45 : 0.08;
+
+    var visibleStars = [];
+
+    for (var i = 0; i < STAR_CATALOG.length; i++) {
+      var star = STAR_CATALOG[i];
+      var ra = star[1], dec = star[2], mag = star[3], spec = star[4], constIdx = star[5];
+
+      if (mag > twilightMagLimit) continue;
+
+      var horiz = equatorialToHorizontal(ra, dec, lst);
+      if (horiz.alt <= 0) continue;
+
+      var screen = horizontalToScreen(horiz.alt, horiz.az, W, H);
+      if (!screen) continue;
+      if (screen.x < -20 || screen.x > W + 20 || screen.y < -20 || screen.y > H + 20) continue;
+
+      /* Weather visibility */
+      var cloudOcc = getStarCloudOcclusion(screen.x, screen.y, time, cloudCover);
+      var totalVis = starVis * cloudOcc * fogDim * hazeDim;
+      if (totalVis < 0.01) continue;
+
+      /* Scintillation */
+      var zenithDist = screen.r;
+      var scint = getStarScintillation(i, time, zenithDist, mag, constIdx);
+
+      /* Star color with chromatic scintillation */
+      var baseColor = SPECTRAL_COLORS[spec] || SPECTRAL_COLORS['A'];
+      var r = clamp(Math.round(baseColor.r + scint.colorShift.r), 0, 255);
+      var g = clamp(Math.round(baseColor.g + scint.colorShift.g), 0, 255);
+      var b = clamp(Math.round(baseColor.b + scint.colorShift.b), 0, 255);
+
+      /* Theme-aware color blending */
+      var rawColor = { r: r, g: g, b: b };
+      var blended = themeBlendColor(rawColor, cachedWeatherColor, blendT);
+      var finalColor = ensureCelestialContrast(blended, cachedBgColor, cachedWeatherColor);
+      r = finalColor.r; g = finalColor.g; b = finalColor.b;
+
+      var colorStr = 'rgb(' + r + ',' + g + ',' + b + ')';
+      var alpha = getStarAlpha(mag) * scint.brightness * totalVis * twilightDim;
+      alpha = clamp(alpha, 0, 1);
+      if (alpha < 0.02) continue;
+
+      /* Noise-driven character selection */
+      var magClass = getStarMagClass(mag);
+      var ch = getStarChar(i, time, magClass);
+      var size = getStarSize(mag);
+
+      /* Draw via sprite cache */
+      ctx.globalAlpha = alpha;
+      var sprite = getStarSprite(ch, size, colorStr);
+      ctx.drawImage(sprite, screen.x - sprite.width / 2, screen.y - sprite.height / 2);
+
+      /* Glow halo for bright stars */
+      if (mag < 1.5 && alpha > 0.25) {
+        var glowPulse = starGlowNoise.noise2D(i * 4.3 + time * 0.6, i * 2.7);
+        var glowAlpha = alpha * 0.12 * (1.5 - mag) / 2.0 * (0.8 + glowPulse * 0.2);
+        if (glowAlpha > 0.005) {
+          ctx.globalAlpha = glowAlpha;
+          var glowSize = Math.round(size * (2.2 + glowPulse * 0.5));
+          var glowSprite = getStarSprite('\u2727', glowSize, colorStr);
+          ctx.drawImage(glowSprite, screen.x - glowSprite.width / 2, screen.y - glowSprite.height / 2);
+        }
+      }
+
+      /* Diffraction spikes for the very brightest (mag < 0) */
+      if (mag < 0 && alpha > 0.4) {
+        var spikeGate = starGlowNoise.noise2D(i * 9.1 + time * 1.5, 700);
+        if (spikeGate > 0.15) {
+          var spikeAlpha = alpha * 0.15 * (spikeGate - 0.15) / 0.85;
+          ctx.globalAlpha = spikeAlpha;
+          ctx.strokeStyle = colorStr;
+          ctx.lineWidth = 0.5;
+          var spikeLen = size * 1.2 * scint.brightness;
+          ctx.beginPath();
+          ctx.moveTo(screen.x - spikeLen, screen.y);
+          ctx.lineTo(screen.x + spikeLen, screen.y);
+          ctx.moveTo(screen.x, screen.y - spikeLen);
+          ctx.lineTo(screen.x, screen.y + spikeLen);
+          ctx.stroke();
+        }
+      }
+
+      visibleStars.push({ x: screen.x, y: screen.y, alpha: alpha, constIdx: constIdx });
+    }
+
+    /* Constellation glow fields */
+    computeStarConstellationCentroids(visibleStars);
+    renderConstellationGlow(time, bgLum);
+
+    ctx.globalAlpha = 1;
+  }
+
+  /* ============================================================
      15. ANIMATION LOOP
      ============================================================ */
 
@@ -3068,6 +3509,7 @@
     /* Celestial bodies (behind rain and mist, on top of clouds) */
     updateCelestialTime(dtSec);
     celestialTimeAccum += dtSec;
+    renderStars(celestialTimeAccum);
     renderSun(celestialTimeAccum);
     renderMoon(celestialTimeAccum);
 
@@ -3311,10 +3753,11 @@
       buildCloudSprites(newColor);
     }
 
-    /* Invalidate celestial color cache so sun/moon colors update */
+    /* Invalidate celestial color cache so sun/moon/star colors update */
     celestialThemeDirty = true;
     lastSunColorStr = '';
     lastMoonColorStr = '';
+    invalidateStarSprites();
   }
 
   /* MutationObserver on <html> to detect data-time-theme changes */

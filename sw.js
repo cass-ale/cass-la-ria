@@ -16,7 +16,7 @@
    Reference: https://web.dev/articles/offline-fallback-page
    ============================================================ */
 
-const CACHE_NAME = 'casslaria-v3';
+const CACHE_NAME = 'casslaria-v4';
 
 const CORE_ASSETS = [
   '/',
