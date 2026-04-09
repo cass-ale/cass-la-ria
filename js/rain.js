@@ -1515,6 +1515,95 @@
   }
 
   /* ============================================================
+     10c. CELESTIAL GLOW SPRITE CACHE
+     Cached radial gradient sprites drawn BEHIND the character
+     zones to create a soft glow/aura without altering fillStyle.
+     Uses the same color as the body but at reduced alpha via
+     radial gradient falloff.
+
+     Technique: Offscreen canvas with createRadialGradient.
+     Cached per (radius, color) pair. Hundreds of times faster
+     than per-frame shadowBlur (SO #15706856).
+
+     References:
+     - MDN: CanvasRenderingContext2D.shadowBlur (performance warning)
+     - web.dev/articles/canvas-texteffects (cached shadow technique)
+     - SO #15706856 (benchmark: cached 100x faster than live shadow)
+     ============================================================ */
+
+  var glowSpriteCache = {};
+  var lastSunGlowKey = '';
+  var lastMoonGlowKey = '';
+
+  /**
+   * Build a cached radial gradient glow sprite.
+   * @param {number} radius - Glow radius in pixels
+   * @param {object} color - {r, g, b} object
+   * @param {number} peakAlpha - Alpha at center (0-1)
+   * @param {number} softness - How quickly the glow fades (0.3=hard, 0.8=soft)
+   * @returns {HTMLCanvasElement} Offscreen canvas with the glow
+   */
+  function buildGlowSprite(radius, color, peakAlpha, softness) {
+    var key = Math.round(radius) + '@' + color.r + ',' + color.g + ',' + color.b + '@' + Math.round(peakAlpha*100) + '@' + Math.round(softness*100);
+    if (glowSpriteCache[key]) return glowSpriteCache[key];
+
+    var size = Math.ceil(radius * 2) + 4; /* +4 for anti-aliasing margin */
+    var off = document.createElement('canvas');
+    off.width = size; off.height = size;
+    var o = off.getContext('2d');
+    var cx = size / 2, cy = size / 2;
+
+    /* Inner radius: where the glow starts to fade from peak */
+    var innerR = radius * (1.0 - softness);
+
+    var grad = o.createRadialGradient(cx, cy, innerR, cx, cy, radius);
+    var r = color.r, g = color.g, b = color.b;
+    grad.addColorStop(0, 'rgba(' + r + ',' + g + ',' + b + ',' + peakAlpha + ')');
+    grad.addColorStop(0.4, 'rgba(' + r + ',' + g + ',' + b + ',' + (peakAlpha * 0.5) + ')');
+    grad.addColorStop(0.7, 'rgba(' + r + ',' + g + ',' + b + ',' + (peakAlpha * 0.15) + ')');
+    grad.addColorStop(1, 'rgba(' + r + ',' + g + ',' + b + ',0)');
+
+    /* Fill the inner core with peak alpha too */
+    if (innerR > 0) {
+      o.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',' + peakAlpha + ')';
+      o.beginPath();
+      o.arc(cx, cy, innerR, 0, Math.PI * 2);
+      o.fill();
+    }
+
+    o.fillStyle = grad;
+    o.fillRect(0, 0, size, size);
+
+    glowSpriteCache[key] = off;
+    return off;
+  }
+
+  /**
+   * Draw a cached glow sprite at the given position.
+   * @param {number} radius - Glow radius
+   * @param {object} color - {r, g, b}
+   * @param {number} peakAlpha - Center alpha
+   * @param {number} softness - Fade rate
+   * @param {number} px - Center x
+   * @param {number} py - Center y
+   * @param {number} alpha - Global alpha multiplier
+   */
+  function drawGlow(radius, color, peakAlpha, softness, px, py, alpha) {
+    if (alpha < 0.005 || radius < 2) return;
+    var sprite = buildGlowSprite(radius, color, peakAlpha, softness);
+    var prevAlpha = ctx.globalAlpha;
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(sprite, px - sprite.width * 0.5, py - sprite.height * 0.5);
+    ctx.globalAlpha = prevAlpha;
+  }
+
+  function invalidateGlowCache() {
+    glowSpriteCache = {};
+    lastSunGlowKey = '';
+    lastMoonGlowKey = '';
+  }
+
+  /* ============================================================
      11. RAINDROP OBJECT POOL (with depth layers)
      ============================================================ */
 
@@ -2816,6 +2905,20 @@
     var fsInner = Math.round(SUN_CELL * SUN_SIZES.inner);
     var fsCore = Math.round(SUN_CELL * SUN_SIZES.core);
 
+    /* Radial gradient glow — drawn BEHIND all character zones.
+       Uses the same theme-aware color at reduced alpha.
+       Glow radius is 1.8x the outermost character zone.
+       Intensity modulated by elevation, weather, and haze.
+       Cached via buildGlowSprite for zero per-frame cost. */
+    var sunGlowR = radius * 1.8 * glowMult;
+    var sunGlowPeak = 0.18 + hazeFactor * 0.12 + wx.haloExpand * 0.15;
+    var sunGlowSoft = 0.65 + hazeFactor * 0.15;
+    var sunGlowAlpha = flickerVis * (0.6 + elevation * 0.4);
+    /* Breathing: slow noise-driven pulsation */
+    var sunBreath = noise.noise2D(time * 0.03, 0.77) * 0.08 + 1.0;
+    sunGlowAlpha *= sunBreath;
+    drawGlow(sunGlowR, sunColor, sunGlowPeak, sunGlowSoft, cx, cy, sunGlowAlpha);
+
     /* Zone 5: GLOW */
     var glowR = radius * 1.3 * glowMult;
     var glowC = Math.ceil(glowR * 2 / SUN_CELL);
@@ -2963,6 +3066,18 @@
     var fsGlow = Math.round(SUN_CELL * MOON_SIZES.glow);
     var fsSurf = Math.round(SUN_CELL * MOON_SIZES.surface);
     var fsCore = Math.round(SUN_CELL * MOON_SIZES.core);
+
+    /* Radial gradient glow — drawn BEHIND all character zones.
+       Moon glow is softer and dimmer than sun, scaled by illumination.
+       Fog/haze expands the glow (lunar corona effect). */
+    var moonGlowR = radius * 2.0 * glowMult;
+    var moonGlowPeak = (0.12 + hazeFactor * 0.15 + wx.haloExpand * 0.2) * illumination;
+    var moonGlowSoft = 0.7 + hazeFactor * 0.15;
+    var moonGlowAlpha = flickerVis * illumination * (0.5 + elevation * 0.5);
+    /* Breathing: slow noise-driven pulsation */
+    var moonBreath = moonNoise.noise2D(time * 0.025, 1.33) * 0.06 + 1.0;
+    moonGlowAlpha *= moonBreath;
+    drawGlow(moonGlowR, moonColor, moonGlowPeak, moonGlowSoft, cx, cy, moonGlowAlpha);
 
     /* Zone 3: GLOW */
     var glowR = radius * 1.4 * glowMult;
@@ -3757,6 +3872,7 @@
     celestialThemeDirty = true;
     lastSunColorStr = '';
     lastMoonColorStr = '';
+    invalidateGlowCache();
     invalidateStarSprites();
   }
 
