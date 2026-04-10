@@ -74,7 +74,7 @@ Each preset also defines **celestial visibility parameters** (sun/moon visibilit
 
 ### Celestial Body System
 
-A Unicode sun and moon render in the sky behind the weather layer, following physically accurate mechanics:
+A Unicode sun, moon, and 500-star field render in the sky behind the weather layer, following physically accurate mechanics. Stars are sourced from the Hipparcos catalog (ESA, 1997) with J2000 coordinates, filtered for Tokyo's sky, and projected using stereographic projection with real sidereal time:
 
 | Feature | Description |
 |---|---|
@@ -92,6 +92,12 @@ A Unicode sun and moon render in the sky behind the weather layer, following phy
 | Snow whiteout | Scatter-based contrast reduction |
 | Dust color shift | Pushes sun toward blood-red/amber in dust presets |
 | Wind-shifted gaps | Higher wind = more turbulent = more frequent visibility gaps |
+| Star catalog | 500 real stars from Hipparcos (ESA, 1997) — magnitude -1.46 (Sirius) to 6.5, 7 spectral types |
+| Star projection | Stereographic projection with real local sidereal time for Tokyo (139.65°E) |
+| Twilight model | 4-stage magnitude limit (civil → nautical → astronomical → full dark) |
+| Scintillation | Noise-driven brightness + chromatic flickering, stronger near horizon |
+| Constellation glow | Soft glow fields around constellation centroids |
+| Emoji prevention | VS15 (U+FE0E) on all emoji-capable characters + monochrome font stack |
 | Sprite cache | Pre-rendered character sprites for 60fps performance |
 
 ### Umbrella Cursor (Desktop)
@@ -283,6 +289,14 @@ Key techniques: `clamp()` fluid typography, `100dvh` dynamic viewport height, JS
 ## Changelog
 
 All notable changes to this project, in reverse chronological order.
+
+### 2026-04-09 — Star Catalog Expansion & Emoji Prevention
+
+- **Expanded star catalog**: 500 real stars (130 original + 370 new) from the Hipparcos catalog (ESA, 1997), filtered for Tokyo's sky (35.68°N, 139.65°E). Stars selected via spatially balanced, magnitude-prioritized sampling across all 24 RA hours and declination bands. Source: [gmiller123456/hip2000](https://github.com/gmiller123456/hip2000).
+- **Full-viewport projection**: Changed `horizontalToScreen` from `Math.min(cW,cH)*0.48` to `Math.max(cW,cH)*0.55`, spreading stars across the entire rectangular viewport instead of a central circle.
+- **Emoji prevention system**: Added `EMOJI_CAPABLE` lookup table (all 182 BMP code points with emoji presentation from Unicode 16.0) and `sanitizeChars()` utility function. All Unicode characters in the weather system are protected with VS15 (U+FE0E) to force text presentation. Font stack (`EMOJI_SAFE_FONT`) prioritizes monochrome symbol fonts over emoji fonts.
+- **Magnitude limit fix**: Demo `magLimit` raised from 5.5 to 6.5 to show all catalog stars in full darkness.
+- **Cache bump**: `rain.js?v=12`, `casslaria-v6` service worker.
 
 ### 2026-04-08 — Celestial Body System (Sun + Moon)
 
