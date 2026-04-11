@@ -895,12 +895,18 @@ var WEATHER_PRESETS = {
    Stars cycle through characters driven by noise, matching
    the rain.js sun/moon rendering approach. VS15 (U+FE0E)
    prevents emoji rendering on mobile. */
+/* Star character sets — ONLY emoji-safe characters.
+   U+2734 and U+2605 are in the Unicode emoji variation sequences
+   and render as colored emoji on iOS/Android even with VS15.
+   Replaced with U+2726, U+2736, U+2739, U+2738, U+2737
+   which are Dingbats block characters without emoji variation sequences.
+   Ref: unicode.org/emoji/charts/emoji-variants.html (v17.0)            */
 var STAR_CHARS_BRILLIANT = [
-  '\u2726', '\u2605\uFE0E', '\u2736', '\u2734\uFE0E', '\u2739',
-  '\u2605\uFE0E', '\u2726', '\u2734\uFE0E'
+  '\u2726', '\u2736', '\u2738', '\u2739', '\u2737',
+  '\u2726', '\u2736', '\u2738'
 ];
 var STAR_CHARS_BRIGHT = [
-  '\u2726', '\u2727', '\u2736', '\u2734\uFE0E', '\u2726', '\u2727'
+  '\u2726', '\u2727', '\u2736', '\u2738', '\u2726', '\u2727'
 ];
 var STAR_CHARS_MEDIUM = [
   '\u2727', '\u2726', '\u2219', '\u2022\uFE0E', '\u2727', '\u00B7'
@@ -912,7 +918,7 @@ var STAR_CHARS_FAINT = [
   '\u2027', '\u002E', '\u00B7', '\u2219', '\u002E', '\u2027'
 ];
 
-var STAR_FONT = '"Apple Symbols", "Segoe UI Symbol", "Noto Sans Symbols 2", "Cormorant Garamond", Georgia, serif';
+var STAR_FONT = '"Apple Symbols", "Segoe UI Symbol", "Noto Sans Symbols 2", "DejaVu Sans", "Cormorant Garamond", Georgia, serif';
 
 /* ============================================================
    8. COORDINATE TRANSFORMS
@@ -960,6 +966,8 @@ function resizeCanvas() {
   canvas.height = H * dpr;
   canvas.style.width = W + 'px';
   canvas.style.height = H + 'px';
+  canvas.style.fontVariantEmoji = 'text';
+  canvas.style.fontFamily = STAR_FONT;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   spriteCache = {};
 }

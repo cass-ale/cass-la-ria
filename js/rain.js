@@ -929,8 +929,26 @@
   }
 
   /** Font stack that prioritizes monochrome symbol fonts over emoji fonts.
-   *  Use as the font-family for all canvas fillText / sprite rendering. */
-  var EMOJI_SAFE_FONT = '"Apple Symbols", "Segoe UI Symbol", "Noto Sans Symbols 2", "Cormorant Garamond", Georgia, serif';
+   *  Use as the font-family for all canvas fillText / sprite rendering.
+   *
+   *  Defense-in-depth strategy against emoji rendering on mobile:
+   *  1. Use only characters NOT in Unicode emoji variation sequences (primary)
+   *  2. Append VS15 (\uFE0E) to any remaining emoji-capable chars (secondary)
+   *  3. CSS font-variant-emoji: text on canvas elements (tertiary)
+   *  4. Font stack ordering: text-glyph fonts before system fallback (quaternary)
+   *
+   *  Font stack rationale:
+   *  - "Apple Symbols": macOS/iOS monochrome symbol font (has dingbats as text)
+   *  - "Segoe UI Symbol": Windows monochrome symbol font
+   *  - "Noto Sans Symbols 2": Android/Linux monochrome symbol font
+   *  - "DejaVu Sans": Widely available, has dingbats as text glyphs
+   *  - "Cormorant Garamond": Site's primary font (for non-symbol chars)
+   *  - Georgia, serif: Final fallback
+   *
+   *  Ref: twbs/bootstrap#31860 (Apple Color Emoji overrides unicode)
+   *  Ref: css-tricks.com/text-that-sometimes-turns-to-emojis/
+   *  Ref: unicode.org/emoji/charts/emoji-variants.html (v17.0)              */
+  var EMOJI_SAFE_FONT = '"Apple Symbols", "Segoe UI Symbol", "Noto Sans Symbols 2", "DejaVu Sans", "Cormorant Garamond", Georgia, serif';
 
   /* ============================================================
      6. NOISE HELPERS
@@ -1453,7 +1471,7 @@
       var sz = Math.ceil(iceSplashSize * 1.4);
       off.width = sz; off.height = sz;
       var octx = off.getContext('2d');
-      octx.font = iceSplashSize + 'px "Cormorant Garamond", Georgia, serif';
+      octx.font = iceSplashSize + 'px ' + EMOJI_SAFE_FONT;  /* U+2716 needs emoji-safe font */
       octx.textAlign = 'center';
       octx.textBaseline = 'middle';
       octx.fillStyle = color;
@@ -1533,7 +1551,7 @@
         var off = document.createElement('canvas');
         off.width = sz; off.height = sz;
         var o = off.getContext('2d');
-        o.font = fs + 'px "Apple Symbols", "Segoe UI Symbol", "Noto Sans Symbols 2", "Cormorant Garamond", Georgia, serif';
+        o.font = fs + 'px ' + EMOJI_SAFE_FONT;
         o.textAlign = 'center'; o.textBaseline = 'middle';
         o.fillStyle = colorStr;
         o.fillText(uniq[ci], sz/2, sz/2);
@@ -1570,7 +1588,7 @@
     var s = celestialSprites[key];
     if (s) { ctx.drawImage(s, px - s.width*0.5, py - s.height*0.5); }
     else {
-      ctx.font = fs + 'px "Apple Symbols", "Segoe UI Symbol", "Noto Sans Symbols 2", "Cormorant Garamond", Georgia, serif';
+      ctx.font = fs + 'px ' + EMOJI_SAFE_FONT;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillStyle = colorStr; ctx.fillText(ch, px, py);
     }
@@ -1983,6 +2001,13 @@
       canvas = document.createElement('canvas');
       canvas.className = 'rain-canvas';
       canvas.setAttribute('aria-hidden', 'true');
+      /* Force text presentation for all Unicode symbols on the canvas.
+         font-variant-emoji: text is supported in Chrome 131+, Firefox 141+,
+         Safari 17.5+. Older browsers ignore it and fall back to the
+         emoji-safe font stack + VS15 protection.
+         Ref: caniuse.com/mdn-css_properties_font-variant-emoji */
+      canvas.style.fontVariantEmoji = 'text';
+      canvas.style.fontFamily = EMOJI_SAFE_FONT;
       document.body.insertBefore(canvas, document.body.firstChild);
     }
 
@@ -3231,8 +3256,14 @@
   var TOKYO_LAT_RAD = TOKYO_LAT * Math.PI / 180;
 
   /* --- Star character sets (VS15 for emoji prevention) --- */
-  var STAR_CHARS_BRILLIANT = ['\u2726','\u2605\uFE0E','\u2736','\u2734\uFE0E','\u2739','\u2605\uFE0E','\u2726','\u2734\uFE0E'];
-  var STAR_CHARS_BRIGHT    = ['\u2726','\u2727','\u2736','\u2734\uFE0E','\u2726','\u2727'];
+  /* Star character sets — ONLY emoji-safe characters.
+     U+2734 (EIGHT POINTED BLACK STAR) and U+2605 (BLACK STAR) are in the
+     Unicode emoji variation sequences and render as colored emoji on iOS/Android
+     even with VS15. Replaced with U+2726, U+2736, U+2739, U+2738, U+2737
+     which are Dingbats block characters without emoji variation sequences.
+     Ref: unicode.org/emoji/charts/emoji-variants.html (v17.0)                */
+  var STAR_CHARS_BRILLIANT = ['\u2726','\u2736','\u2738','\u2739','\u2737','\u2726','\u2736','\u2738'];
+  var STAR_CHARS_BRIGHT    = ['\u2726','\u2727','\u2736','\u2738','\u2726','\u2727'];
   var STAR_CHARS_MEDIUM    = ['\u2727','\u2726','\u2219','\u2022\uFE0E','\u2727','\u00B7'];
   var STAR_CHARS_DIM       = ['\u00B7','\u2219','\u2027','\u2022\uFE0E','\u00B7','\u2219'];
   var STAR_CHARS_FAINT     = ['\u2027','\u002E','\u00B7','\u2219','\u002E','\u2027'];
@@ -3718,7 +3749,7 @@
     sc.width = size + pad * 2;
     sc.height = size + pad * 2;
     var sctx = sc.getContext('2d');
-    sctx.font = size + 'px "Apple Symbols", "Segoe UI Symbol", "Noto Sans Symbols 2", "Cormorant Garamond", Georgia, serif';
+    sctx.font = size + 'px ' + EMOJI_SAFE_FONT;
     sctx.fillStyle = colorStr;
     sctx.textAlign = 'center';
     sctx.textBaseline = 'middle';
