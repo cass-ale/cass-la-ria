@@ -1,0 +1,441 @@
+/* ============================================================
+   COMPONENTS
+   Reusable UI elements — name heading, rule, icon buttons,
+   contact button, email address, skip link.
+   ============================================================ */
+
+/* ---- Skip-to-content link (WCAG keyboard navigation) ----
+   Uses the sr-only / clip pattern instead of top:-100% because
+   Instagram, TikTok, and Facebook WebViews sometimes render
+   off-screen positioned elements visibly. The clip approach is
+   the industry standard (Bootstrap, Tailwind, GOV.UK) and works
+   in every browser engine including in-app WebViews.
+
+   Reference: webaim.org/techniques/css/invisiblecontent
+   Reference: a11yproject.com/posts/how-to-hide-content
+   ------------------------------------------------------------ */
+
+.skip-link {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  -webkit-clip-path: inset(50%);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+
+  /* Visual styling for when it becomes visible on focus */
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  letter-spacing: 0.1em;
+  color: var(--color-bg);
+  background-color: var(--color-accent);
+  text-decoration: none;
+  z-index: 100;
+}
+
+.skip-link:focus {
+  /* Undo sr-only on focus so keyboard users can see it */
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: auto;
+  height: auto;
+  padding: 0.75rem 1.5rem;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  -webkit-clip-path: none;
+  clip-path: none;
+  white-space: normal;
+  border-radius: 0 0 4px 4px;
+  outline: 2px solid var(--color-text);
+  outline-offset: 2px;
+}
+
+/* ---- Name / Title ---- */
+
+.hero__name {
+  font-family: var(--font-display);
+  font-weight: 300;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--color-text);
+
+  /* Fluid type: 28px → 64px across viewports */
+  font-size: clamp(1.75rem, 5vw + 0.5rem, 4rem);
+  line-height: 1.15;
+
+  /* Prevent long name from overflowing on small screens */
+  word-break: break-word;
+  hyphens: auto;
+}
+
+/* ---- Decorative horizontal rule ---- */
+
+.hero__rule {
+  width: clamp(60px, 12vw, 120px);
+  height: 1px;
+  background-color: var(--color-accent);
+  opacity: 0.6;
+}
+
+/* ---- Icon Buttons (Social Links) ----
+   Fixed square buttons with constrained icon sizing.
+   Explicit max-width/max-height on icons prevents WebViews
+   from rendering SVGs at their intrinsic viewBox size when
+   CSS fails to load or apply correctly.
+   -------------------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  color: var(--color-accent);
+  background: transparent;
+  border: 1px solid var(--color-border);
+
+  /* Fixed pixel sizes — no clamp() to avoid WebView issues.
+     48px is the recommended touch target (Google Material Design).
+     Slightly larger on desktop via media query below. */
+  width: 48px;
+  height: 48px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0;
+
+  cursor: pointer;
+  text-decoration: none;
+
+  /* GPU compositing for smooth rendering in WebViews */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+
+  transition:
+    color var(--duration) var(--ease-out),
+    border-color var(--duration) var(--ease-out),
+    background-color var(--duration) var(--ease-out),
+    transform 0.2s var(--ease-out);
+}
+
+.btn:hover,
+.btn:focus-visible {
+  color: var(--color-bg);
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+  outline: none;
+  transform: translateY(-2px) translateZ(0);
+  -webkit-transform: translateY(-2px) translateZ(0);
+}
+
+.btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-accent);
+}
+
+.btn:active {
+  background-color: var(--color-accent-soft);
+  border-color: var(--color-accent-soft);
+  transform: translateY(0) translateZ(0);
+  -webkit-transform: translateY(0) translateZ(0);
+}
+
+/* ---- SVG Icon inside buttons ----
+   Fixed pixel size with max constraints. The SVG elements also
+   have explicit width/height attributes in the HTML as a fallback
+   for WebViews that don't apply CSS to inline SVGs. */
+
+.btn__icon {
+  width: 22px;
+  height: 22px;
+  max-width: 22px;
+  max-height: 22px;
+  flex-shrink: 0;
+}
+
+/* ---- Contact Button ---- */
+
+.hero__contact {
+  position: relative;
+  z-index: 1;
+}
+
+.btn--contact {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+
+  width: auto;
+  height: auto;
+  padding: 0.6rem 1.6rem;
+
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.btn__icon--contact {
+  width: 16px;
+  height: 16px;
+  max-width: 16px;
+  max-height: 16px;
+}
+
+/* ---- Visible email address (fallback for mailto: failures) ----
+   Smaller, muted, centered directly under the contact button. */
+
+.hero__email {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 0.625rem;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  opacity: 0.5;
+  text-align: center;
+  -webkit-user-select: all;
+  user-select: all;
+  cursor: text;
+  margin-top: 0.35rem;
+}
+
+/* ---- Responsive adjustments ---- */
+
+/* Desktop: slightly larger icon buttons */
+@media (min-width: 768px) {
+  .btn--icon {
+    width: 52px;
+    height: 52px;
+  }
+
+  .btn--contact {
+    padding: 0.7rem 2rem;
+    font-size: 0.8125rem;
+  }
+
+  .hero__email {
+    font-size: 0.6875rem;
+  }
+}
+
+/* Small phones: tighter but still accessible */
+@media (max-width: 374px) {
+  .btn--icon {
+    width: 44px;
+    height: 44px;
+  }
+
+  .btn__icon {
+    width: 20px;
+    height: 20px;
+    max-width: 20px;
+    max-height: 20px;
+  }
+
+  .btn--contact {
+    padding: 0.5rem 1.2rem;
+    font-size: 0.6875rem;
+  }
+}
+
+/* ============================================================
+   LANGUAGE SWITCHER
+   Globe icon in the bottom-right corner of the decorative frame.
+   Click to reveal a vertically stacked list of languages above
+   the globe in their native scripts.
+
+   UX research sources:
+     - Smashing Magazine: smashingmagazine.com/2022/05/designing-better-language-selector
+     - NNGroup: nngroup.com/articles/language-switching-ecommerce
+     - CodyHouse: codyhouse.co/blog/post/accessible-language-picker
+
+   Key decisions:
+     - Globe icon, not flags (flags = countries, not languages)
+     - Native script labels ("日本語" not "Japanese")
+     - Bottom-right placement (utility zone, doesn't compete with content)
+     - Click-only reveal (no hover) — prevents accidental activation
+   ============================================================ */
+
+.lang-switcher {
+  position: fixed;
+  bottom: calc(var(--frame-inset) + 12px);
+  right: calc(var(--frame-inset) + 12px);
+  z-index: 50;
+  font-family: var(--font-display);
+}
+
+/* ---- Globe trigger button ---- */
+
+.lang-switcher__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  margin: 0;
+
+  background: color-mix(in srgb, var(--color-bg) 60%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  color: var(--color-text-muted);
+  cursor: pointer;
+
+  transition:
+    color var(--duration) var(--ease-out),
+    border-color var(--duration) var(--ease-out),
+    background-color var(--duration) var(--ease-out),
+    transform 0.2s var(--ease-out);
+}
+
+.lang-switcher__trigger:hover,
+.lang-switcher__trigger:focus-visible {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+  background-color: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  transform: scale(1.08);
+}
+
+.lang-switcher__trigger:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-accent);
+}
+
+.lang-switcher__trigger svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* ---- Language list (dropdown — opens above globe) ---- */
+
+.lang-switcher__list {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  right: 0;
+  min-width: 140px;
+
+  list-style: none;
+  margin: 0;
+  padding: 6px 0;
+
+  background-color: color-mix(in srgb, var(--color-bg) 92%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 24px color-mix(in srgb, var(--color-text) 10%, transparent);
+
+  /* Hidden by default — click-only, no hover */
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition:
+    opacity 0.25s var(--ease-out),
+    visibility 0.25s var(--ease-out),
+    transform 0.25s var(--ease-out);
+}
+
+/* Show ONLY when aria-expanded is true (JS click toggle) */
+.lang-switcher__trigger[aria-expanded="true"] + .lang-switcher__list {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+/* ---- Individual language option ---- */
+
+.lang-switcher__option {
+  display: block;
+  width: 100%;
+  padding: 5px 16px;
+
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  text-align: left;
+  text-decoration: none;
+  white-space: nowrap;
+
+  background: transparent;
+  border: none;
+  cursor: pointer;
+
+  transition:
+    color 0.2s var(--ease-out),
+    background-color 0.2s var(--ease-out);
+}
+
+.lang-switcher__option:hover,
+.lang-switcher__option:focus-visible {
+  color: var(--color-accent);
+  background-color: color-mix(in srgb, var(--color-accent) 6%, transparent);
+}
+
+.lang-switcher__option:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--color-accent);
+}
+
+/* Active language indicator */
+.lang-switcher__option[aria-current="true"] {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+/* ---- Responsive ---- */
+
+/* Desktop: slightly larger trigger */
+@media (min-width: 768px) {
+  .lang-switcher__trigger {
+    width: 36px;
+    height: 36px;
+  }
+
+  .lang-switcher__trigger svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .lang-switcher__option {
+    font-size: 0.875rem;
+    padding: 6px 18px;
+  }
+}
+
+/* Small phones */
+@media (max-width: 374px) {
+  .lang-switcher {
+    bottom: calc(var(--frame-inset) + 6px);
+    right: calc(var(--frame-inset) + 6px);
+  }
+
+  .lang-switcher__trigger {
+    width: 30px;
+    height: 30px;
+  }
+
+  .lang-switcher__trigger svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .lang-switcher__option {
+    font-size: 0.75rem;
+    padding: 5px 12px;
+  }
+}

@@ -1,0 +1,53 @@
+/* ============================================================
+   DESIGN TOKENS
+   Edit these variables to update the entire site's look & feel.
+
+   Time-based theming: The :root block defines the Midday default
+   (used as fallback if time-theme.js hasn't loaded yet).
+   All color transitions are handled by js/time-theme.js which
+   continuously interpolates between 8 anchor palettes and writes
+   the results as inline styles on <html>. The data-time-theme
+   attribute is set by time-theme.js purely as a signal for the
+   MutationObserver in rain.js (to trigger sprite color rebuilds).
+
+   --color-weather is specifically for rain/cloud/mist/splash
+   unicode characters — tuned for optimal contrast against each
+   theme's background color.
+   ============================================================ */
+
+:root {
+  /* ---- Colour Palette (Midday default / fallback) ----
+     Inspired by Neo Yokio's signature pastel pinks, soft
+     lavenders, and muted rose tones — Kaz Kaan's world of
+     pink carnations and melancholic luxury.
+     Dark fonts for strong contrast against the light pinks.  */
+  --color-bg:          #f2d4d7;       /* soft blush pink              */
+  --color-bg-subtle:   #e8c2c6;       /* slightly deeper rose         */
+  --color-text:        #2a1f2d;       /* deep plum / near-black       */
+  --color-text-muted:  #5c4560;       /* muted aubergine              */
+  --color-accent:      #8b3a62;       /* dark magenta / berry         */
+  --color-accent-soft: #a34d78;       /* lighter magenta for hover    */
+  --color-border:      #c9a0ad;       /* dusty rose border            */
+  --color-border-light:#d4b3be;       /* lighter rose for hover       */
+  --color-weather:     #2a1f2d;       /* weather elements (= text)    */
+
+  /* ---- Typography ---- */
+  --font-display:  'Cormorant Garamond', 'Georgia', serif;
+  --font-body:     'Cormorant Garamond', 'Georgia', serif;
+
+  /* ---- Spacing Scale (rem) ---- */
+  --space-xs:  0.25rem;
+  --space-sm:  0.5rem;
+  --space-md:  1rem;
+  --space-lg:  2rem;
+  --space-xl:  4rem;
+  --space-2xl: 6rem;
+
+  /* ---- Transitions ---- */
+  --ease-out:  cubic-bezier(0.22, 1, 0.36, 1);
+  --duration:  0.45s;
+
+  /* ---- Frame ---- */
+  --frame-inset: clamp(16px, 3vw, 40px);
+  --frame-width: 1px;
+}
