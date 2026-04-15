@@ -100,9 +100,18 @@ A Unicode sun, moon, and 500-star field render in the sky behind the weather lay
 | Emoji prevention | VS15 (U+FE0E) on all emoji-capable characters + monochrome font stack |
 | Sprite cache | Pre-rendered character sprites for 60fps performance |
 
-### Umbrella Cursor (Desktop)
+### Weather Cursor (Desktop)
 
-On desktop, the native cursor is replaced by a Unicode umbrella (`☂`). Rain characters deflect and bounce off the umbrella canopy using reflection physics. The umbrella follows the cursor with smooth movement.
+On desktop, the native cursor is replaced by a weather-specific Unicode character that changes with the active preset:
+
+| Category | Character | Presets | Deflection |
+|---|---|---|---|
+| Rain | U+2602 Umbrella | All rain presets, freezing rain, petrichor | Yes — full splash/drip/bounce physics |
+| Snow | U+2746 Snowflake | Light Snow, Blizzard | No |
+| Atmospheric | U+2727 White Star | Haze, Dust Storm, Ice Fog, Radiation Fog | No |
+| Clear | U+2726 Four-Pointed Star | Clear Sky, Partly Cloudy, Overcast, Starry Night | No |
+
+When hovering over clickable elements (links, buttons, inputs), the custom cursor hides and the default pointer is restored for clear affordance.
 
 ### Touch Interaction (Mobile)
 
@@ -213,11 +222,11 @@ cass-la-ria/
 │   ├── layout.css          ← Page structure + responsive breakpoints
 │   ├── components.css      ← Icon buttons, language switcher, contact, heading, toggle
 │   ├── animations.css      ← Entrance animations (motion-safe)
-│   ├── rain.css            ← Rain canvas, umbrella cursor, touch ripple
+│   ├── rain.css            ← Rain canvas, weather cursor, touch ripple
 │   └── editable.css        ← Inline editing UI (tooltip, pencil, mobile bar, toast)
 ├── js/
 │   ├── main.js             ← Viewport fix, deep linking, mailto fallback, i18n switcher
-│   ├── rain.js             ← Weather engine (clouds, drops, wind, sun, moon, presets, tilt, collision)
+│   ├── rain.js             ← Weather engine (clouds, drops, wind, sun, moon, stars, presets, cursor, tilt, collision)
 │   ├── time-theme.js       ← Time-based colour theme (updates CSS variables every minute)
 │   ├── i18n.js             ← Translation strings for all 8 languages
 │   ├── editable.js         ← Inline editing module (localStorage + Google Sheet + spam detection)
@@ -289,6 +298,14 @@ Key techniques: `clamp()` fluid typography, `100dvh` dynamic viewport height, JS
 ## Changelog
 
 All notable changes to this project, in reverse chronological order.
+
+### 2026-04-15 — Weather-Specific Cursors & Code Audit
+
+- **Weather-specific cursors**: Custom cursor now changes based on the active weather preset — umbrella (U+2602) for rain, snowflake (U+2746) for snow, white star (U+2727) for atmospheric/fog, and four-pointed star (U+2726) for clear/cloudy. All non-umbrella characters are emoji-safe.
+- **Clickable element pointer**: Default pointer cursor is restored when hovering over links, buttons, inputs, and other interactive elements via both CSS selectors and JS `isClickable()` detection.
+- **Deflection physics guard**: Umbrella deflection physics (splash, drip, bounce) are now conditionally disabled for non-rain cursor categories.
+- **Code audit**: Cleaned stale class references (`umbrella-cursor` → `weather-cursor`), removed literal emoji from comments, updated file tree in README and CONTRIBUTING.md.
+- **Cache bump**: `rain.js?v=14`, `casslaria-v8` service worker.
 
 ### 2026-04-09 — Star Catalog Expansion & Emoji Prevention
 

@@ -205,8 +205,53 @@
   var SUN_SIZES  = { glow: 0.8, corona: 0.9, rays: 0.9, inner: 1.1, core: 1.4 };
   var MOON_SIZES = { glow: 0.7, surface: 0.9, core: 1.2 };
 
-  /* Umbrella */
-  var UMBRELLA_CHAR = '\u2602\uFE0E';
+  /* Weather-specific cursor characters
+     Each weather preset maps to a cursor category that determines
+     the character shown as the custom cursor on desktop.
+     - rain:        U+2602 Umbrella (with deflection physics)
+     - snow:        ❆ U+2746 Heavy Chevron Snowflake
+     - atmospheric: ✧ U+2727 White Four Pointed Star
+     - clear:       ✦ U+2726 Black Four Pointed Star
+     All characters are emoji-safe (not in Unicode Emoji Variation Sequences).
+     Ref: unicode.org/emoji/charts/emoji-variants.html */
+  var CURSOR_CHARS = {
+    rain:        '\u2602\uFE0E',  /* U+2602 umbrella — needs VS15 (in emoji VS list) */
+    snow:        '\u2746',         /* ❆ heavy chevron snowflake */
+    atmospheric: '\u2727',         /* ✧ white four pointed star */
+    clear:       '\u2726'          /* ✦ black four pointed star */
+  };
+
+  /* Map each preset key to a cursor category */
+  var CURSOR_CATEGORY = {
+    /* Rain presets — umbrella with deflection physics */
+    gentleMist:    'rain',
+    lightDrizzle:  'rain',
+    steadyRain:    'rain',
+    windyShower:   'rain',
+    downpour:      'rain',
+    stormFront:    'rain',
+    typhoon:       'rain',
+    monsoon:       'rain',
+    squallLine:    'rain',
+    thunderstorm:  'rain',
+    freezingRain:  'rain',
+    petrichor:     'rain',
+    /* Snow presets — snowflake */
+    lightSnow:     'snow',
+    blizzard:      'snow',
+    /* Atmospheric presets — subtle star */
+    haze:          'atmospheric',
+    dustStorm:     'atmospheric',
+    iceFog:        'atmospheric',
+    radiationFog:  'atmospheric',
+    /* Clear / cloudy presets — four pointed star */
+    clearSky:      'clear',
+    partlyCloudy:  'clear',
+    overcast:      'clear',
+    starryNight:   'clear'
+  };
+
+  var activeCursorCategory = 'rain';  /* default until preset is selected */
   var UMBRELLA_RADIUS = 55;
 
   /* Umbrella collision physics
@@ -1982,6 +2027,10 @@
     activePreset = WEATHER_PRESETS[key];
     activeCloudType = activePreset.cloudType;
 
+    /* Determine cursor category from preset key */
+    activeCursorCategory = CURSOR_CATEGORY[key] || 'clear';
+    updateCursorChar();
+
     if (isMobile()) {
       activePreset = Object.assign({}, activePreset);
       activePreset.dropCount = Math.floor(activePreset.dropCount * MOBILE_DROP_FACTOR);
@@ -1990,7 +2039,18 @@
     if (typeof console !== 'undefined') {
       console.log('[Rain] Weather: ' + activePreset.name +
                   ' | Cloud: ' + activeCloudType +
-                  ' | Wind: ' + activePreset.windSpeed);
+                  ' | Wind: ' + activePreset.windSpeed +
+                  ' | Cursor: ' + activeCursorCategory);
+    }
+  }
+
+  /**
+   * updateCursorChar — update the custom cursor element's character
+   * to match the active weather preset's cursor category.
+   */
+  function updateCursorChar() {
+    if (umbrellaEl) {
+      umbrellaEl.textContent = CURSOR_CHARS[activeCursorCategory] || CURSOR_CHARS.clear;
     }
   }
 
@@ -2096,8 +2156,8 @@
     if (isDesktop) {
       if (!umbrellaEl) {
         umbrellaEl = document.createElement('div');
-        umbrellaEl.className = 'umbrella-cursor';
-        umbrellaEl.textContent = UMBRELLA_CHAR;
+        umbrellaEl.className = 'weather-cursor';
+        umbrellaEl.textContent = CURSOR_CHARS[activeCursorCategory] || CURSOR_CHARS.clear;
         umbrellaEl.setAttribute('aria-hidden', 'true');
         document.body.appendChild(umbrellaEl);
       }
@@ -2118,12 +2178,32 @@
     }
   }
 
+  function isClickable(el) {
+    if (!el) return false;
+    var tag = el.tagName;
+    if (tag === 'A' || tag === 'BUTTON' || tag === 'INPUT' ||
+        tag === 'SELECT' || tag === 'TEXTAREA' || tag === 'LABEL') return true;
+    if (el.getAttribute('role') === 'button' || el.getAttribute('tabindex')) return true;
+    if (el.classList && (el.classList.contains('btn') || el.classList.contains('clickable'))) return true;
+    /* Walk up to check if a parent anchor/button wraps this element */
+    if (el.closest && el.closest('a, button, [role="button"]')) return true;
+    return false;
+  }
+
   function onMouseMove(e) {
     mouseX = e.clientX; mouseY = e.clientY; mouseActive = true;
     if (umbrellaEl) {
       umbrellaEl.style.left = mouseX + 'px';
       umbrellaEl.style.top = mouseY + 'px';
-      umbrellaEl.classList.add('visible');
+
+      /* Hide custom cursor over clickable elements so the default pointer shows */
+      if (isClickable(e.target)) {
+        umbrellaEl.classList.remove('visible');
+        document.body.classList.remove('rain-active');
+      } else {
+        umbrellaEl.classList.add('visible');
+        document.body.classList.add('rain-active');
+      }
     }
   }
   function onMouseLeave() { mouseActive = false; if (umbrellaEl) umbrellaEl.classList.remove('visible'); }
@@ -2218,6 +2298,9 @@
 
   function applyUmbrellaDeflection(drop) {
     if (!mouseActive) return;
+
+    /* Deflection physics only apply when the umbrella cursor is active */
+    if (activeCursorCategory !== 'rain') return;
 
     /* Depth filtering — only foreground drops (zLayer 2) collide.
        Background/midground drops pass behind the umbrella for parallax. */

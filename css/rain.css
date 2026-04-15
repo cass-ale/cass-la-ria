@@ -1,49 +1,40 @@
 /* ============================================================
-   RAIN ANIMATION
-   Styles for the canvas rain layer, cloud elements,
-   umbrella cursor, and weather system.
-
-   WebView compatibility notes:
-   - Canvas uses position:fixed with explicit inset + GPU hint
-   - -webkit- prefixes for older WebView engines (Instagram, FB)
-   - will-change + translateZ(0) forces GPU compositing
+   rain.css — Styles for the weather canvas overlay,
+   weather cursor, and weather system.
    ============================================================ */
 
-/* ---- Rain canvas (full-viewport background layer) ---- */
+/* ---- Canvas overlay ---- */
 
 .rain-canvas {
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 0;
-  pointer-events: none;
-  display: block;
-
-  /* Explicit pixel sizing set by JS; CSS fallback.
-     In-app browsers (Instagram, TikTok, Facebook) may not
-     support 100vh correctly, so we also provide the JS-
-     calculated --vh fallback. */
   width: 100%;
-  height: 100vh;
-  height: 100dvh;
-  height: calc(var(--vh, 1vh) * 100);
-
-  /* GPU compositing for WebView compatibility */
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
-  will-change: contents;
-
-  /* Prevent canvas from being selected or dragged */
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+  image-rendering: auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* ---- Umbrella cursor (desktop only) ---- */
+/* ---- Gradient overlay for rain depth ---- */
 
-.umbrella-cursor {
+.rain-gradient {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 40%;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(to top, var(--color-bg), transparent);
+  opacity: 0.3;
+}
+
+/* ---- Weather cursor (desktop only) ---- */
+
+.weather-cursor {
   position: fixed;
   z-index: 10;
   pointer-events: none;
@@ -57,7 +48,7 @@
   /* GPU-accelerated movement */
   will-change: transform;
 
-  /* The umbrella character */
+  /* The weather character */
   font-size: 48px;
   line-height: 1;
   color: var(--color-text);
@@ -65,13 +56,13 @@
   transition: opacity 0.3s ease;
 }
 
-.umbrella-cursor.visible {
+.weather-cursor.visible {
   opacity: 0.7;
 }
 
 /* Hide on touch devices */
 @media (hover: none) and (pointer: coarse) {
-  .umbrella-cursor {
+  .weather-cursor {
     display: none;
   }
 }
@@ -116,9 +107,20 @@
     cursor: none;
   }
 
+  /* Restore default pointer on clickable elements.
+     The JS also hides the custom cursor element on hover,
+     but this CSS ensures the native pointer is always visible
+     as a fallback even if JS detection misses an element. */
   body.rain-active a,
   body.rain-active button,
-  body.rain-active .btn {
-    cursor: none;
+  body.rain-active input,
+  body.rain-active select,
+  body.rain-active textarea,
+  body.rain-active label,
+  body.rain-active [role="button"],
+  body.rain-active [tabindex],
+  body.rain-active .btn,
+  body.rain-active .clickable {
+    cursor: pointer;
   }
 }

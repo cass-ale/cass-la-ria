@@ -22,13 +22,13 @@ cass-la-ria/
 │   ├── layout.css          ← Page structure and responsive breakpoints
 │   ├── components.css      ← Buttons, headings, language switcher, decorative elements
 │   ├── animations.css      ← Entrance animations (respects reduced-motion)
-│   ├── rain.css            ← Rain canvas, umbrella cursor, touch ripple
+│   ├── rain.css            ← Rain canvas, weather cursor, touch ripple
 │   ├── editable.css        ← Inline editing UI (tooltip, pencil, mobile bar, toast)
 │   ├── fonts.css           ← Self-hosted @font-face declarations (Latin)
 │   └── fonts-cjk.css       ← CJK font fallback declarations (loaded lazily)
 ├── js/
 │   ├── main.js             ← Viewport fix, deep linking, mailto fallback, i18n switcher
-│   ├── rain.js             ← Rain/cloud animation engine (weather presets, collision, tilt)
+│   ├── rain.js             ← Weather engine (clouds, drops, wind, sun, moon, stars, presets, cursor, tilt, collision)
 │   ├── time-theme.js       ← Time-based colour theme (updates CSS variables every minute)
 │   ├── editable.js         ← Inline editing module (localStorage + Google Sheet logging)
 │   ├── i18n.js             ← Translation strings for all 8 languages
