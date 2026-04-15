@@ -4141,6 +4141,206 @@
   }
 
   /* ============================================================
+     14b. ARCH DOOR (DEMO ONLY)
+     Draws a small medieval pointed-arch door at the bottom-left
+     of the viewport, filled with the same domain-warped noise
+     characters used for clouds.
+     Reference: freepik.com/premium-psd/old-wooden-arch-door-medieval-fantasy-entrance_412394059
+     ============================================================ */
+
+  var DOOR_SEED = 42.7;           /* fixed noise seed — door doesn't drift */
+  var doorNoise = new SimplexNoise(DOOR_SEED);
+
+  /* Door noise — simplified version of cloudEntityNoise, no time drift */
+  function doorFbm(x, y, octaves) {
+    var v = 0, amp = 0.5, freq = 1;
+    for (var i = 0; i < octaves; i++) {
+      v += amp * doorNoise.noise2D(x * freq, y * freq);
+      amp *= 0.5;
+      freq *= 2;
+    }
+    return v;
+  }
+
+  function doorDensity(px, py) {
+    var scale = 0.025;
+    var sx = px * scale;
+    var sy = py * scale;
+    var qx = doorFbm(sx, sy, 3);
+    var qy = doorFbm(sx + 5.2, sy + 1.3, 3);
+    var warped = doorFbm(sx + 2.0 * qx, sy + 2.0 * qy, 4);
+    return (warped + 1) * 0.5;  /* normalize to [0, 1] */
+  }
+
+  /* Pointed arch shape test.
+     Gothic arch: two circular arcs centered at the spring points,
+     each with radius = door width. The arcs intersect at the apex.
+     px, py = pixel coords relative to the door's bounding box origin
+     doorW, doorH = bounding box size in px
+     archFrac = fraction of total height occupied by the arch (top portion) */
+  function isInsideDoor(px, py, doorX, doorY, doorW, doorH, archFrac) {
+    var lx = px - doorX;
+    var ly = py - doorY;
+    if (lx < 0 || lx > doorW || ly < 0 || ly > doorH) return 0;
+
+    var springY = doorH * archFrac;  /* y where arch meets rectangle */
+    var R = doorW;                   /* arc radius = full width (standard Gothic) */
+    var frameThick = doorW * 0.05;   /* stone frame thickness in px */
+
+    if (ly >= springY) {
+      /* Rectangular body — always inside */
+      if (lx < frameThick || lx > doorW - frameThick) return 0.5;  /* stone frame */
+      return 1.0;  /* door surface */
+    }
+
+    /* Arch zone — two arcs centered at (0, springY) and (doorW, springY) */
+    var dxL = lx;
+    var dyL = ly - springY;
+    var distL = Math.sqrt(dxL * dxL + dyL * dyL);
+
+    var dxR = lx - doorW;
+    var dyR = ly - springY;
+    var distR = Math.sqrt(dxR * dxR + dyR * dyR);
+
+    if (distL <= R && distR <= R) {
+      /* Inside both arcs = inside the pointed arch */
+      var minEdgeDist = Math.min(R - distL, R - distR);
+      if (minEdgeDist < frameThick) return 0.5;  /* stone frame */
+      return 1.0;  /* door surface */
+    }
+
+    return 0;  /* outside */
+  }
+
+  /* Door character sets — heavier than clouds for solid wood/stone feel */
+  var DOOR_CHARS_WOOD   = ['\u2588','\u2593','\u2592','#','@','%','W','M','H','N'];
+  var DOOR_CHARS_STONE  = ['0','8','6','9','3','5','*','+','=','$','&'];
+  var DOOR_CHARS_EDGE   = ['\u2591','\u00B7','\u2022',':','^','~'];
+
+  function doorCharFromZone(zone, density) {
+    if (zone >= 0.9) {
+      /* Door surface — dense wood texture, mostly heavy chars */
+      if (density > 0.35) return randomItem(DOOR_CHARS_WOOD);
+      return randomItem(DOOR_CHARS_STONE);
+    }
+    if (zone >= 0.4) {
+      /* Stone frame — medium density */
+      if (density > 0.4) return randomItem(DOOR_CHARS_STONE);
+      return randomItem(DOOR_CHARS_EDGE);
+    }
+    return randomItem(DOOR_CHARS_EDGE);
+  }
+
+  /* Pre-rendered door sprite cache (built alongside cloud sprites) */
+  var doorSprites = {};
+
+  function buildDoorSprites(color) {
+    doorSprites = {};
+    var fontSize = CLOUD_CELL - 1;
+    var sz = Math.ceil(fontSize * 1.4);
+    var allDoorChars = DOOR_CHARS_WOOD.concat(DOOR_CHARS_STONE, DOOR_CHARS_EDGE);
+    var seen = {};
+    for (var i = 0; i < allDoorChars.length; i++) {
+      var c = allDoorChars[i];
+      if (seen[c]) continue;
+      seen[c] = true;
+      var off = document.createElement('canvas');
+      off.width = sz; off.height = sz;
+      var octx = off.getContext('2d');
+      octx.font = fontSize + 'px ' + EMOJI_SAFE_FONT;
+      octx.textAlign = 'center';
+      octx.textBaseline = 'middle';
+      octx.fillStyle = color;
+      octx.fillText(c, sz / 2, sz / 2);
+      doorSprites[c] = off;
+    }
+  }
+
+  /* Render the door on the main canvas */
+  var doorFieldTimer = 150;       /* start at interval so first frame renders immediately */
+  var DOOR_FIELD_INTERVAL = 150;  /* ms — door refreshes slower than clouds */
+  var doorOffscreen = null;
+  var doorOffCtx = null;
+  var doorDrawX = 0;
+  var doorDrawY = 0;
+
+  function renderDoor() {
+    if (!ctx || W === 0 || H === 0) return;
+
+    /* Door dimensions — small, bottom-left, same height as lang-switcher */
+    var frameInset = Math.min(Math.max(window.innerWidth * 0.03, 16), 40);
+    var doorH = Math.min(220, H * 0.32);   /* max 220px or 32% of viewport */
+    var doorW = doorH / 1.6;               /* 1.6:1 aspect ratio */
+    var doorX = frameInset + 8;            /* left edge offset */
+    var doorY = H - doorH + doorH * 0.08;  /* bottom 8% hidden below viewport for grounded look */
+
+    /* Create/resize offscreen canvas for the door */
+    var ow = Math.ceil(doorW);
+    var oh = Math.ceil(doorH);
+    if (!doorOffscreen || doorOffscreen.width !== ow || doorOffscreen.height !== oh) {
+      doorOffscreen = document.createElement('canvas');
+      doorOffscreen.width = ow;
+      doorOffscreen.height = oh;
+      doorOffCtx = doorOffscreen.getContext('2d');
+    }
+    doorOffCtx.clearRect(0, 0, ow, oh);
+
+    var textColor = getComputedStyle(document.documentElement)
+      .getPropertyValue('--color-weather').trim()
+      || getComputedStyle(document.documentElement)
+        .getPropertyValue('--color-text').trim()
+      || '#2a1f2d';
+
+    /* Rebuild sprites if color changed */
+    if (!doorSprites['#'] || doorSprites['#']._color !== textColor) {
+      buildDoorSprites(textColor);
+      /* Tag sprites with the color they were built for */
+      var allDoorChars = DOOR_CHARS_WOOD.concat(DOOR_CHARS_STONE, DOOR_CHARS_EDGE);
+      for (var i = 0; i < allDoorChars.length; i++) {
+        if (doorSprites[allDoorChars[i]]) doorSprites[allDoorChars[i]]._color = textColor;
+      }
+    }
+
+    var cell = CLOUD_CELL;
+    var cols = Math.ceil(doorW / cell);
+    var rows = Math.ceil(doorH / cell);
+    var archFrac = 0.42;  /* top 42% is the pointed arch */
+
+    for (var row = 0; row < rows; row++) {
+      for (var col = 0; col < cols; col++) {
+        var px = col * cell;
+        var py = row * cell;
+
+        /* Test if this cell is inside the door shape */
+        var zone = isInsideDoor(px, py, 0, 0, doorW, doorH, archFrac);
+        if (zone === 0) continue;
+
+        /* Get noise density for texture */
+        var density = doorDensity(px + doorX, py + doorY);
+
+        /* Select character based on zone and density */
+        var ch = doorCharFromZone(zone, density);
+        var sprite = doorSprites[ch] || cloudSprites[ch];
+        if (!sprite) continue;
+
+        /* Opacity: solid for door surface, lighter for stone frame */
+        var alpha = (zone >= 0.9) ? 1.0 : 0.75;
+
+        doorOffCtx.globalAlpha = alpha;
+        doorOffCtx.fillStyle = textColor;
+        var halfSz = sprite.width * 0.5;
+        doorOffCtx.drawImage(sprite, px + cell * 0.5 - halfSz, py + cell * 0.5 - halfSz);
+      }
+    }
+
+    doorOffCtx.globalAlpha = 1;
+
+    /* Store position for cached draws between refreshes */
+    doorDrawX = doorX;
+    doorDrawY = doorY;
+  }
+
+  /* ============================================================
      15. ANIMATION LOOP
      ============================================================ */
 
@@ -4194,6 +4394,16 @@
     /* Lightning (on top of everything) */
     updateLightning(dtSec);
     drawLightning();
+
+    /* Arch door (demo only — on top of everything) */
+    doorFieldTimer += dt;
+    if (doorFieldTimer >= DOOR_FIELD_INTERVAL) {
+      renderDoor();
+      doorFieldTimer = 0;
+    }
+    if (doorOffscreen) {
+      ctx.drawImage(doorOffscreen, doorDrawX, doorDrawY);
+    }
 
     ctx.globalAlpha = 1;
 
