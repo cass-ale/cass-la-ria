@@ -4284,13 +4284,18 @@
     }
   }
 
-  /* Render the door on the main canvas */
-  var doorFieldTimer = 150;       /* start at interval so first frame renders immediately */
-  var DOOR_FIELD_INTERVAL = 150;  /* ms — door refreshes slower than clouds */
+  /* Render the door on the main canvas.
+     Unlike clouds, the door is a STATIC structure — it renders once into
+     an offscreen canvas and reuses that cached image every frame.
+     It only re-renders when the viewport resizes or the color theme changes. */
   var doorOffscreen = null;
   var doorOffCtx = null;
   var doorDrawX = 0;
   var doorDrawY = 0;
+  var doorDirty = true;           /* true = needs (re-)render */
+  var doorLastW = 0;              /* track viewport size for invalidation */
+  var doorLastH = 0;
+  var doorLastColor = '';
 
   function renderDoor() {
     if (!ctx || W === 0 || H === 0) return;
@@ -4425,11 +4430,18 @@
     updateLightning(dtSec);
     drawLightning();
 
-    /* Arch door (demo only — on top of everything) */
-    doorFieldTimer += dt;
-    if (doorFieldTimer >= DOOR_FIELD_INTERVAL) {
+    /* Arch door (demo only — static structure, cached render) */
+    var doorColor = getComputedStyle(document.documentElement)
+      .getPropertyValue('--color-weather').trim() || '';
+    if (W !== doorLastW || H !== doorLastH || doorColor !== doorLastColor) {
+      doorDirty = true;
+      doorLastW = W;
+      doorLastH = H;
+      doorLastColor = doorColor;
+    }
+    if (doorDirty) {
       renderDoor();
-      doorFieldTimer = 0;
+      doorDirty = false;
     }
     if (doorOffscreen) {
       ctx.drawImage(doorOffscreen, doorDrawX, doorDrawY);
