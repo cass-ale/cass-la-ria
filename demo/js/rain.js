@@ -4148,6 +4148,27 @@
      Reference: freepik.com/premium-psd/old-wooden-arch-door-medieval-fantasy-entrance_412394059
      ============================================================ */
 
+  /* Darken a CSS hex/rgb color by mixing toward black.
+     amount = 0 → unchanged, 1 → fully black */
+  function darkenColor(cssColor, amount) {
+    var r, g, b;
+    if (cssColor.charAt(0) === '#') {
+      var hex = cssColor.replace('#', '');
+      if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+      r = parseInt(hex.substring(0,2), 16);
+      g = parseInt(hex.substring(2,4), 16);
+      b = parseInt(hex.substring(4,6), 16);
+    } else {
+      var m = cssColor.match(/\d+/g);
+      r = parseInt(m[0]); g = parseInt(m[1]); b = parseInt(m[2]);
+    }
+    var f = 1 - amount;
+    r = Math.round(r * f);
+    g = Math.round(g * f);
+    b = Math.round(b * f);
+    return '#' + ((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);
+  }
+
   var DOOR_SEED = 42.7;           /* fixed noise seed — door doesn't drift */
   var doorNoise = new SimplexNoise(DOOR_SEED);
 
@@ -4217,18 +4238,25 @@
   var DOOR_CHARS_STONE  = ['0','8','6','9','3','5','*','+','=','$','&'];
   var DOOR_CHARS_EDGE   = ['\u2591','\u00B7','\u2022',':','^','~'];
 
+  /* Deterministic character picker — uses density as an index into the
+     array so the same cell always gets the same character (no flashing). */
+  function pickChar(arr, density) {
+    var idx = Math.floor(Math.abs(density) * arr.length * 7.31) % arr.length;
+    return arr[idx];
+  }
+
   function doorCharFromZone(zone, density) {
     if (zone >= 0.9) {
       /* Door surface — dense wood texture, mostly heavy chars */
-      if (density > 0.35) return randomItem(DOOR_CHARS_WOOD);
-      return randomItem(DOOR_CHARS_STONE);
+      if (density > 0.35) return pickChar(DOOR_CHARS_WOOD, density);
+      return pickChar(DOOR_CHARS_STONE, density);
     }
     if (zone >= 0.4) {
       /* Stone frame — medium density */
-      if (density > 0.4) return randomItem(DOOR_CHARS_STONE);
-      return randomItem(DOOR_CHARS_EDGE);
+      if (density > 0.4) return pickChar(DOOR_CHARS_STONE, density);
+      return pickChar(DOOR_CHARS_EDGE, density);
     }
-    return randomItem(DOOR_CHARS_EDGE);
+    return pickChar(DOOR_CHARS_EDGE, density);
   }
 
   /* Pre-rendered door sprite cache (built alongside cloud sprites) */
@@ -4267,12 +4295,12 @@
   function renderDoor() {
     if (!ctx || W === 0 || H === 0) return;
 
-    /* Door dimensions — small, bottom-left, same height as lang-switcher */
+    /* Door dimensions — 20% smaller, bottom aligned to frame boundary */
     var frameInset = Math.min(Math.max(window.innerWidth * 0.03, 16), 40);
-    var doorH = Math.min(220, H * 0.32);   /* max 220px or 32% of viewport */
+    var doorH = Math.min(176, H * 0.256);  /* 20% smaller: was 220/0.32 */
     var doorW = doorH / 1.6;               /* 1.6:1 aspect ratio */
     var doorX = frameInset + 8;            /* left edge offset */
-    var doorY = H - doorH + doorH * 0.08;  /* bottom 8% hidden below viewport for grounded look */
+    var doorY = H - frameInset - doorH;    /* bottom of door sits on the frame boundary line */
 
     /* Create/resize offscreen canvas for the door */
     var ow = Math.ceil(doorW);
@@ -4285,11 +4313,13 @@
     }
     doorOffCtx.clearRect(0, 0, ow, oh);
 
-    var textColor = getComputedStyle(document.documentElement)
+    /* Darken the weather color for the door — mix 40% toward black */
+    var rawColor = getComputedStyle(document.documentElement)
       .getPropertyValue('--color-weather').trim()
       || getComputedStyle(document.documentElement)
         .getPropertyValue('--color-text').trim()
       || '#2a1f2d';
+    var textColor = darkenColor(rawColor, 0.4);
 
     /* Rebuild sprites if color changed */
     if (!doorSprites['#'] || doorSprites['#']._color !== textColor) {
