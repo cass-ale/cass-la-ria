@@ -4142,238 +4142,108 @@
 
   /* ============================================================
      14b. ARCH DOOR (DEMO ONLY)
-     Draws a small medieval pointed-arch door at the bottom-left
-     of the viewport, filled with the same domain-warped noise
-     characters used for clouds.
+     Medieval pointed-arch door traced from Freepik reference image
+     using image-to-unicode-art halfblock converter.
+     Rendered as colored pixel rectangles on an offscreen canvas.
      Reference: freepik.com/premium-psd/old-wooden-arch-door-medieval-fantasy-entrance_412394059
      ============================================================ */
 
-  /* Darken a CSS hex/rgb color by mixing toward black.
-     amount = 0 → unchanged, 1 → fully black */
-  function darkenColor(cssColor, amount) {
-    var r, g, b;
-    if (cssColor.charAt(0) === '#') {
-      var hex = cssColor.replace('#', '');
-      if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
-      r = parseInt(hex.substring(0,2), 16);
-      g = parseInt(hex.substring(2,4), 16);
-      b = parseInt(hex.substring(4,6), 16);
-    } else {
-      var m = cssColor.match(/\d+/g);
-      r = parseInt(m[0]); g = parseInt(m[1]); b = parseInt(m[2]);
-    }
-    var f = 1 - amount;
-    r = Math.round(r * f);
-    g = Math.round(g * f);
-    b = Math.round(b * f);
-    return '#' + ((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);
-  }
-
-  var DOOR_SEED = 42.7;           /* fixed noise seed — door doesn't drift */
-  var doorNoise = new SimplexNoise(DOOR_SEED);
-
-  /* Door noise — simplified version of cloudEntityNoise, no time drift */
-  function doorFbm(x, y, octaves) {
-    var v = 0, amp = 0.5, freq = 1;
-    for (var i = 0; i < octaves; i++) {
-      v += amp * doorNoise.noise2D(x * freq, y * freq);
-      amp *= 0.5;
-      freq *= 2;
-    }
-    return v;
-  }
-
-  function doorDensity(px, py) {
-    var scale = 0.025;
-    var sx = px * scale;
-    var sy = py * scale;
-    var qx = doorFbm(sx, sy, 3);
-    var qy = doorFbm(sx + 5.2, sy + 1.3, 3);
-    var warped = doorFbm(sx + 2.0 * qx, sy + 2.0 * qy, 4);
-    return (warped + 1) * 0.5;  /* normalize to [0, 1] */
-  }
-
-  /* Pointed arch shape test.
-     Gothic arch: two circular arcs centered at the spring points,
-     each with radius = door width. The arcs intersect at the apex.
-     px, py = pixel coords relative to the door's bounding box origin
-     doorW, doorH = bounding box size in px
-     archFrac = fraction of total height occupied by the arch (top portion) */
-  function isInsideDoor(px, py, doorX, doorY, doorW, doorH, archFrac) {
-    var lx = px - doorX;
-    var ly = py - doorY;
-    if (lx < 0 || lx > doorW || ly < 0 || ly > doorH) return 0;
-
-    var springY = doorH * archFrac;  /* y where arch meets rectangle */
-    var R = doorW;                   /* arc radius = full width (standard Gothic) */
-    var frameThick = doorW * 0.05;   /* stone frame thickness in px */
-
-    if (ly >= springY) {
-      /* Rectangular body — always inside */
-      if (lx < frameThick || lx > doorW - frameThick) return 0.5;  /* stone frame */
-      return 1.0;  /* door surface */
-    }
-
-    /* Arch zone — two arcs centered at (0, springY) and (doorW, springY) */
-    var dxL = lx;
-    var dyL = ly - springY;
-    var distL = Math.sqrt(dxL * dxL + dyL * dyL);
-
-    var dxR = lx - doorW;
-    var dyR = ly - springY;
-    var distR = Math.sqrt(dxR * dxR + dyR * dyR);
-
-    if (distL <= R && distR <= R) {
-      /* Inside both arcs = inside the pointed arch */
-      var minEdgeDist = Math.min(R - distL, R - distR);
-      if (minEdgeDist < frameThick) return 0.5;  /* stone frame */
-      return 1.0;  /* door surface */
-    }
-
-    return 0;  /* outside */
-  }
-
-  /* Door character sets — heavier than clouds for solid wood/stone feel */
-  var DOOR_CHARS_WOOD   = ['\u2588','\u2593','\u2592','#','@','%','W','M','H','N'];
-  var DOOR_CHARS_STONE  = ['0','8','6','9','3','5','*','+','=','$','&'];
-  var DOOR_CHARS_EDGE   = ['\u2591','\u00B7','\u2022',':','^','~'];
-
-  /* Deterministic character picker — uses density as an index into the
-     array so the same cell always gets the same character (no flashing). */
-  function pickChar(arr, density) {
-    var idx = Math.floor(Math.abs(density) * arr.length * 7.31) % arr.length;
-    return arr[idx];
-  }
-
-  function doorCharFromZone(zone, density) {
-    if (zone >= 0.9) {
-      /* Door surface — dense wood texture, mostly heavy chars */
-      if (density > 0.35) return pickChar(DOOR_CHARS_WOOD, density);
-      return pickChar(DOOR_CHARS_STONE, density);
-    }
-    if (zone >= 0.4) {
-      /* Stone frame — medium density */
-      if (density > 0.4) return pickChar(DOOR_CHARS_STONE, density);
-      return pickChar(DOOR_CHARS_EDGE, density);
-    }
-    return pickChar(DOOR_CHARS_EDGE, density);
-  }
-
-  /* Pre-rendered door sprite cache (built alongside cloud sprites) */
-  var doorSprites = {};
-
-  function buildDoorSprites(color) {
-    doorSprites = {};
-    var fontSize = CLOUD_CELL - 1;
-    var sz = Math.ceil(fontSize * 1.4);
-    var allDoorChars = DOOR_CHARS_WOOD.concat(DOOR_CHARS_STONE, DOOR_CHARS_EDGE);
-    var seen = {};
-    for (var i = 0; i < allDoorChars.length; i++) {
-      var c = allDoorChars[i];
-      if (seen[c]) continue;
-      seen[c] = true;
-      var off = document.createElement('canvas');
-      off.width = sz; off.height = sz;
-      var octx = off.getContext('2d');
-      octx.font = fontSize + 'px ' + EMOJI_SAFE_FONT;
-      octx.textAlign = 'center';
-      octx.textBaseline = 'middle';
-      octx.fillStyle = color;
-      octx.fillText(c, sz / 2, sz / 2);
-      doorSprites[c] = off;
-    }
-  }
+  // Door pixel art data — 50 cols x 16 rows (halfblock: each cell = 2 vertical pixels)
+  // Each cell: [foreground_hex, background_hex] or 0 (transparent)
+  // Foreground = bottom half, Background = top half
+  var DOOR_ART_COLS = 50;
+  var DOOR_ART_ROWS = 16;
+  var DOOR_ART = [
+  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,['#2d222c',0],['#624e46',0],['#906e55',0],['#865d43',0],['#bc884f','#6c584e'],['#ffe493','#b18f68'],['#e7ad6d','#c39464'],['#edaf70','#ad825b'],['#b7854f','#8e7058'],['#614029','#1d121f'],['#a47f5e',0],['#8b6d59',0],['#544443',0],['#150e20',0],0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,0,0,0,0,0,['#261a27',0],['#bb976d',0],['#ffe69f','#150c20'],['#f9c687','#53403b'],['#ebb779','#9d7f60'],['#dbad72','#e0b37b'],['#ba9067','#ffcd86'],['#e1b27c','#f3b56d'],['#dca870','#e5a562'],['#d9a26b','#c18c5a'],['#b9804d','#734927'],['#764726','#ac774e'],['#c0834d','#e3a96e'],['#6f4120','#e7ae6d'],['#805530','#5e3a1d'],['#ffc47d','#ae8359'],['#f4ba7a','#dda56b'],['#fbc987','#fdc179'],['#f3c98c','#ffd188'],['#e9c188','#ffe2a3'],['#f2c68a','#caa882'],['#ffd696','#897362'],['#ffdf9f','#44373a'],['#ffe3a0','#0e091f'],['#765d46',0],0,0,0,0,0,0,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,0,['#4b3e40',0],['#d2ae85',0],['#ffcb8f','#665550'],['#e4b57b','#ebc58c'],['#ca9e71','#f0c285'],['#dbb081','#9a6c45'],['#aa7e53','#be8d53'],['#8e5d36','#d4a979'],['#c78f56','#cfa577'],['#754c27','#d1a478'],['#2f1100','#bb8d65'],[0,'#926643'],[0,'#533018'],['#2d1300','#351403'],['#482a12',0],['#492a14',0],['#452913',0],['#4f321f',0],['#603a20',0],['#694124','#341502'],['#321506','#623a19'],['#522b13','#96653b'],['#401a05','#cb9a64'],['#653919','#e8b880'],['#9b6a3b','#f1c48a'],['#b68350','#d4a878'],['#613b21','#c99e6d'],['#967355','#734d27'],['#e8be8f','#7e5d3c'],['#e2b985','#ffd599'],['#e1b27a','#d4b284'],['#d7a978','#43343a'],['#a48469',0],['#2d202b',0],0,0,0,0,0,0,0,0],
+  [0,0,0,0,0,['#796759',0],['#ffe7a6','#2c2531'],['#c99563','#d4ae82'],['#d0a16f','#e2ab70'],['#d8af7a','#c49763'],['#b48b5e','#bf9668'],['#d2a370','#cea176'],['#c2905b','#ffd997'],['#3c1a05','#efbd7b'],[0,'#8b623a'],['#2e1808',0],['#51321d',0],['#4a2e1a',0],['#6e4629','#381e0b'],['#704a31','#3f2516'],['#744d2b','#4b2a16'],['#825635','#654123'],['#a76e3e','#865733'],['#9c6a3d','#9d673d'],['#543d28','#794f2e'],['#855838','#865b3b'],['#ba814f','#93613a'],['#b37b49','#a97041'],['#794b2b','#724826'],['#9d693d','#8e5f37'],['#a26c3d','#82542d'],['#b27844','#86572b'],['#7e5129','#4c2609'],['#9b6639','#512a0f'],['#7b4b25','#48230b'],['#4d2509','#bd8957'],['#7f4d23','#ffd08d'],['#c9965e','#f3cb91'],['#b68f61','#b78e66'],['#b28e69','#a98157'],['#d9b385','#b78a5a'],['#e9c089','#f7c789'],['#e0af78','#bb9b7b'],['#f1c894','#120b20'],['#403138',0],0,0,0,0,0],
+  [0,0,0,['#77655a',0],['#fac786','#927f6e'],['#d4a571','#ffffc2'],['#d7ab79','#ffd494'],['#e3b980','#d8ac76'],['#e1b07b','#d2a774'],['#f8c88e','#d5ab7d'],['#ae7c4c','#f0c089'],['#331500','#906437'],['#492c15',0],['#684123',0],['#593720','#402614'],['#66462f','#69442a'],['#774e30','#714c2e'],['#855c36','#5e3b23'],['#d2995e','#af7b4b'],['#bd8651','#a26f46'],['#90643c','#97673a'],['#724e31','#9d673e'],['#825834','#ab7345'],['#523921','#61472a'],['#493623','#2a1f13'],['#543a24','#4b3220'],['#734d2e','#aa764a'],['#7b5432','#c98c54'],['#885c36','#855630'],['#b47c4c','#ad7648'],['#be854f','#c0874f'],['#b37f4c','#b67f48'],['#7e512f','#815230'],['#b8804f','#9d693d'],['#aa7343','#b17644'],['#9a663e','#9d6c3c'],['#8b5730','#502c16'],['#94643d','#5e3216'],['#6e3713','#b07d49'],['#cf9961','#ecc28d'],['#eac18f','#c9a076'],['#c49968','#cda372'],['#e4b880','#edc48d'],['#d4ac79','#ffdf9e'],['#c79b66','#ffd898'],['#d2a774','#5a4a49'],['#403238',0],0,0,0],
+  [0,0,['#c2a785','#3a2f39'],['#ffdf99','#ffe3a2'],['#dfb07e','#d9ac7d'],['#d8ad7e','#d3a87a'],['#edc28d','#ca9d6e'],['#f4c894','#cfa26d'],['#ffcf8f','#cc9f6b'],['#623a19','#b78854'],['#270d00','#451e06'],['#633f23','#44270f'],['#5b3619','#643e20'],['#5e3d25','#623b1f'],['#4a3121','#543522'],['#603e2d','#5d3c2b'],['#65422b','#64422a'],['#93643a','#8d6037'],['#d49c61','#dba264'],['#c58c54','#c78d54'],['#a67349','#855a3a'],['#bc8450','#684b2a'],['#815130','#a37041'],['#422918','#714d2c'],['#1a140c','#2f2117'],['#402c1a','#835938'],['#8a5e3a','#845936'],['#b57a4d','#5c3d26'],['#8f6137','#8d6138'],['#bc8652','#b07a4b'],['#be864f','#b27d4d'],['#be8953','#b98453'],['#653f25','#5c381e'],['#a06f48','#84593a'],['#a06b41','#794f33'],['#bc804a','#97643f'],['#935c30','#8c572d'],['#9b673f','#ab7244'],['#b27544','#9f6738'],['#905b36','#875125'],['#865026','#b68656'],['#ffd996','#bb9565'],['#c19a70','#cc9e6a'],['#c99e73','#b88e60'],['#ad8462','#b38a66'],['#cfa474','#c3996d'],['#fcca8a','#d1a677'],['#705a51','#120c21'],0,0],
+  [0,['#191428',0],['#e5b278','#fedea6'],['#b5804c','#f8c787'],['#a87648','#cfa075'],['#9e6e41','#e7ba89'],['#9a683a','#f4cc92'],['#9d6c3f','#f8ce94'],['#8d5c32','#dca870'],[0,'#3f1d07'],['#5f3c1c','#513016'],['#674026','#634026'],['#512c13','#4f2d17'],['#7e512e','#71492c'],['#6b4530','#573a27'],['#815438','#5c3e2c'],['#815337','#5d3d2a'],['#96653b','#8f5e34'],['#d69c60','#c18b56'],['#c08953','#ba834e'],['#a26d43','#a06b42'],['#c68b54','#d49a5f'],['#ba7c49','#c7844d'],['#b27848','#93613a'],['#845932','#2b2217'],['#a47148','#865c3a'],['#af7649','#c68656'],['#b0784b','#b67b4c'],['#885733','#885a34'],['#b27d4f','#b98552'],['#a36f45','#b77f4e'],['#b88251','#bb8652'],['#906034','#7d532f'],['#a26e47','#ac7849'],['#ad7449','#b37846'],['#cf8e53','#cb8d53'],['#936030','#996535'],['#9d6640','#95623d'],['#b47747','#a16a40'],['#c08045','#b17442'],['#674120','#6c3d1b'],['#9c673a','#dcab71'],['#a77342','#d3ab7f'],['#996437','#d8a979'],['#95643a','#ad8563'],['#96653e','#a9805e'],['#ad7748','#d6a570'],['#b78c65','#8f7259'],0,0],
+  [0,[0,'#3a2c34'],['#dcb281','#ca8f56'],['#a97c50','#976235'],['#a4744c','#a47144'],['#926546','#9a6940'],['#a57752','#7e4e2d'],['#b37e56','#8d5e39'],['#6e4224','#8f6038'],0,['#623c1d','#5e381a'],['#674226','#623d25'],['#623a1b','#5e3718'],['#815432','#7b4f2d'],['#795034','#65412f'],['#98623d','#925e3b'],['#905f3d','#94603a'],['#764f2e','#906139'],['#cf935c','#d69c60'],['#b2784a','#ba834f'],['#895a33','#9c6942'],['#bd7f4c','#d19258'],['#ae7446','#c1834b'],['#8f5f3b','#c38753'],['#70482d','#96653f'],['#a6744d','#b17a50'],['#a46a43','#a96f47'],['#aa6e46','#aa6f45'],['#875532','#8c5c36'],['#c08955','#c78f58'],['#9c6943','#986842'],['#996e47','#aa784d'],['#6a4727','#875730'],['#9a653e','#92623e'],['#ae7144','#a66c43'],['#be7f4c','#c7884e'],['#8c562a','#91592f'],['#be874e','#ae7746'],['#b07748','#b87b49'],['#ca8f54','#c7874e'],['#3b1a05','#5d3617'],['#865a31','#9b6639'],['#c48e60','#96663d'],['#895d41','#77492a'],['#704b33','#8a5b37'],['#704c32','#7f5633'],['#724b31','#875930'],['#6c503f','#986e46'],[0,'#100a1d'],0],
+  [0,['#0e0922','#120b21'],['#ffcf91','#ffe49e'],['#b27f51','#dda972'],['#b0815d','#d0a173'],['#bf8f60','#edbd80'],['#a97b55','#fdcb83'],['#ab774f','#efb678'],['#754526','#9a653a'],0,['#1f180a','#3f2712'],['#32281d','#583a24'],['#522d12','#643c1d'],['#7b482b','#7e4f2d'],['#865334','#7e5033'],['#895438','#8f5c3a'],['#985f3c','#9c633b'],['#84522d','#83512f'],['#ce8e55','#d2965d'],['#ce8f53','#bc804c'],['#986239','#875730'],['#c48450','#936038'],['#b97a45','#8a5837'],['#ac7346','#b57a49'],['#835934','#9d6e3f'],['#a06b42','#ab7347'],['#a76e44','#ab7346'],['#a36940','#a86e43'],['#8e5c36','#8e5c34'],['#b27e4f','#b27e4d'],['#b57e4e','#b47b4e'],['#ae7d4d','#906543'],['#74492b','#472b16'],['#7c5339','#825538'],['#8e5b3b','#99653c'],['#d89753','#cf9153'],['#805631','#8b5329'],['#7b5834','#c1884e'],['#9c6b3f','#ce9056'],['#da9857','#d2965a'],['#5b3617','#48260c'],['#764929','#a16e3f'],['#8c5f43','#e0a771'],['#7d563d','#e4ae71'],['#8a6447','#c09162'],['#825c44','#a97f5a'],['#9b6f48','#daa56d'],['#b0875f','#d0a475'],0,0],
+  [0,0,['#ffd897','#bd8f64'],['#ffde93','#bf8d61'],['#f1c184','#cc9864'],['#daa56e','#ab7a50'],['#a17b5b','#8a6146'],['#986e4e','#906241'],['#5d3313','#4b280e'],0,['#281f12','#2d2417'],['#483b2a','#443a2a'],['#4d4538','#4d3c2c'],['#4b4437','#4e3b2c'],['#4d4332','#523f2c'],['#574431','#503b2c'],['#53422f','#543b28'],['#3d3223','#44321f'],['#31271c','#4b3824'],['#292015','#5b442c'],['#17140f','#66482c'],[0,'#956841'],['#483222','#bb7e4a'],['#af7546','#b9804c'],['#96633a','#95623a'],['#8c5e3d','#936141'],['#a87046','#a56f47'],['#aa7143','#ab6f45'],['#835530','#895733'],['#ab774a','#aa7647'],['#bd8452','#bb824e'],['#ca9357','#b98450'],['#683f23','#704827'],['#9e673f','#91603d'],['#95673f','#b37243'],['#493622','#90633b'],['#4d2a13','#342a21'],[0,'#201d16'],['#3b1f09','#1e1811'],['#7b5e41','#875f3a'],[0,'#48270c'],['#6d3b17','#613718'],['#f0b77d','#c4915e'],['#8f6c54','#7a5840'],['#b4875a','#7e583d'],['#ebba7c','#a97a51'],['#facb83','#986c47'],['#9f7556','#654434'],0,0],
+  [0,0,['#ffe59d','#ffe39e'],['#efbd7a','#d5a871'],['#e0ab76','#b38961'],['#ebbd85','#c49564'],['#efc38d','#e1b584'],['#b38459','#ac7e59'],['#6d3f1e','#603515'],0,['#2e1b0a','#201910'],['#55361b','#2a2118'],['#673d1f','#2b1506'],['#704329','#3d220f'],['#613f2b','#462b1a'],['#643e2e','#523321'],['#5f3a27','#4a3120'],['#835331','#4b301c'],['#cc8a51','#66462a'],['#b47648','#64442a'],['#764c2e','#503118'],['#d19158','#915f37'],['#bb7944','#9f6539'],['#cb8d51','#be814a'],['#8c5d37','#865a36'],['#94613f','#895c3e'],['#93613c','#a16940'],['#965f3e','#9e653d'],['#7a492c','#815330'],['#af7849','#b17c4c'],['#c28651','#c38a55'],['#ab7747','#c58e56'],['#60371c','#60371c'],['#8e613d','#9e683d'],['#87522f','#5d3b1d'],['#89562e','#402f1b'],['#5a381f','#54351a'],['#28160c',0],['#452e17','#462b11'],['#674223','#6a5032'],['#381807',0],['#835325','#76471d'],['#ffd28f','#ffcd90'],['#d8ae7f','#b6916f'],['#b2875d','#8d6646'],['#c29366','#b2875e'],['#e2ae70','#c89865'],['#bd8f61','#ac815a'],0,0],
+  [0,[0,'#0e081e'],['#ffe89a','#fbc88b'],['#f4c280','#ca9968'],['#c89a6c','#c1946b'],['#946a4a','#cda276'],['#a87d54','#ddac76'],['#c2905e','#ab7d55'],['#6f401e','#5d3317'],0,['#432914','#6a4324'],['#774d2d','#81542f'],['#764925','#784c26'],['#704327','#764c2d'],['#6f452c','#66412a'],['#905b3a','#6b442c'],['#855335','#6f472e'],['#885730','#83532e'],['#be8250','#bd8252'],['#c6874e','#b17646'],['#81502b','#6c4326'],['#c1844e','#b47849'],['#c0824c','#c07f4a'],['#ae7443','#cf8f52'],['#784829','#885930'],['#764f35','#744b34'],['#93613f','#784f37'],['#a06640','#96603b'],['#663b22','#714428'],['#b07846','#9e6740'],['#d49656','#b37a4a'],['#c98c53','#b07748'],['#60351b','#653b20'],['#b57b49','#ac7346'],['#b17542','#ad703f'],['#9e6438','#b87a42'],['#724528','#86532c'],['#74492e','#7a4a2c'],['#a56f44','#b67748'],['#ae764b','#c18551'],['#2d1407','#46230f'],['#7c4b1e','#72441b'],['#ffd08b','#ffd38f'],['#c39869','#e1b47d'],['#8f6343','#8f694e'],['#b2895f','#956e53'],['#dfab70','#ba885b'],['#c4925e','#966d4b'],0,0],
+  [0,['#0e091e',0],['#ffeda1','#ffda92'],['#fbca86','#ffcf8a'],['#f8c887','#eab579'],['#e5b77c','#bd8b5a'],['#ddaf7c','#845f49'],['#be8d5d','#906747'],['#845329','#8b582d'],0,['#764e29','#4d2f1a'],['#a47340','#875b34'],['#704522','#6e4222'],['#5e3722','#6c4027'],['#5d3f2b','#66402b'],['#7a5134','#8b5d39'],['#955f3a','#8b5b3a'],['#945e34','#8a5b32'],['#b77d4b','#bd804d'],['#c2864e','#b97c49'],['#784c2a','#7c4e2b'],['#bd864d','#c98f53'],['#cd8e53','#b67945'],['#d09051','#a56a3d'],['#7b522c','#6a4125'],['#855439','#84563a'],['#9f663a','#a46c41'],['#a7693c','#ab6d40'],['#60351f','#6e4026'],['#ba824c','#bd874e'],['#ca894e','#d79957'],['#ba7d46','#cb8c4f'],['#5b331b','#63391e'],['#a87143','#b67f49'],['#ae6e3e','#b97846'],['#a87040','#9d683d'],['#925d2f','#7c4b28'],['#975f3a','#7d4e31'],['#b67d49','#a06942'],['#bf824d','#ab7347'],['#3c1a0a','#270d02'],['#805224','#804d23'],['#ffea9a','#f4bc7d'],['#ebc28d','#aa8362'],['#a9815d','#a0714d'],['#af825c','#c1905e'],['#b8885a','#d2a16a'],['#c69664','#bb8b5d'],0,0],
+  [0,['#29202f',0],['#d3a16c','#ffd38f'],['#ae7a4c','#ebb97b'],['#97613a','#cf9d68'],['#8d5934','#d9a365'],['#95643f','#d19d64'],['#b48054','#916741'],['#5f3b1d','#583217'],0,['#724622','#714724'],['#946535','#a36f3e'],['#6b4524','#5f391c'],['#4e2f1d','#462618'],['#68412b','#614027'],['#7e4f32','#794c30'],['#98633b','#a96e3f'],['#8e5c33','#965f32'],['#99663e','#b97c49'],['#ae7645','#d59858'],['#835733','#8a592f'],['#ac7647','#c3874e'],['#af7143','#c1824b'],['#a77043','#d39051'],['#7b4b2e','#87582d'],['#75492d','#7f4e32'],['#8d5833','#a3693e'],['#78492c','#885633'],['#73462b','#6c4022'],['#a46b3e','#c5874b'],['#9e653e','#bc7d47'],['#945e38','#ba7b45'],['#774625','#714120'],['#a0673a','#a66d3c'],['#a46c3f','#9f663c'],['#9c673b','#a3693d'],['#89552f','#865129'],['#a56d3d','#af7542'],['#9a6138','#ae7545'],['#b57a47','#c78853'],['#4c270e','#4a250e'],['#4c270c','#603613'],['#eaac70','#fabb78'],['#b37b4e','#e1b175'],['#a66c3f','#d79d61'],['#af7545','#b98454'],['#a9764b','#906646'],['#ac8158','#a47953'],['#201a29',0],0],
+  [['#b39572','#5c4e4a'],['#ffe9a3','#fff1ae'],['#e0b583','#e7b982'],['#d5ad7e','#c29771'],['#cba277','#d09d70'],['#c29a6d','#c39265'],['#b58d67','#b6865b'],['#c1966c','#d3a271'],['#906946','#cc9561'],['#3a1e07','#3e1e08'],['#3e210a','#553115'],['#5a361b','#3d260f'],['#402710','#2b1f13'],['#4e2c14','#845a35'],['#4a2c1a','#905f3a'],['#4a2c1a','#5d412d'],['#5f361e','#161411'],['#643b21','#5b3c27'],['#684027','#352319'],['#754b2b','#38281b'],['#5e381e','#795339'],['#754929','#774e35'],['#663e23','#3a291d'],['#6f4427','#231b13'],['#683e1f','#8d633e'],['#764b28','#8a5e39'],['#87542c','#8b5e3b'],['#704422','#4f3b27'],['#503014','#2b2216'],['#996336','#764d2f'],['#8d5b30','#825534'],['#7b4e29','#503d2c'],['#4e2c10','#362b1c'],['#7f4f29','#754d30'],['#643e22','#7c5133'],['#674025','#885836'],['#57331b','#5d4129'],['#654221','#271d14'],['#825229','#4e280f'],['#976237','#9b6538'],['#6a3d18','#7d491f'],['#ce935c','#cc8e56'],['#dbac79','#e8af77'],['#ca9d6e','#bb8659'],['#d0a171','#bf8c5f'],['#c1976c','#c08c65'],['#bf976d','#c0956f'],['#b58d65','#f4c58b'],['#bd8c63','#eabf8a'],['#6b5142','#3a2c31']],
+  [['#9d7b5c','#be9974'],['#b27f4e','#fecb88'],['#8b603d','#dbb07c'],['#ac7f52','#e7bb81'],['#976d45','#dfb380'],['#a17146','#e8b87f'],['#976742','#e3b376'],['#926542','#deac71'],['#684730','#765437'],['#271615','#271200'],['#1f1217','#54320f'],['#311f1f','#85562b'],['#23151a','#583514'],['#231319','#5c3315'],['#27161a','#60381e'],['#372223','#8c562f'],['#3a2624','#ba743d'],['#2d1b1f','#774725'],['#3e2828','#a1683c'],['#422c2a','#b47943'],['#392424','#835026'],['#3e2828','#ae6f3c'],['#402828','#b8743e'],['#452b28','#c37a42'],['#372022','#7f4722'],['#3a2424','#9c5f36'],['#352022','#a36533'],['#301b1e','#a26133'],['#311d1f','#7d4622'],['#422b28','#c7864c'],['#462d2a','#b47541'],['#3a2426','#9c6236'],['#342022','#854b25'],['#442c2a','#bf7b40'],['#422b27','#b5743d'],['#422a27','#9b6336'],['#301b1e','#8c5528'],['#341e20','#ad6e38'],['#422a28','#c27d41'],['#382324','#9b6233'],['#3a2322','#5f3311'],['#8c6345','#ca8d55'],['#8e6341','#f4bf7c'],['#996b44','#f8c57f'],['#a07145','#f0c07f'],['#92653d','#ecbc80'],['#996e45','#ebbc81'],['#704e34','#be9466'],['#7a573a','#b2855a'],['#644d3e','#6c5142']]
+  ];
 
   /* Render the door on the main canvas.
-     Unlike clouds, the door is a STATIC structure — it renders once into
-     an offscreen canvas and reuses that cached image every frame.
-     It only re-renders when the viewport resizes or the color theme changes. */
+     The door is a STATIC structure — it renders once into an offscreen
+     canvas and reuses that cached image every frame.
+     It only re-renders when the viewport resizes. */
   var doorOffscreen = null;
-  var doorOffCtx = null;
   var doorDrawX = 0;
   var doorDrawY = 0;
-  var doorDirty = true;           /* true = needs (re-)render */
-  var doorLastW = 0;              /* track viewport size for invalidation */
+  var doorDirty = true;
+  var doorLastW = 0;
   var doorLastH = 0;
-  var doorLastColor = '';
 
   function renderDoor() {
     if (!ctx || W === 0 || H === 0) return;
 
-    /* Door dimensions — 20% smaller, bottom aligned to frame boundary */
+    /* Door dimensions — sized to be small and unobtrusive */
     var frameInset = Math.min(Math.max(window.innerWidth * 0.03, 16), 40);
-    var doorH = Math.min(176, H * 0.256);  /* 20% smaller: was 220/0.32 */
-    var doorW = doorH / 1.6;               /* 1.6:1 aspect ratio */
-    var doorX = frameInset + 8;            /* left edge offset */
-    var doorY = H - frameInset - doorH;    /* bottom of door sits on the frame boundary line */
+    /* Target: ~176px tall, scaled to viewport */
+    var doorH = Math.min(176, H * 0.256);
+    /* Aspect ratio from the art: 50 cols x 32 pixel-rows (16 halfblock rows x 2) */
+    var artAspect = DOOR_ART_COLS / (DOOR_ART_ROWS * 2);
+    var doorW = doorH * artAspect;
 
-    /* Create/resize offscreen canvas for the door */
+    /* Position: bottom-left, bottom aligned to frame boundary */
+    var doorX = frameInset + 8;
+    var doorY = H - frameInset - doorH;
+
+    /* Cell size: scale art grid to fit door dimensions */
+    var cellW = doorW / DOOR_ART_COLS;
+    var cellH = doorH / DOOR_ART_ROWS;  /* each row = 2 pixel rows */
+    var halfH = cellH / 2;  /* height of each half (top/bottom pixel) */
+
+    /* Create offscreen canvas */
     var ow = Math.ceil(doorW);
     var oh = Math.ceil(doorH);
-    if (!doorOffscreen || doorOffscreen.width !== ow || doorOffscreen.height !== oh) {
-      doorOffscreen = document.createElement('canvas');
-      doorOffscreen.width = ow;
-      doorOffscreen.height = oh;
-      doorOffCtx = doorOffscreen.getContext('2d');
-    }
-    doorOffCtx.clearRect(0, 0, ow, oh);
+    doorOffscreen = document.createElement('canvas');
+    doorOffscreen.width = ow;
+    doorOffscreen.height = oh;
+    var dctx = doorOffscreen.getContext('2d');
 
-    /* Darken the weather color for the door — mix 40% toward black */
-    var rawColor = getComputedStyle(document.documentElement)
-      .getPropertyValue('--color-weather').trim()
-      || getComputedStyle(document.documentElement)
-        .getPropertyValue('--color-text').trim()
-      || '#2a1f2d';
-    var textColor = darkenColor(rawColor, 0.4);
+    /* Draw each cell as two colored rectangles */
+    for (var row = 0; row < DOOR_ART_ROWS; row++) {
+      var artRow = DOOR_ART[row];
+      if (!artRow) continue;
+      for (var col = 0; col < DOOR_ART_COLS; col++) {
+        var cell = artRow[col];
+        if (!cell) continue;  /* transparent */
 
-    /* Rebuild sprites if color changed */
-    if (!doorSprites['#'] || doorSprites['#']._color !== textColor) {
-      buildDoorSprites(textColor);
-      /* Tag sprites with the color they were built for */
-      var allDoorChars = DOOR_CHARS_WOOD.concat(DOOR_CHARS_STONE, DOOR_CHARS_EDGE);
-      for (var i = 0; i < allDoorChars.length; i++) {
-        if (doorSprites[allDoorChars[i]]) doorSprites[allDoorChars[i]]._color = textColor;
+        var x = Math.floor(col * cellW);
+        var y = Math.floor(row * cellH);
+        var w = Math.ceil(cellW) + 1;  /* +1 to avoid subpixel gaps */
+
+        /* Background = top half pixel */
+        var bg = cell[1];
+        if (bg) {
+          dctx.fillStyle = bg;
+          dctx.fillRect(x, y, w, Math.ceil(halfH) + 1);
+        }
+
+        /* Foreground = bottom half pixel */
+        var fg = cell[0];
+        if (fg) {
+          dctx.fillStyle = fg;
+          dctx.fillRect(x, y + Math.floor(halfH), w, Math.ceil(halfH) + 1);
+        }
       }
     }
 
-    var cell = CLOUD_CELL;
-    var cols = Math.ceil(doorW / cell);
-    var rows = Math.ceil(doorH / cell);
-    var archFrac = 0.42;  /* top 42% is the pointed arch */
-
-    for (var row = 0; row < rows; row++) {
-      for (var col = 0; col < cols; col++) {
-        var px = col * cell;
-        var py = row * cell;
-
-        /* Test if this cell is inside the door shape */
-        var zone = isInsideDoor(px, py, 0, 0, doorW, doorH, archFrac);
-        if (zone === 0) continue;
-
-        /* Get noise density for texture */
-        var density = doorDensity(px + doorX, py + doorY);
-
-        /* Select character based on zone and density */
-        var ch = doorCharFromZone(zone, density);
-        var sprite = doorSprites[ch] || cloudSprites[ch];
-        if (!sprite) continue;
-
-        /* Opacity: solid for door surface, lighter for stone frame */
-        var alpha = (zone >= 0.9) ? 1.0 : 0.75;
-
-        doorOffCtx.globalAlpha = alpha;
-        doorOffCtx.fillStyle = textColor;
-        var halfSz = sprite.width * 0.5;
-        doorOffCtx.drawImage(sprite, px + cell * 0.5 - halfSz, py + cell * 0.5 - halfSz);
-      }
-    }
-
-    doorOffCtx.globalAlpha = 1;
-
-    /* Store position for cached draws between refreshes */
+    /* Store position for cached draws */
     doorDrawX = doorX;
     doorDrawY = doorY;
   }
+
 
   /* ============================================================
      15. ANIMATION LOOP
@@ -4430,14 +4300,11 @@
     updateLightning(dtSec);
     drawLightning();
 
-    /* Arch door (demo only — static structure, cached render) */
-    var doorColor = getComputedStyle(document.documentElement)
-      .getPropertyValue('--color-weather').trim() || '';
-    if (W !== doorLastW || H !== doorLastH || doorColor !== doorLastColor) {
+    /* Arch door (demo only — static pixel-art, cached render) */
+    if (W !== doorLastW || H !== doorLastH) {
       doorDirty = true;
       doorLastW = W;
       doorLastH = H;
-      doorLastColor = doorColor;
     }
     if (doorDirty) {
       renderDoor();
