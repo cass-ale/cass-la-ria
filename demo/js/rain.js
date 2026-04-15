@@ -4528,8 +4528,15 @@
     for (var i = 0; i < selectors.length; i++) {
       var els = document.querySelectorAll(selectors[i]);
       for (var j = 0; j < els.length; j++) {
+        /* Cancel any CSS entrance animation — fill-mode:both keeps
+           the final keyframe opacity:1 applied, which overrides
+           normal inline styles. We must remove the animation first. */
+        els[j].style.animation = 'none';
+        void els[j].offsetHeight; /* force style recalc */
         els[j].style.transition = 'opacity ' + durationSec + 's ease-out';
-        els[j].style.opacity = '0';
+        /* Use !important so the value wins over any residual
+           animation fill-mode effects in all browsers. */
+        els[j].style.setProperty('opacity', '0', 'important');
       }
     }
   }
