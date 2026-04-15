@@ -4287,6 +4287,7 @@
   var MOVE_DURATION = 1000;   /* ms to move to center */
   var DISSOLVE_DURATION = 1000; /* ms for top-to-bottom dissolve */
   var doorDissolveProgress = 0;
+  var weatherFadeAlpha = 1;     /* 1 = full, fades to 0 during door animation */
 
   /* Initialize luminance data */
   parseDoorLuminance();
@@ -4513,7 +4514,9 @@
   }
 
   /**
-   * Fade out all visible page elements except .lang-switcher and .rain-canvas.
+   * Fade out all visible page elements except .lang-switcher.
+   * Weather fades out on the canvas via weatherFadeAlpha (driven in the loop),
+   * so the door remains fully visible while rain/clouds/stars disappear.
    * Uses a CSS transition over MOVE_DURATION (1 s) so the fade is smooth.
    */
   function fadeOutPageElements() {
@@ -4666,6 +4669,15 @@
 
     ctx.clearRect(0, 0, W, H);
 
+    /* Fade weather alpha during door animation */
+    if (doorAnimating && weatherFadeAlpha > 0) {
+      weatherFadeAlpha -= dt / MOVE_DURATION;
+      if (weatherFadeAlpha < 0) weatherFadeAlpha = 0;
+    }
+
+    /* Apply weather fade alpha for all weather elements */
+    if (weatherFadeAlpha < 1) ctx.globalAlpha = weatherFadeAlpha;
+
     /* Wind */
     updateWind(dtFactor, dtSec);
 
@@ -4700,6 +4712,9 @@
     /* Lightning (on top of everything) */
     updateLightning(dtSec);
     drawLightning();
+
+    /* Reset alpha before drawing the door (door stays fully visible) */
+    ctx.globalAlpha = 1;
 
     /* Arch door (demo only — theme-aware pixel-art with interaction) */
     if (doorEnabled) {
