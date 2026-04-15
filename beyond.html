@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+  <!-- ============================================================
+       BEYOND — Hidden page reached through the door
+       Placeholder for future content.
+       Made by CAPRI la Ria
+       ============================================================ -->
+
+  <title>Beyond — Cass la Ria</title>
+  <meta name="robots" content="noindex, nofollow, noarchive" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="demo/assets/icons/favicon.ico" />
+  <link rel="icon" type="image/png" sizes="32x32" href="demo/assets/icons/favicon-32x32.png" />
+
+  <!-- Fonts -->
+  <link rel="stylesheet" href="demo/css/fonts.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <!-- Styles (demo copies) -->
+  <link rel="stylesheet" href="demo/css/variables.css" />
+  <link rel="stylesheet" href="demo/css/reset.css" />
+  <link rel="stylesheet" href="demo/css/rain.css" />
+
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--color-bg, #1e1828);
+      color: var(--color-text, #d8c8d0);
+      font-family: 'Cormorant Garamond', 'Georgia', serif;
+      overflow: hidden;
+    }
+
+    .beyond {
+      text-align: center;
+      opacity: 0;
+      animation: fadeIn 2s ease-out 0.3s forwards;
+    }
+
+    .beyond__title {
+      font-size: clamp(1.8rem, 5vw, 3.6rem);
+      font-weight: 300;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--color-text, #d8c8d0);
+      margin: 0 0 1.5rem;
+    }
+
+    .beyond__rule {
+      width: 60px;
+      height: 1px;
+      background: var(--color-accent, #a05080);
+      margin: 0 auto 1.5rem;
+      opacity: 0.6;
+    }
+
+    .beyond__subtitle {
+      font-size: clamp(0.9rem, 2vw, 1.15rem);
+      font-weight: 300;
+      font-style: italic;
+      letter-spacing: 0.08em;
+      color: var(--color-text-muted, #a898a8);
+      margin: 0 0 3rem;
+    }
+
+    .beyond__back {
+      display: inline-block;
+      font-size: 0.85rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--color-accent-soft, #b86898);
+      text-decoration: none;
+      border: 1px solid var(--color-border-light, #382838);
+      padding: 0.6em 1.8em;
+      transition: border-color 0.3s ease, color 0.3s ease;
+    }
+
+    .beyond__back:hover {
+      border-color: var(--color-accent, #a05080);
+      color: var(--color-text, #d8c8d0);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <main class="beyond">
+    <h1 class="beyond__title">Beyond</h1>
+    <div class="beyond__rule" aria-hidden="true"></div>
+    <p class="beyond__subtitle">This space is waiting to be filled.</p>
+    <a href="demo.html" class="beyond__back">Return</a>
+  </main>
+
+  <!-- Time-based theme (keeps colors in sync) -->
+  <script src="demo/js/time-theme.js"></script>
+
+  <!-- Weather canvas (same atmosphere as the main page) -->
+  <script src="demo/js/rain.js?v=16"></script>
+
+</body>
+</html>
