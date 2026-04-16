@@ -49,12 +49,13 @@
     body {
       margin: 0;
       min-height: 100vh;
-      background: var(--color-bg, #1e1828);
-      color: var(--color-text, #d8c8d0);
+      background: var(--color-bg, #f2d4d7);
+      color: var(--color-text, #2a1f2d);
       font-family: 'Cormorant Infant', 'Cormorant Garamond', 'Georgia', serif;
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
+      transition: background-color 2s ease, color 2s ease;
     }
 
     /* Frame removed from story page for cleaner reading experience */
@@ -75,7 +76,7 @@
       -webkit-backdrop-filter: blur(10px);
       backdrop-filter: blur(10px);
       border-bottom: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
-      transition: background 0.4s ease, border-color 0.4s ease;
+      transition: background 2s ease, border-color 2s ease;
     }
 
     .navbar__left,
@@ -108,7 +109,7 @@
       color: var(--color-text, #2a1f2d);
       text-decoration: none;
       white-space: nowrap;
-      transition: color 0.3s ease;
+      transition: color 2s ease;
     }
 
     .navbar__brand:hover {
@@ -131,8 +132,8 @@
       cursor: pointer;
       text-decoration: none;
       transition:
-        color 0.3s ease,
-        background 0.3s ease,
+        color 2s ease,
+        background 2s ease,
         transform 0.2s ease;
       -webkit-tap-highlight-color: transparent;
     }
@@ -242,12 +243,13 @@
       font-style: italic;
       letter-spacing: 0.06em;
       line-height: 1.7;
-      color: var(--color-text-muted, #a898a8);
-      border: 1px solid var(--color-border, #382838);
+      color: var(--color-text-muted, #5c4560);
+      border: 1px solid var(--color-border, #c9a0ad);
       padding: 1.2em 1.6em;
       margin-bottom: clamp(3rem, 6vh, 5rem);
       opacity: 0.85;
       text-align: center;
+      transition: color 2s ease, border-color 2s ease;
     }
 
     .story__note-icon {
@@ -264,9 +266,10 @@
       font-weight: 300;
       letter-spacing: 0.15em;
       line-height: 1.2;
-      color: var(--color-text, #d8c8d0);
+      color: var(--color-text, #2a1f2d);
       margin: 0 0 0.3em;
       text-transform: none;
+      transition: color 2s ease;
     }
 
     /* ---- Chapter heading ---- */
@@ -276,16 +279,18 @@
       font-weight: 400;
       letter-spacing: 0.25em;
       text-transform: uppercase;
-      color: var(--color-text-muted, #a898a8);
+      color: var(--color-text-muted, #5c4560);
       margin: 0 0 clamp(2.5rem, 5vh, 4rem);
+      transition: color 2s ease;
     }
 
     .story__rule {
       width: 60px;
       height: 1px;
-      background: var(--color-accent, #a05080);
+      background: var(--color-accent, #8b3a62);
       margin: 1.5rem auto clamp(2.5rem, 5vh, 4rem);
       opacity: 0.6;
+      transition: background-color 2s ease;
     }
 
     /* ---- Narration paragraphs ---- */
@@ -295,9 +300,10 @@
       font-weight: 400;
       line-height: 1.85;
       letter-spacing: 0.02em;
-      color: var(--color-text, #d8c8d0);
+      color: var(--color-text, #2a1f2d);
       margin: 0 0 1.6em;
       text-align: center;
+      transition: color 2s ease;
     }
 
     /* ---- Dialogue styling ----
@@ -311,9 +317,10 @@
       font-style: italic;
       line-height: 1.85;
       letter-spacing: 0.02em;
-      color: var(--color-accent-soft, #b86898);
+      color: var(--color-accent-soft, #a34d78);
       margin: 0 0 1.6em;
       text-align: center;
+      transition: color 2s ease;
     }
 
     /* ---- Mystical voice (The Lake's inner speech) ----
@@ -326,10 +333,11 @@
       letter-spacing: 0.25em;
       white-space: nowrap;
       line-height: 1.6;
-      color: var(--color-accent, #a05080);
+      color: var(--color-accent, #8b3a62);
       margin: 0.8em 0 1.2em;
       text-align: center;
       animation: mysticalPulse 4s ease-in-out infinite;
+      transition: color 2s ease;
     }
 
     @keyframes mysticalPulse {
@@ -345,18 +353,20 @@
       font-style: italic;
       letter-spacing: 0.12em;
       line-height: 1.6;
-      color: var(--color-text-muted, #a898a8);
+      color: var(--color-text-muted, #5c4560);
       margin: 0 0 0.6em;
       text-align: center;
+      transition: color 2s ease;
     }
 
     /* ---- Section break (visual page break) ---- */
     .story__break {
       width: 40px;
       height: 1px;
-      background: var(--color-border, #382838);
+      background: var(--color-border, #c9a0ad);
       margin: clamp(2rem, 4vh, 3.5rem) auto;
       opacity: 0.5;
+      transition: background-color 2s ease;
     }
 
     /* ---- Back link ---- */
@@ -366,17 +376,17 @@
       font-size: 0.82rem;
       letter-spacing: 0.15em;
       text-transform: uppercase;
-      color: var(--color-accent-soft, #b86898);
+      color: var(--color-accent-soft, #a34d78);
       text-decoration: none;
-      border: 1px solid var(--color-border-light, #382838);
+      border: 1px solid var(--color-border-light, #d4b3be);
       padding: 0.6em 1.8em;
       margin-top: clamp(2rem, 4vh, 3.5rem);
-      transition: border-color 0.3s ease, color 0.3s ease;
+      transition: border-color 2s ease, color 2s ease;
     }
 
     .story__back:hover {
-      border-color: var(--color-accent, #a05080);
-      color: var(--color-text, #d8c8d0);
+      border-color: var(--color-accent, #8b3a62);
+      color: var(--color-text, #2a1f2d);
     }
 
     /* ============================================================
