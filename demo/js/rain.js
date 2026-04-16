@@ -4217,21 +4217,64 @@
   }
 
   /**
-   * Map a luminance value (0-1) to a theme-aware color.
-   * Uses --color-bg as the dark end and a brightened --color-weather as the light end.
-   * Applies a contrast boost so the door stands out from the background.
+   * Build gradient stops from all 9 theme CSS variables.
+   * Each stop has { position: 0-1, color: [r,g,b] }.
+   * Stops are sorted by their own luminance so the door's original
+   * luminance values map naturally through the full palette.
    */
-  function lumToThemeColor(lum, bgRGB, fgRGB) {
-    /* Boost contrast: remap 0-1 luminance to a narrower range that
-       stays clearly above the background */
-    var lo = 0.25;  /* minimum brightness offset from bg */
-    var hi = 0.95;  /* maximum brightness */
-    var t = lo + lum * (hi - lo);
+  function buildGradientStops(colorMap) {
+    var entries = [];
+    for (var i = 0; i < colorMap.length; i++) {
+      var c = colorMap[i];
+      var lum = (0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]) / 255;
+      entries.push({ color: c, lum: lum });
+    }
+    /* Sort darkest → brightest */
+    entries.sort(function(a, b) { return a.lum - b.lum; });
+    /* Normalize positions to 0-1 */
+    var minL = entries[0].lum;
+    var maxL = entries[entries.length - 1].lum;
+    var range = maxL - minL || 1;
+    var stops = [];
+    for (var i = 0; i < entries.length; i++) {
+      stops.push({
+        position: (entries[i].lum - minL) / range,
+        color: entries[i].color
+      });
+    }
+    return stops;
+  }
 
-    var r = Math.round(bgRGB[0] + t * (fgRGB[0] - bgRGB[0]));
-    var g = Math.round(bgRGB[1] + t * (fgRGB[1] - bgRGB[1]));
-    var b = Math.round(bgRGB[2] + t * (fgRGB[2] - bgRGB[2]));
-    return 'rgb(' + r + ',' + g + ',' + b + ')';
+  /**
+   * Sample a color from the gradient stops at position t (0-1).
+   * Linearly interpolates between the two surrounding stops.
+   */
+  function sampleGradient(stops, t) {
+    t = Math.max(0, Math.min(1, t));
+    if (t <= stops[0].position) return stops[0].color;
+    if (t >= stops[stops.length - 1].position) return stops[stops.length - 1].color;
+    for (var i = 0; i < stops.length - 1; i++) {
+      if (t >= stops[i].position && t <= stops[i + 1].position) {
+        var span = stops[i + 1].position - stops[i].position;
+        var frac = span > 0 ? (t - stops[i].position) / span : 0;
+        var a = stops[i].color;
+        var b = stops[i + 1].color;
+        return [
+          Math.round(a[0] + (b[0] - a[0]) * frac),
+          Math.round(a[1] + (b[1] - a[1]) * frac),
+          Math.round(a[2] + (b[2] - a[2]) * frac)
+        ];
+      }
+    }
+    return stops[stops.length - 1].color;
+  }
+
+  /**
+   * Convert a 0-1 luminance to an 'rgb(...)' string via gradient stops.
+   */
+  function lumToThemeColor(lum, gradientStops) {
+    var rgb = sampleGradient(gradientStops, lum);
+    return 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')';
   }
 
   function parseHexToRGB(hex) {
@@ -4378,15 +4421,30 @@
   function renderDoor() {
     if (!ctx || W === 0 || H === 0) return;
 
-    /* Read current theme colors */
-    var bgHex = getCSSColor('--color-bg', '#1e1828');
-    var weatherHex = getCSSColor('--color-weather', '#c8b0c0');
-    var accentHex = getCSSColor('--color-accent', '#a05080');
-    doorLastBg = bgHex;
-    doorLastWeather = weatherHex;
+    /* Read all 9 theme colors for full-palette gradient mapping */
+    var colorProps = [
+      ['--color-bg',           '#1e1828'],
+      ['--color-bg-subtle',    '#2a2038'],
+      ['--color-text',         '#d8c8d0'],
+      ['--color-text-muted',   '#887888'],
+      ['--color-accent',       '#a05080'],
+      ['--color-accent-soft',  '#b86898'],
+      ['--color-border',       '#382838'],
+      ['--color-border-light', '#483848'],
+      ['--color-weather',      '#c8b0c0']
+    ];
+    var themeColors = [];
+    for (var ci = 0; ci < colorProps.length; ci++) {
+      themeColors.push(parseHexToRGB(
+        getCSSColor(colorProps[ci][0], colorProps[ci][1])
+      ));
+    }
+    /* Track for dirty check */
+    doorLastBg = getCSSColor('--color-bg', '#1e1828');
+    doorLastWeather = getCSSColor('--color-weather', '#c8b0c0');
 
-    var bgRGB = parseHexToRGB(bgHex);
-    var fgRGB = parseHexToRGB(weatherHex);
+    /* Build gradient stops sorted by luminance */
+    var gradientStops = buildGradientStops(themeColors);
 
     /* Door dimensions — sized to be small and unobtrusive */
     var frameInset = Math.min(Math.max(window.innerWidth * 0.03, 16), 40);
@@ -4431,13 +4489,13 @@
 
         /* Background = top half */
         if (cell[1] >= 0) {
-          dctx.fillStyle = lumToThemeColor(cell[1], bgRGB, fgRGB);
+          dctx.fillStyle = lumToThemeColor(cell[1], gradientStops);
           dctx.fillRect(x, y, w, Math.ceil(halfH) + 1);
         }
 
         /* Foreground = bottom half */
         if (cell[0] >= 0) {
-          dctx.fillStyle = lumToThemeColor(cell[0], bgRGB, fgRGB);
+          dctx.fillStyle = lumToThemeColor(cell[0], gradientStops);
           dctx.fillRect(x, y + Math.floor(halfH), w, Math.ceil(halfH) + 1);
         }
       }
