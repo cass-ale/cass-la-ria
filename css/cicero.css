@@ -273,19 +273,35 @@ html[lang="en"] [data-editable]::after {
 
 /* ---- Dialogue styling ----
    Dialogue is intentionally not in quotation marks.
-   We differentiate it with italic style and a subtle
-   color shift toward the accent color. */
+   Two speakers are visually distinguished:
+     --man  = the young man (soft, muted, lighter weight)
+     --lake = the Lake (bold, vivid accent, commanding)
+   Base .story__dialogue provides shared layout. */
 .story__dialogue {
   font-family: 'Cormorant Infant', 'Cormorant Garamond', 'Georgia', serif;
   font-size: clamp(1.15rem, 2.8vw, 1.45rem);
-  font-weight: 400;
   font-style: italic;
   line-height: 1.85;
   letter-spacing: 0.02em;
-  color: var(--color-accent-soft, #a34d78);
   margin: 0 0 1.6em;
   text-align: center;
   transition: color 2s ease;
+}
+
+/* Young man — hesitant, quiet, internal thoughts.
+   Lighter weight, muted color, slightly reduced opacity
+   to convey his soft-spoken, uncertain nature. */
+.story__dialogue--man {
+  font-weight: 300;
+  color: var(--color-text-muted, #5c4560);
+}
+
+/* The Lake — ancient, playful, boisterous, powerful.
+   Bolder weight, vivid accent color, full presence
+   to convey its commanding, warm personality. */
+.story__dialogue--lake {
+  font-weight: 600;
+  color: var(--color-accent, #8b3a62);
 }
 
 /* ---- Mystical voice (The Lake's inner speech) ----
