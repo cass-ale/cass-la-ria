@@ -156,6 +156,17 @@
         if(g) g.parentNode.removeChild(g);
       });
     });
+
+    /* bfcache restore: force reload when navigating back to this page.
+       The rain/canvas system is torn down during the door-open animation,
+       so the bfcache snapshot is a dead state with a blank canvas.
+       A full reload is the Google-recommended approach for pages with
+       complex JS state that cannot be trivially re-initialized.
+       Reference: https://web.dev/articles/bfcache
+                  ("Update stale or sensitive data after bfcache restore") */
+    window.addEventListener('pageshow', function(e) {
+      if (e.persisted) location.reload();
+    });
   </script>
 </head>
 <body>

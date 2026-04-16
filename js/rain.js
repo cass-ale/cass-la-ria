@@ -4395,11 +4395,19 @@
     var text = getBubbleText();
     bubbleLastLang = document.documentElement.lang || 'en';
 
-    /* Bubble scale: 15% larger than previous for readability.
-       Desktop: 0.765 * 1.15 ≈ 0.88;  Mobile: 0.65 * 1.15 ≈ 0.75 */
+    /* On mobile, match the contact button's font-size (0.75rem base,
+       0.6875rem on small phones ≤374px) so the bubble text is equally
+       readable. On desktop, keep the proportional door-width scaling.
+       Contact button CSS: components.css .btn--contact */
     var isMobileBubble = window.innerWidth < 768;
-    var bubbleScale = isMobileBubble ? 0.75 : 0.88;
-    var fontSize = Math.max(8, Math.round(doorW * 0.085 * bubbleScale));
+    var fontSize;
+    if (isMobileBubble) {
+      var rootPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      var remFactor = window.innerWidth <= 374 ? 0.6875 : 0.75;
+      fontSize = Math.round(rootPx * remFactor);
+    } else {
+      fontSize = Math.max(8, Math.round(doorW * 0.085 * 0.88));
+    }
     var padding = Math.round(fontSize * 0.6);
     var tailH = Math.round(fontSize * 0.5);
 
