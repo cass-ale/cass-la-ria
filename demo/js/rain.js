@@ -4292,7 +4292,7 @@
   }
 
   /* --- Door state --- */
-  var doorEnabled = !!document.querySelector('.demo-banner');
+  var doorEnabled = !!document.querySelector('.demo-banner') || !!document.querySelector('.hero');
   var doorOffscreen = null;
   var doorDrawX = 0;
   var doorDrawY = 0;
