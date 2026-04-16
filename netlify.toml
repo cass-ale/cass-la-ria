@@ -42,12 +42,12 @@
     # frame-ancestors 'none' replaces X-Frame-Options for modern browsers.
     # form-action 'self' allows mailto: links but blocks external form posts.
     # The sha256 hashes whitelist the inline JSON-LD structured data script
-    # and the inline service worker registration script.
+    # and the inline service worker registration + auto-update script.
     # If the JSON-LD content changes, regenerate the hash with:
     #   python3 -c "import re,hashlib,base64;h=open('index.html').read();m=re.search(r'<script type=.application/ld\\+json.>(.*?)</script>',h,re.DOTALL);print('sha256-'+base64.b64encode(hashlib.sha256(m.group(1).encode()).digest()).decode())"
     # manifest-src 'self' allows the PWA manifest.json to be loaded.
     # worker-src 'self' allows the service worker (sw.js) to be registered.
-    Content-Security-Policy = "default-src 'none'; script-src 'self' 'sha256-2se67jeqDptuJ195uK1pyIOBC3ZcE4wuRKJrJ4/wB9E=' 'sha256-Knd0YgTwmW/EJHFa1+Uu8/8E7i6tn7CDhGP2IFJyz40=' 'sha256-B/qllzUQATaqj4GojLG1echCDsbHCpBCmIthwUtluAk=' 'sha256-KG9oQ26M3TiCcgLBwDw4K2NTj+eU4VjG++qnS1gP2CQ=' 'sha256-oslHUE7wpUx9rB569+wAsFwd5e6Dn1MR08w2x4WtANQ='; style-src 'self' https://fonts.googleapis.com 'sha256-UqzG6JWWsqi4n86DOB1pK3iJ8fEtUTCJkUCbJ9oD9eY=' 'sha256-aYtsGVjS5Nz2l9nHPnnyioCs5JmrZ3xUS3W5fot8xFY=' 'sha256-TV5cX+DH5jiQYz03NTXxeOZLBVYJIQqlCUmMge31zCQ='; font-src 'self' https://fonts.gstatic.com; img-src 'self'; connect-src 'self' https://script.google.com; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
+    Content-Security-Policy = "default-src 'none'; script-src 'self' 'sha256-2se67jeqDptuJ195uK1pyIOBC3ZcE4wuRKJrJ4/wB9E=' 'sha256-K5r+m5Jun+DA4liCn4dV7+FEetv4HpqGqAZgiBYWYLE=' 'sha256-B/qllzUQATaqj4GojLG1echCDsbHCpBCmIthwUtluAk=' 'sha256-KG9oQ26M3TiCcgLBwDw4K2NTj+eU4VjG++qnS1gP2CQ=' 'sha256-oslHUE7wpUx9rB569+wAsFwd5e6Dn1MR08w2x4WtANQ='; style-src 'self' https://fonts.googleapis.com 'sha256-UqzG6JWWsqi4n86DOB1pK3iJ8fEtUTCJkUCbJ9oD9eY=' 'sha256-aYtsGVjS5Nz2l9nHPnnyioCs5JmrZ3xUS3W5fot8xFY=' 'sha256-TV5cX+DH5jiQYz03NTXxeOZLBVYJIQqlCUmMge31zCQ='; font-src 'self' https://fonts.gstatic.com; img-src 'self'; connect-src 'self' https://script.google.com; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
 
     # -- Disable browser features we don't use --
     # interest-cohort=() blocks Google FLoC tracking.
@@ -75,6 +75,18 @@
 # Reference: web.dev/http-cache
 # Reference: jakearchibald.com/2016/caching-best-practices
 # ============================================================
+
+# Service Worker — MUST never be cached by the CDN or browser.
+# Browsers already byte-compare sw.js on every navigation to detect
+# updates, but if the CDN serves a stale copy, the browser never
+# sees the new bytes. no-store ensures Netlify's edge and the
+# browser always fetch the latest sw.js from origin.
+# Reference: https://web.dev/articles/service-worker-lifecycle#avoid_changing_the_url_of_your_service_worker_script
+# Reference: https://developers.google.com/web/updates/2018/06/fresher-sw
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
 
 # CSS files — always revalidate (cache busted via ?v= query strings)
 [[headers]]
