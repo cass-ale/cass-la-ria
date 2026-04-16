@@ -268,14 +268,22 @@
   <script src="js/wet-text.js?v=4"></script>
 
   <!-- Service Worker registration — enables PWA install + offline caching.
+       Uses TWO reload triggers for maximum reliability:
+       1. controllerchange — fires when a new SW takes control (most reliable)
+       2. updatefound → statechange → activated — backup for browsers
+          where controllerchange doesn't fire reliably
        On every page load, calls reg.update() to force the browser to check
-       for a new sw.js regardless of HTTP cache age. When a new SW activates,
-       the page auto-reloads so users always see the latest content.
+       for a new sw.js regardless of HTTP cache age.
        Reference: https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API
        Reference: https://redfin.engineering/how-to-fix-the-refresh-button-when-using-service-workers-a8e27af6df68
-       Reference: https://developer.chrome.com/docs/workbox/handling-service-worker-updates -->
+       Reference: https://developer.chrome.com/docs/workbox/handling-service-worker-updates
+       Reference: https://medium.com/@nekrtemplar/self-destroying-serviceworker-73d62921d717 -->
   <script>
   if ('serviceWorker' in navigator) {
+    var reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function() {
+      if (!reloading) { reloading = true; window.location.reload(); }
+    });
     window.addEventListener('load', function() {
       navigator.serviceWorker.register('/sw.js').then(function(reg) {
         reg.update();
@@ -283,8 +291,8 @@
           var w = reg.installing;
           if (w) {
             w.addEventListener('statechange', function() {
-              if (w.state === 'activated') {
-                window.location.reload();
+              if (w.state === 'activated' && !reloading) {
+                reloading = true; window.location.reload();
               }
             });
           }

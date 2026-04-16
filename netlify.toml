@@ -41,13 +41,20 @@
     # editing feedback system — edits are logged to a Google Sheet.
     # frame-ancestors 'none' replaces X-Frame-Options for modern browsers.
     # form-action 'self' allows mailto: links but blocks external form posts.
-    # The sha256 hashes whitelist the inline JSON-LD structured data script
-    # and the inline service worker registration + auto-update script.
-    # If the JSON-LD content changes, regenerate the hash with:
-    #   python3 -c "import re,hashlib,base64;h=open('index.html').read();m=re.search(r'<script type=.application/ld\\+json.>(.*?)</script>',h,re.DOTALL);print('sha256-'+base64.b64encode(hashlib.sha256(m.group(1).encode()).digest()).decode())"
+    # The sha256 hashes whitelist inline scripts and styles across all pages:
+    #   script-src hashes:
+    #     2se67j... = index.html JSON-LD structured data
+    #     bg6I/z... = index.html SW registration + controllerchange + auto-reload
+    #     +s8TkJ... = 404.html lang-aware title observer
+    #     GjEV8W... = offline.html retry button click handler
+    #   style-src hashes:
+    #     hE4OtW... = 404.html entrance animations
+    #     HviAbv... = offline.html self-contained styles
+    # To regenerate hashes after editing inline content:
+    #   python3 -c "import re,hashlib,base64;h=open('FILE.html').read();[print('sha256-'+base64.b64encode(hashlib.sha256(m.group(2).encode()).digest()).decode()) for m in re.finditer(r'<(script|style)([^>]*)>(.*?)</\\1>',h,re.DOTALL) if 'src=' not in m.group(2) and m.group(3).strip()]"
     # manifest-src 'self' allows the PWA manifest.json to be loaded.
     # worker-src 'self' allows the service worker (sw.js) to be registered.
-    Content-Security-Policy = "default-src 'none'; script-src 'self' 'sha256-2se67jeqDptuJ195uK1pyIOBC3ZcE4wuRKJrJ4/wB9E=' 'sha256-K5r+m5Jun+DA4liCn4dV7+FEetv4HpqGqAZgiBYWYLE=' 'sha256-B/qllzUQATaqj4GojLG1echCDsbHCpBCmIthwUtluAk=' 'sha256-KG9oQ26M3TiCcgLBwDw4K2NTj+eU4VjG++qnS1gP2CQ=' 'sha256-oslHUE7wpUx9rB569+wAsFwd5e6Dn1MR08w2x4WtANQ='; style-src 'self' https://fonts.googleapis.com 'sha256-UqzG6JWWsqi4n86DOB1pK3iJ8fEtUTCJkUCbJ9oD9eY=' 'sha256-aYtsGVjS5Nz2l9nHPnnyioCs5JmrZ3xUS3W5fot8xFY=' 'sha256-TV5cX+DH5jiQYz03NTXxeOZLBVYJIQqlCUmMge31zCQ='; font-src 'self' https://fonts.gstatic.com; img-src 'self'; connect-src 'self' https://script.google.com; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
+    Content-Security-Policy = "default-src 'none'; script-src 'self' 'sha256-2se67jeqDptuJ195uK1pyIOBC3ZcE4wuRKJrJ4/wB9E=' 'sha256-bg6I/zRKDoyBUam4jG6U3ClToOei979pjOum6mmbNBQ=' 'sha256-+s8TkJ5Z99YKtAMyghilURDLxZ25lIBbzWE8Buam4sA=' 'sha256-GjEV8Wo4B6ytLaM4dCeuWuE4AoK511PUbU+DWjdyjJQ='; style-src 'self' https://fonts.googleapis.com 'sha256-hE4OtW+OL886wD+ApYbWgyTXd5mLqZzBWuQXSN6ucPE=' 'sha256-HviAbv7MGUpFm8iX9mjlQ4c3i+KhzCQxk0MpI8/Cqjs='; font-src 'self' https://fonts.gstatic.com; img-src 'self'; connect-src 'self' https://script.google.com; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
 
     # -- Disable browser features we don't use --
     # interest-cohort=() blocks Google FLoC tracking.

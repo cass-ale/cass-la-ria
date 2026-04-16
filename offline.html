@@ -283,7 +283,7 @@
     <div class="error__home">
       <button
         class="btn--contact"
-        onclick="window.location.reload()"
+        id="retry-btn"
         aria-label="Try again"
       >
         <svg class="btn__icon--contact" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -298,5 +298,10 @@
   <!-- Site credit (hidden from visual display, visible to crawlers and view-source) -->
   <!-- Site designed and built by Cass Aleria -->
 
+  <script>
+  document.getElementById('retry-btn').addEventListener('click', function() {
+    window.location.reload();
+  });
+  </script>
 </body>
 </html>
