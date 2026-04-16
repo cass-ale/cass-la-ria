@@ -57,14 +57,7 @@
       -moz-osx-font-smoothing: grayscale;
     }
 
-    /* Decorative border frame */
-    .frame {
-      position: fixed;
-      inset: var(--frame-inset, clamp(16px, 3vw, 40px));
-      border: var(--frame-width, 1px) solid var(--color-border, #382838);
-      pointer-events: none;
-      z-index: 0;
-    }
+    /* Frame removed from story page for cleaner reading experience */
 
     /* ---- Story container ---- */
     .story {
@@ -161,10 +154,11 @@
        Spaced-out letters, larger, with a slow pulse animation */
     .story__mystical {
       font-family: 'Cormorant Infant', 'Cormorant Garamond', 'Georgia', serif;
-      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-size: clamp(1.1rem, 2.6vw, 1.6rem);
       font-weight: 300;
       font-style: italic;
-      letter-spacing: 0.35em;
+      letter-spacing: 0.25em;
+      white-space: nowrap;
       line-height: 1.6;
       color: var(--color-accent, #a05080);
       margin: 0.8em 0 1.2em;
@@ -257,8 +251,8 @@
       }
 
       .story__mystical {
-        font-size: clamp(1.3rem, 5.5vw, 2rem);
-        letter-spacing: 0.25em;
+        font-size: clamp(0.85rem, 3.6vw, 1.3rem);
+        letter-spacing: 0.18em;
       }
 
       .story__skip {
@@ -280,9 +274,6 @@
   </style>
 </head>
 <body>
-
-  <!-- Decorative border frame -->
-  <div class="frame" aria-hidden="true"></div>
 
   <!-- Language switcher -->
   <div class="lang-switcher" role="navigation" aria-label="Language">
@@ -320,10 +311,10 @@
     </div>
 
     <!-- Title -->
-    <h1 class="story__title fade-in" data-i18n="cicero-title" data-editable="cicero-title" data-editable-multiline>Young Cicero du Lac</h1>
+    <h1 class="story__title fade-in" data-i18n="cicero-title">Young Cicero du Lac</h1>
 
     <!-- Chapter -->
-    <p class="story__chapter fade-in" data-i18n="cicero-chapter" data-editable="cicero-chapter">Chapter I</p>
+    <p class="story__chapter fade-in" data-i18n="cicero-chapter">Chapter I</p>
 
     <div class="story__rule fade-in" aria-hidden="true"></div>
 
