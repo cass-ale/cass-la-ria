@@ -4362,8 +4362,10 @@
     var text = getBubbleText();
     bubbleLastLang = document.documentElement.lang || 'en';
 
-    /* 10% smaller: scale factor 0.9 applied to font size */
-    var fontSize = Math.max(9, Math.round(doorW * 0.085 * 0.9));
+    /* 25% smaller than original: 0.85 * 0.9 = 0.765 (was 0.9, now 15% smaller) */
+    var isMobileBubble = window.innerWidth < 768;
+    var bubbleScale = isMobileBubble ? 0.65 : 0.765;
+    var fontSize = Math.max(8, Math.round(doorW * 0.085 * bubbleScale));
     var padding = Math.round(fontSize * 0.6);
     var tailH = Math.round(fontSize * 0.5);
 
@@ -4446,19 +4448,25 @@
     /* Build gradient stops sorted by luminance */
     var gradientStops = buildGradientStops(themeColors);
 
-    /* Door dimensions — sized to be small and unobtrusive */
+    /* Door dimensions — 20% smaller, with mobile-responsive cap */
     var frameInset = Math.min(Math.max(window.innerWidth * 0.03, 16), 40);
-    var doorH = Math.min(176, H * 0.256);
     var artAspect = DOOR_ART_COLS / (DOOR_ART_ROWS * 2);
+    var isMobile = window.innerWidth < 768;
+    /* Desktop: max 141px (was 176). Mobile: max 20% of viewport height or 25% width */
+    var maxH = isMobile
+      ? Math.min(H * 0.15, W * 0.25 / artAspect, 110)
+      : Math.min(141, H * 0.205);
+    var doorH = maxH;
     var doorW = doorH * artAspect;
 
     /* Store base dimensions for animation */
     doorBaseW = doorW;
     doorBaseH = doorH;
 
-    /* Position: bottom-left, bottom aligned to frame boundary */
+    /* Position: bottom-left, with padding above the frame boundary */
+    var bottomPad = isMobile ? 24 : 12;
     var doorX = frameInset + 8;
-    var doorY = H - frameInset - doorH;
+    var doorY = H - frameInset - doorH - bottomPad;
     doorBaseX = doorX;
     doorBaseY = doorY;
 
