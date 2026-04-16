@@ -4395,9 +4395,10 @@
     var text = getBubbleText();
     bubbleLastLang = document.documentElement.lang || 'en';
 
-    /* 25% smaller than original: 0.85 * 0.9 = 0.765 (was 0.9, now 15% smaller) */
+    /* Bubble scale: 15% larger than previous for readability.
+       Desktop: 0.765 * 1.15 ≈ 0.88;  Mobile: 0.65 * 1.15 ≈ 0.75 */
     var isMobileBubble = window.innerWidth < 768;
-    var bubbleScale = isMobileBubble ? 0.65 : 0.765;
+    var bubbleScale = isMobileBubble ? 0.75 : 0.88;
     var fontSize = Math.max(8, Math.round(doorW * 0.085 * bubbleScale));
     var padding = Math.round(fontSize * 0.6);
     var tailH = Math.round(fontSize * 0.5);
@@ -4704,7 +4705,8 @@
     var cx = dX + dW / 2;
     var cy = dY + dH / 2;
     /* Elliptical radius: half-width + padding, half-height + padding */
-    var fontSize = Math.max(10, Math.round(dH * 0.14));
+    /* 15% larger than previous (0.14 * 1.15 ≈ 0.161) for readability */
+    var fontSize = Math.max(10, Math.round(dH * 0.161));
     var padX = fontSize * 2.2;  /* enough room for the text width */
     var padY = fontSize * 1.2;  /* enough room for the text height */
     var rx = dW / 2 + padX;
