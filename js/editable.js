@@ -126,6 +126,13 @@
     zh: { save: '\u4fdd\u5b58', cancel: '\u53d6\u6d88', edit: '\u7f16\u8f91' }
   };
 
+  /* ---- Language gate ---- */
+  /* Editing is only available for non-English languages.
+     English is the source text — nothing to improve. */
+  function isSourceLang() {
+    return getCurrentLang() === 'en';
+  }
+
   /* ---- State ---- */
   var activeElement = null;
   var originalText = '';
@@ -562,6 +569,8 @@
   /* ---- Mobile UI: Pencil button ---- */
 
   function showPencilButton(el) {
+    /* No pencil on English — source text is not editable */
+    if (isSourceLang()) return;
     removePencilButton();
 
     var labels = getMobileLabels();
@@ -666,6 +675,9 @@
   /* ---- Core editing logic ---- */
 
   function startEditing(el) {
+    /* Block editing when viewing the English source text */
+    if (isSourceLang()) return;
+
     if (activeElement) {
       cancelEditing(activeElement);
     }
@@ -768,7 +780,12 @@
       }
 
       // Set the hover hint (desktop only — hidden by CSS on touch)
-      el.setAttribute('data-edit-hint', HINT_I18N[lang] || DOUBLE_CLICK_HINT);
+      // No hint when viewing English source text
+      if (lang === 'en') {
+        el.removeAttribute('data-edit-hint');
+      } else {
+        el.setAttribute('data-edit-hint', HINT_I18N[lang] || DOUBLE_CLICK_HINT);
+      }
 
       // Apply any saved user override
       var saved = localStorage.getItem(storageKey(key));
@@ -868,7 +885,12 @@
     elements.forEach(function (el) {
       var key = el.getAttribute('data-editable');
 
-      el.setAttribute('data-edit-hint', HINT_I18N[lang] || DOUBLE_CLICK_HINT);
+      // No hint when viewing English source text
+      if (lang === 'en') {
+        el.removeAttribute('data-edit-hint');
+      } else {
+        el.setAttribute('data-edit-hint', HINT_I18N[lang] || DOUBLE_CLICK_HINT);
+      }
 
       var i18nKey = el.getAttribute('data-i18n');
       if (i18nKey && window.I18N && window.I18N[lang]) {

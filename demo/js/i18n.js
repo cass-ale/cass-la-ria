@@ -29,7 +29,7 @@ const translations = {
     'cicero-m1': 'V I S I O N . . .',
     'cicero-m2': 'L O N E L I N E S S . . .',
     'cicero-m3': 'L O V E . . .',
-    'cicero-note': 'This story is available in 8 languages. Switch languages using the globe icon. Double-click (or tap the pencil on mobile) any paragraph to suggest a better translation.',
+    'cicero-note': 'This story is available in 8 languages. Switch languages using the globe icon. When reading in another language, double-click (or tap the pencil on mobile) any paragraph to suggest a better translation.',
     'cicero-p1': 'Once, a young man would walk the length of the Lake daily outside his home.',
     'cicero-p10': 'He picked up a stone, examined it, buffed it, examined it—decent.',
     'cicero-p11': 'He tossed the stone toward the Lake.',
