@@ -4670,7 +4670,7 @@
         doorAnimPhase = 'done';
         /* Navigate to new page after a brief pause */
         setTimeout(function() {
-          window.location.href = '/beyond.html';
+          window.location.href = '/cicero.html';
         }, 300);
       }
       doorAnimX = doorTargetX;

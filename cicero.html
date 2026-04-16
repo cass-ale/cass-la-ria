@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+  <!-- ============================================================
+       CICERO — Young Cicero du Lac, Chapter I
+       Story page reached through the door on demo.html.
+       Features: i18n translation, editable text for translation
+       feedback, lazy-load fade-in, dialogue styling, time-based
+       theme colors.
+       Made by CAPRI la Ria
+       ============================================================ -->
+
+  <title>Young Cicero du Lac — Cass la Ria</title>
+  <meta name="robots" content="noindex, nofollow, noarchive" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="demo/assets/icons/favicon.ico" />
+  <link rel="icon" type="image/png" sizes="32x32" href="demo/assets/icons/favicon-32x32.png" />
+
+  <!-- Fonts: Cormorant Garamond (site) + Cormorant Infant (story) -->
+  <link rel="stylesheet" href="demo/css/fonts.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Infant:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="demo/css/fonts-cjk.css" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="demo/css/variables.css" />
+  <link rel="stylesheet" href="demo/css/reset.css" />
+  <link rel="stylesheet" href="demo/css/components.css" />
+  <link rel="stylesheet" href="css/editable.css?v=4" />
+
+  <style>
+    /* ============================================================
+       STORY PAGE LAYOUT
+       Centered, full-width reading experience with generous
+       whitespace and lazy-load fade-in animations.
+       ============================================================ */
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--color-bg, #1e1828);
+      color: var(--color-text, #d8c8d0);
+      font-family: 'Cormorant Infant', 'Cormorant Garamond', 'Georgia', serif;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Decorative border frame */
+    .frame {
+      position: fixed;
+      inset: var(--frame-inset, clamp(16px, 3vw, 40px));
+      border: var(--frame-width, 1px) solid var(--color-border, #382838);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ---- Story container ---- */
+    .story {
+      position: relative;
+      z-index: 1;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: clamp(80px, 12vh, 160px) clamp(24px, 6vw, 80px) clamp(60px, 10vh, 120px);
+      text-align: center;
+    }
+
+    /* ---- Translation note at top ---- */
+    .story__note {
+      font-family: 'Cormorant Garamond', 'Georgia', serif;
+      font-size: clamp(0.72rem, 1.4vw, 0.82rem);
+      font-style: italic;
+      letter-spacing: 0.06em;
+      line-height: 1.7;
+      color: var(--color-text-muted, #a898a8);
+      border: 1px solid var(--color-border, #382838);
+      padding: 1.2em 1.6em;
+      margin-bottom: clamp(3rem, 6vh, 5rem);
+      opacity: 0.85;
+      text-align: center;
+    }
+
+    .story__note-icon {
+      display: block;
+      font-size: 1.1em;
+      margin-bottom: 0.5em;
+      opacity: 0.6;
+    }
+
+    /* ---- Title ---- */
+    .story__title {
+      font-family: 'Cormorant Garamond', 'Georgia', serif;
+      font-size: clamp(2rem, 6vw, 3.8rem);
+      font-weight: 300;
+      letter-spacing: 0.15em;
+      line-height: 1.2;
+      color: var(--color-text, #d8c8d0);
+      margin: 0 0 0.3em;
+      text-transform: none;
+    }
+
+    /* ---- Chapter heading ---- */
+    .story__chapter {
+      font-family: 'Cormorant Garamond', 'Georgia', serif;
+      font-size: clamp(0.85rem, 2vw, 1.1rem);
+      font-weight: 400;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--color-text-muted, #a898a8);
+      margin: 0 0 clamp(2.5rem, 5vh, 4rem);
+    }
+
+    .story__rule {
+      width: 60px;
+      height: 1px;
+      background: var(--color-accent, #a05080);
+      margin: 1.5rem auto clamp(2.5rem, 5vh, 4rem);
+      opacity: 0.6;
+    }
+
+    /* ---- Narration paragraphs ---- */
+    .story__para {
+      font-family: 'Cormorant Infant', 'Cormorant Garamond', 'Georgia', serif;
+      font-size: clamp(1.15rem, 2.8vw, 1.45rem);
+      font-weight: 400;
+      line-height: 1.85;
+      letter-spacing: 0.02em;
+      color: var(--color-text, #d8c8d0);
+      margin: 0 0 1.6em;
+      text-align: center;
+    }
+
+    /* ---- Dialogue styling ----
+       Dialogue is intentionally not in quotation marks.
+       We differentiate it with italic style and a subtle
+       color shift toward the accent color. */
+    .story__dialogue {
+      font-family: 'Cormorant Infant', 'Cormorant Garamond', 'Georgia', serif;
+      font-size: clamp(1.15rem, 2.8vw, 1.45rem);
+      font-weight: 400;
+      font-style: italic;
+      line-height: 1.85;
+      letter-spacing: 0.02em;
+      color: var(--color-accent-soft, #b86898);
+      margin: 0 0 1.6em;
+      text-align: center;
+    }
+
+    /* ---- Mystical voice (The Lake's inner speech) ----
+       Spaced-out letters, larger, with a slow pulse animation */
+    .story__mystical {
+      font-family: 'Cormorant Infant', 'Cormorant Garamond', 'Georgia', serif;
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 300;
+      font-style: italic;
+      letter-spacing: 0.35em;
+      line-height: 1.6;
+      color: var(--color-accent, #a05080);
+      margin: 0.8em 0 1.2em;
+      text-align: center;
+      animation: mysticalPulse 4s ease-in-out infinite;
+    }
+
+    @keyframes mysticalPulse {
+      0%, 100% { opacity: 0.85; }
+      50% { opacity: 1; }
+    }
+
+    /* ---- Skip count lines (One skip, Two skips...) ---- */
+    .story__skip {
+      font-family: 'Cormorant Infant', 'Cormorant Garamond', 'Georgia', serif;
+      font-size: clamp(1rem, 2.4vw, 1.25rem);
+      font-weight: 300;
+      font-style: italic;
+      letter-spacing: 0.12em;
+      line-height: 1.6;
+      color: var(--color-text-muted, #a898a8);
+      margin: 0 0 0.6em;
+      text-align: center;
+    }
+
+    /* ---- Section break (visual page break) ---- */
+    .story__break {
+      width: 40px;
+      height: 1px;
+      background: var(--color-border, #382838);
+      margin: clamp(2rem, 4vh, 3.5rem) auto;
+      opacity: 0.5;
+    }
+
+    /* ---- Back link ---- */
+    .story__back {
+      display: inline-block;
+      font-family: 'Cormorant Garamond', 'Georgia', serif;
+      font-size: 0.82rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--color-accent-soft, #b86898);
+      text-decoration: none;
+      border: 1px solid var(--color-border-light, #382838);
+      padding: 0.6em 1.8em;
+      margin-top: clamp(2rem, 4vh, 3.5rem);
+      transition: border-color 0.3s ease, color 0.3s ease;
+    }
+
+    .story__back:hover {
+      border-color: var(--color-accent, #a05080);
+      color: var(--color-text, #d8c8d0);
+    }
+
+    /* ============================================================
+       LAZY-LOAD FADE-IN
+       Elements start invisible and slide up when they enter
+       the viewport via IntersectionObserver.
+       ============================================================ */
+
+    .fade-in {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+    }
+
+    .fade-in.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Stagger delay for consecutive elements */
+    .fade-in.is-visible:nth-child(even) {
+      transition-delay: 0.05s;
+    }
+
+    /* ============================================================
+       RESPONSIVE
+       ============================================================ */
+
+    @media (max-width: 600px) {
+      .story {
+        padding: clamp(60px, 10vh, 100px) clamp(20px, 5vw, 40px) clamp(40px, 8vh, 80px);
+      }
+
+      .story__para,
+      .story__dialogue {
+        font-size: clamp(1.05rem, 4.2vw, 1.3rem);
+        line-height: 1.75;
+      }
+
+      .story__mystical {
+        font-size: clamp(1.3rem, 5.5vw, 2rem);
+        letter-spacing: 0.25em;
+      }
+
+      .story__skip {
+        font-size: clamp(0.95rem, 3.8vw, 1.15rem);
+      }
+
+      .story__note {
+        padding: 1em 1.2em;
+        font-size: clamp(0.68rem, 2.8vw, 0.78rem);
+      }
+    }
+
+    /* Large screens: wider reading column */
+    @media (min-width: 1200px) {
+      .story {
+        max-width: 800px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Decorative border frame -->
+  <div class="frame" aria-hidden="true"></div>
+
+  <!-- Language switcher -->
+  <div class="lang-switcher" role="navigation" aria-label="Language">
+    <button
+      class="lang-switcher__trigger"
+      aria-expanded="false"
+      aria-haspopup="listbox"
+      aria-label="Change language"
+      id="lang-trigger"
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="10" />
+        <path d="M2 12h20" />
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+      </svg>
+    </button>
+    <ul class="lang-switcher__list" role="listbox" id="lang-list" aria-label="Select language">
+      <li role="option"><button class="lang-switcher__option" data-lang="en" aria-current="true">English</button></li>
+      <li role="option"><button class="lang-switcher__option" data-lang="es">Español</button></li>
+      <li role="option"><button class="lang-switcher__option" data-lang="fr">Français</button></li>
+      <li role="option"><button class="lang-switcher__option" data-lang="id">Bahasa Indonesia</button></li>
+      <li role="option"><button class="lang-switcher__option" data-lang="ja">日本語</button></li>
+      <li role="option"><button class="lang-switcher__option" data-lang="ko">한국어</button></li>
+      <li role="option"><button class="lang-switcher__option" data-lang="pt">Português</button></li>
+      <li role="option"><button class="lang-switcher__option" data-lang="zh">中文</button></li>
+    </ul>
+  </div>
+
+  <main class="story" id="main-content">
+
+    <!-- Translation & editing note -->
+    <div class="story__note fade-in" data-i18n="cicero-note">
+      <span class="story__note-icon" aria-hidden="true">&#9998;</span>
+      This story is available in 8 languages. Switch languages using the globe icon. Double-click (or tap the pencil on mobile) any paragraph to suggest a better translation.
+    </div>
+
+    <!-- Title -->
+    <h1 class="story__title fade-in" data-i18n="cicero-title" data-editable="cicero-title" data-editable-multiline>Young Cicero du Lac</h1>
+
+    <!-- Chapter -->
+    <p class="story__chapter fade-in" data-i18n="cicero-chapter" data-editable="cicero-chapter">Chapter I</p>
+
+    <div class="story__rule fade-in" aria-hidden="true"></div>
+
+    <!-- ============================================================
+         STORY TEXT
+         Classes:
+           .story__para      = narration
+           .story__dialogue  = spoken dialogue (italic, accent color)
+           .story__mystical  = The Lake's mystical voice (large, pulsing)
+           .story__skip      = skip count lines (smaller, muted)
+         ============================================================ -->
+
+    <p class="story__para fade-in" data-i18n="cicero-p1" data-editable="cicero-p1" data-editable-multiline>Once, a young man would walk the length of the Lake daily outside his home.</p>
+
+    <p class="story__para fade-in" data-i18n="cicero-p2" data-editable="cicero-p2" data-editable-multiline>This Lake was, and very much still is, one of the Great Lakes, and the young man was often told of the gifts one could receive&mdash;</p>
+
+    <p class="story__para fade-in" data-i18n="cicero-p3" data-editable="cicero-p3" data-editable-multiline>the very house he called home was given to his grandfather by the Lake many, many years before even this story could be told. A gruff, middle-aged man limping across the sands; war had left his grandfather bereft of even the most modest of shelters. He fell face-first into the pebbled sands, too tired to even wish for an end to his aching. Seeing this, the Lake gathered dark clouds and wept, and, in its pity for the old veteran, receded its waters and produced an old house it had once reclaimed&mdash;</p>
+
+    <p class="story__para fade-in" data-i18n="cicero-p4" data-editable="cicero-p4" data-editable-multiline>yet his gift had yet to come.</p>
+
+    <div class="story__break fade-in" aria-hidden="true"></div>
+
+    <p class="story__para fade-in" data-i18n="cicero-p5" data-editable="cicero-p5" data-editable-multiline>The young man combed the shore.</p>
+
+    <p class="story__para fade-in" data-i18n="cicero-p6" data-editable="cicero-p6" data-editable-multiline>He picked up a stone, examined it, buffed it, examined it&mdash;unsatisfactory.</p>
+
+    <p class="story__dialogue fade-in" data-i18n="cicero-p7" data-editable="cicero-p7" data-editable-multiline>The Lake will want a gift in exchange for mine, he thought. What would a lake, a Great Lake, want?</p>
+
+    <p class="story__para fade-in" data-i18n="cicero-p8" data-editable="cicero-p8" data-editable-multiline>He placed the stone back where he had found it.</p>
+
+    <p class="story__dialogue fade-in" data-i18n="cicero-p9" data-editable="cicero-p9" data-editable-multiline>The young man paused and thought, What will I even ask the Lake for? What do I want more than anything?</p>
+
+    <p class="story__para fade-in" data-i18n="cicero-p10" data-editable="cicero-p10" data-editable-multiline>He picked up a stone, examined it, buffed it, examined it&mdash;decent.</p>
+
+    <p class="story__para fade-in" data-i18n="cicero-p11" data-editable="cicero-p11" data-editable-multiline>He tossed the stone toward the Lake.</p>
+
+    <div class="story__break fade-in" aria-hidden="true"></div>
+
+    <!-- Skip sequence 1 -->
+    <p class="story__skip fade-in" data-i18n="cicero-skip1" data-editable="cicero-skip1">One skip . . .</p>
+    <p class="story__skip fade-in" data-i18n="cicero-skip2" data-editable="cicero-skip2">Two skips . . .</p>
+    <p class="story__skip fade-in" data-i18n="cicero-skip3" data-editable="cicero-skip3">Sink!</p>
+
+    <div class="story__break fade-in" aria-hidden="true"></div>
+
+    <p class="story__para fade-in" data-i18n="cicero-p12" data-editable="cicero-p12" data-editable-multiline>The young man had done better than a measly two skips before. A childhood friend had recounted another boy from a neighboring town that had reached 17 skips, and, as no one challenged the claim, the young man had kept the gossip as gospel in his mind with only minor lingering doubts surrounding it. Would someone really lie about such a feat?</p>
+
+    <p class="story__para fade-in" data-i18n="cicero-p13" data-editable="cicero-p13" data-editable-multiline>Another stone caught his eye.</p>
+
+    <p class="story__para fade-in" data-i18n="cicero-p14" data-editable="cicero-p14" data-editable-multiline>The young man picked it up, examined it, buffed it, examined it&ndash;exceptional!</p>
+
+    <p class="story__para fade-in" data-i18n="cicero-p15" data-editable="cicero-p15" data-editable-multiline>He tossed the stone toward the lake.</p>
+
+    <div class="story__break fade-in" aria-hidden="true"></div>
+
+    <!-- Skip sequence 2 -->
+    <p class="story__skip fade-in" data-i18n="cicero-skip4" data-editable="cicero-skip4">One skip . . .</p>
+    <p class="story__skip fade-in" data-i18n="cicero-skip5" data-editable="cicero-skip5">Two skips . . .</p>
+    <p class="story__skip fade-in" data-i18n="cicero-skip6" data-editable="cicero-skip6">Three skips . . .</p>
+    <p class="story__skip fade-in" data-i18n="cicero-skip7" data-editable="cicero-skip7">Four skips . . ?</p>
+    <p class="story__skip fade-in" data-i18n="cicero-skip8" data-editable="cicero-skip8">Five skips . . !</p>
+    <p class="story__skip fade-in" data-i18n="cicero-skip9" data-editable="cicero-skip9">Six skips . . .</p>
+    <p class="story__skip fade-in" data-i18n="cicero-skip10" data-editable="cicero-skip10">Seven skips . . .</p>
+    <p class="story__skip fade-in" data-i18n="cicero-skip11" data-editable="cicero-skip11">Eight skips . . .</p>
+    <p class="story__skip fade-in" data-i18n="cicero-skip12" data-editable="cicero-skip12">Nine skips . . ? !</p>
+    <p class="story__skip fade-in" data-i18n="cicero-skip13" data-editable="cicero-skip13">Swat!</p>
+
+    <div class="story__break fade-in" aria-hidden="true"></div>
+
+    <p class="story__para fade-in" data-i18n="cicero-p16" data-editable="cicero-p16" data-editable-multiline>The young man stood awestruck.</p>
+
+    <p class="story__para fade-in" data-i18n="cicero-p17" data-editable="cicero-p17" data-editable-multiline>Swat? How could that be? Of the countless days he had combed the shore of this Lake in search of Perfect Stones to toss toward the waters, he had neither so nearly broken into the territory of double digits nor had he seen an attempt at such feats rejected by the water itself.</p>
+
+    <div class="story__break fade-in" aria-hidden="true"></div>
+
+    <p class="story__dialogue fade-in" data-i18n="cicero-p18" data-editable="cicero-p18" data-editable-multiline>Ow!</p>
+
+    <p class="story__para fade-in" data-i18n="cicero-p19" data-editable="cicero-p19" data-editable-multiline>The waters of the Lake began to recede, and an uncanny figure&mdash;vaguely shaped as a person who had seldom compared their form to the true thing&mdash;began to form and rise.</p>
+
+    <p class="story__dialogue fade-in" data-i18n="cicero-p20" data-editable="cicero-p20" data-editable-multiline>Ow~!, it said again, a strange and watery voice sounding like a person submerged, you have been coming here and throwing rocks at me for years! What did I do to you? Have we even met before?</p>
+
+    <p class="story__para fade-in" data-i18n="cicero-p21" data-editable="cicero-p21" data-editable-multiline>The young man struggled to find words, but he eventually replied with a hesitant apology to the figure.</p>
+
+    <p class="story__para fade-in" data-i18n="cicero-p22" data-editable="cicero-p22" data-editable-multiline>He couldn&rsquo;t really tell where he should look. The eyeless, faceless, water-being seemed to be looking right at him, he thought.</p>
+
+    <p class="story__dialogue fade-in" data-i18n="cicero-p23" data-editable="cicero-p23" data-editable-multiline>Don&rsquo;t you have friends to bother? You look far too old to be skipping stones! You look. . .</p>
+
+    <p class="story__para fade-in" data-i18n="cicero-p24" data-editable="cicero-p24" data-editable-multiline>There seemed to be a moment of, at the young man&rsquo;s best guess, recognition. The figure began its approach.</p>
+
+    <p class="story__dialogue fade-in" data-i18n="cicero-p25" data-editable="cicero-p25" data-editable-multiline>Ah, I see it now, The Lake said, you have the same face as that sad, old one I loved so much! Ha~! You must be in great need of something, you must. I see so in those eyes of yours. Out with it now!</p>
+
+    <p class="story__dialogue fade-in" data-i18n="cicero-p26" data-editable="cicero-p26" data-editable-multiline>The young man stammered, You are&hellip; the Great Lake?</p>
+
+    <p class="story__dialogue fade-in" data-i18n="cicero-p27" data-editable="cicero-p27" data-editable-multiline>The Lake replied, I am&hellip; the Great Lake! Do I need to work on my delivery to make that more obvious?</p>
+
+    <p class="story__para fade-in" data-i18n="cicero-p28" data-editable="cicero-p28" data-editable-multiline>If the young man had had a more vivid, violent way with his words he would have cursed all fates for having brought the wish-granting Great Lake to him at this current moment, in which he struggled to put his desires to word.</p>
+
+    <p class="story__dialogue fade-in" data-i18n="cicero-p29" data-editable="cicero-p29" data-editable-multiline>Ah, the Lake sighed and extended a watery limb to the young man&rsquo;s face, that face, that expression that speaks with overwhelming passion! Ha~! Speak not, gentle heart, I know exactly what you need.</p>
+
+    <p class="story__dialogue fade-in" data-i18n="cicero-p30" data-editable="cicero-p30" data-editable-multiline>You do?</p>
+
+    <p class="story__dialogue fade-in" data-i18n="cicero-p31" data-editable="cicero-p31" data-editable-multiline>Mhm~! Lean in close to me.</p>
+
+    <div class="story__break fade-in" aria-hidden="true"></div>
+
+    <p class="story__para fade-in" data-i18n="cicero-p32" data-editable="cicero-p32" data-editable-multiline>The Lake bowed its head slightly, and the young man, after slight hesitation, did the same.</p>
+
+    <p class="story__para fade-in" data-i18n="cicero-p33" data-editable="cicero-p33" data-editable-multiline>The waters of the Lake darted forward with great speed and enveloped the young man&rsquo;s head.</p>
+
+    <p class="story__para fade-in" data-i18n="cicero-p34" data-editable="cicero-p34" data-editable-multiline>Blind and breathless, he struggled in vain to escape the waters&rsquo; vise grip. Amidst the roars of crashing waves and swirling timpani, the resonant voice of the Lake filled his mind:</p>
+
+    <div class="story__break fade-in" aria-hidden="true"></div>
+
+    <!-- The Lake's mystical voice sequence -->
+    <p class="story__dialogue fade-in" data-i18n="cicero-p35" data-editable="cicero-p35">Be still&hellip;</p>
+
+    <p class="story__para fade-in" data-i18n="cicero-p36" data-editable="cicero-p36" data-editable-multiline>He stilled himself.</p>
+
+    <p class="story__dialogue fade-in" data-i18n="cicero-p37" data-editable="cicero-p37">Open your eyes&hellip;</p>
+
+    <p class="story__para fade-in" data-i18n="cicero-p38" data-editable="cicero-p38" data-editable-multiline>He opened his eyes, and could feel the water pouring inside, wrapping gently around each eyeball.</p>
+
+    <p class="story__dialogue fade-in" data-i18n="cicero-p39" data-editable="cicero-p39">What you need is&hellip;</p>
+
+    <p class="story__mystical fade-in" data-i18n="cicero-m1" data-editable="cicero-m1">V I S I O N . . .</p>
+
+    <p class="story__dialogue fade-in" data-i18n="cicero-p40" data-editable="cicero-p40">What you need is&hellip;</p>
+
+    <p class="story__dialogue fade-in" data-i18n="cicero-p41" data-editable="cicero-p41">Something that will ease your&hellip;</p>
+
+    <p class="story__mystical fade-in" data-i18n="cicero-m2" data-editable="cicero-m2">L O N E L I N E S S . . .</p>
+
+    <p class="story__dialogue fade-in" data-i18n="cicero-p42" data-editable="cicero-p42">My special gift to you&hellip;</p>
+
+    <p class="story__dialogue fade-in" data-i18n="cicero-p43" data-editable="cicero-p43" data-editable-multiline>Pretty eyes, the same color I get to wear when my favorite sky is out&hellip;</p>
+
+    <p class="story__dialogue fade-in" data-i18n="cicero-p44" data-editable="cicero-p44">Pretty eyes, for you to find&hellip;</p>
+
+    <p class="story__mystical fade-in" data-i18n="cicero-m3" data-editable="cicero-m3">L O V E. . .</p>
+
+    <div class="story__break fade-in" aria-hidden="true"></div>
+
+    <p class="story__para fade-in" data-i18n="cicero-p45" data-editable="cicero-p45" data-editable-multiline>The young man sat up. He had been lying in the same spot for a couple of hours, perhaps. He stood, aching, and brushed off the sand and pebbles that had begun to impress their shapes into his back and shoulders. He tiredly headed toward his home.</p>
+
+    <p class="story__dialogue fade-in" data-i18n="cicero-p46" data-editable="cicero-p46" data-editable-multiline>Surely that wasn&rsquo;t a dream, he thought to himself. He looked toward the sky and saw the setting sun surrounded by an expected entourage of dark reds, oranges, yellows, purples, and the encroaching navy blues. He stepped toward the water.</p>
+
+    <p class="story__para fade-in" data-i18n="cicero-p47" data-editable="cicero-p47" data-editable-multiline>The last few rays of light from the retreating sun had left one last bright patch for the day. The young man walked ankle-deep into the water to get a look at his reflection before retiring for the evening.</p>
+
+    <p class="story__dialogue fade-in" data-i18n="cicero-p48" data-editable="cicero-p48">My eyes, he mouthed.</p>
+
+    <p class="story__para fade-in" data-i18n="cicero-p49" data-editable="cicero-p49" data-editable-multiline>They had changed. No longer the typical brown, but now a light gray that warned of impending rain. His encounter wasn&rsquo;t a dream!</p>
+
+    <p class="story__dialogue fade-in" data-i18n="cicero-p50" data-editable="cicero-p50" data-editable-multiline>These new eyes, this vision&hellip; will help me find love? Love is all I&rsquo;ll need?</p>
+
+    <p class="story__para fade-in" data-i18n="cicero-p51" data-editable="cicero-p51" data-editable-multiline>He was truly happy at that moment. So happy he joyously wept all his tears into the Lake.</p>
+
+    <p class="story__para fade-in" data-i18n="cicero-p52" data-editable="cicero-p52" data-editable-multiline>He returned home for the night. The young man had no further need of stone skipping nor his daily walks. He resolved himself to go into town the next day, and there, he hoped, he would lay his new eyes upon his love.</p>
+
+    <div class="story__break fade-in" aria-hidden="true"></div>
+
+    <!-- Return link -->
+    <a href="demo.html" class="story__back fade-in" data-i18n="cicero-back">Return</a>
+
+  </main>
+
+  <!-- Site credit (hidden from visual display, visible to crawlers and view-source) -->
+  <!-- Site designed and built by Cass Aleria -->
+
+  <!-- Scripts -->
+  <script src="demo/js/i18n.js?v=4"></script>
+  <script src="demo/js/main.js"></script>
+  <script src="demo/js/time-theme.js"></script>
+  <script src="js/editable.js?v=4"></script>
+
+  <!-- Cicero page script: lazy-load fade-in + i18n bridge for editable module -->
+  <script>
+  (function () {
+    'use strict';
+
+    /* ============================================================
+       1. LAZY-LOAD FADE-IN (IntersectionObserver)
+       Elements with .fade-in get .is-visible when they enter
+       the viewport. Threshold 0.15 = 15% visible triggers it.
+       ============================================================ */
+
+    if ('IntersectionObserver' in window) {
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, {
+        threshold: 0.15,
+        rootMargin: '0px 0px -40px 0px'
+      });
+
+      document.querySelectorAll('.fade-in').forEach(function (el) {
+        observer.observe(el);
+      });
+    } else {
+      /* Fallback: show everything immediately */
+      document.querySelectorAll('.fade-in').forEach(function (el) {
+        el.classList.add('is-visible');
+      });
+    }
+
+    /* ============================================================
+       2. I18N BRIDGE FOR EDITABLE MODULE
+       The editable module (js/editable.js) expects window.I18N
+       in the format { lang: { key: text } }. The demo i18n system
+       uses window.i18n.translations in the same format, so we
+       create a compatibility shim.
+       ============================================================ */
+
+    if (window.i18n && window.i18n.translations) {
+      window.I18N = window.i18n.translations;
+    }
+
+    /* ============================================================
+       3. LANGUAGE SWITCH HOOK
+       When the language changes, update all story paragraphs
+       and notify the editable module.
+       ============================================================ */
+
+    var origSwitchLanguage = window.switchLanguage;
+
+    /* Patch into the existing switchLanguage if exposed globally,
+       otherwise use a MutationObserver on html[lang] */
+    var lastLang = document.documentElement.lang || 'en';
+
+    var langObserver = new MutationObserver(function (mutations) {
+      mutations.forEach(function (m) {
+        if (m.attributeName === 'lang') {
+          var newLang = document.documentElement.lang;
+          if (newLang !== lastLang) {
+            lastLang = newLang;
+            onLanguageChanged(newLang);
+          }
+        }
+      });
+    });
+
+    langObserver.observe(document.documentElement, { attributes: true });
+
+    function onLanguageChanged(lang) {
+      var translations = (window.i18n && window.i18n.translations) || {};
+      var langData = translations[lang] || translations['en'] || {};
+
+      /* Update all [data-i18n] elements that aren't user-modified */
+      document.querySelectorAll('[data-i18n]').forEach(function (el) {
+        var key = el.getAttribute('data-i18n');
+        if (langData[key] !== undefined) {
+          el.setAttribute('data-original-text', langData[key]);
+          if (!el.classList.contains('is-modified')) {
+            el.textContent = langData[key];
+          }
+        }
+      });
+
+      /* Notify the editable module */
+      if (window.EditableModule && window.EditableModule.onLanguageChange) {
+        window.EditableModule.onLanguageChange();
+      }
+    }
+
+    /* ============================================================
+       4. SCROLL TO TOP ON LOAD
+       ============================================================ */
+
+    window.scrollTo(0, 0);
+
+  })();
+  </script>
+
+</body>
+</html>
