@@ -185,21 +185,25 @@
      This prevents iOS/Android from rendering color emoji that ignore fillStyle.
      Ref: https://jeffkreeftmeijer.com/unicode-variation-selectors/
      Ref: https://character.construction/emoji-vs-text                          */
-  var SUN_CORE   = ['\u2739','\u2609\uFE0E','\u25C9','\u25CF','\u2299','\u25CE','\u2600\uFE0E'];
-  var SUN_INNER  = ['\u2726','\u2727','\u2736','\u2737','\u2738','\u274B','\u274A','\u2749','\u273A','\u273B','\u273C','\u203B','\u2055'];
-  var SUN_RAYS   = ['/','\\','|','\u2014','\u2571','\u2572','\u2502','\u2500','*','+','\u00B7','\u2022\uFE0E','\u2219'];
-  var SUN_CORONA = ['\u00B7','\u2022\uFE0E','\u2219','\u22C5','\u02D9','\u00B0','\u204E','\u2055','*','\'',',','.','`'];
-  var SUN_GLOW   = ['.',',','\'','`','\u00B7',' ','\u02D9','\u00B0'];
+  /* Medieval woodcut sun — ornate florettes, teardrop-spoked asterisks,
+     and club-spoked motifs evoke 15th-c. block-printed almanac suns.
+     Ref: Nuremberg Chronicle (1493), Hypnerotomachia Poliphili (1499).    */
+  var SUN_CORE   = ['\u2739','\u2742','\u2738','\u273A','\u2741','\u273E','\u25C9','\u2609\uFE0E','\u263C\uFE0E','\u2600\uFE0E'];
+  var SUN_INNER  = ['\u2726','\u2727','\u2736','\u274B','\u274A','\u273B','\u273C','\u273D','\u2743','\u273F','\u2740','\u2723','\u2724','\u2725','\u203B','\u2055','\u2722','\u2749','\u272F','\u2731'];
+  var SUN_RAYS   = ['/','\\','|','\u2014','\u2571','\u2572','\u2502','\u2500','\u2726','\u2727','\u2722','\u2723','\u204E','\u2217','\u00B7'];
+  var SUN_CORONA = ['\u00B7','\u2219','\u02D9','\u00B0','\u2055','\u204E','\u2727','\u2726','\u02DA','\u2218','\u22C5','\'',',','.','`'];
+  var SUN_GLOW   = ['.',',','\'','`','\u00B7',' ','\u02D9','\u00B0','\u02DA'];
 
-  /* Moon character sets — 3 concentric zones + phase-specific cores
-     VS15 appended to crescent/quarter chars that have emoji variants.       */
-  var MOON_CORE_NEW      = ['\u25CF','\u25CB','\u25C9'];
-  var MOON_CORE_CRESCENT = ['\u263D\uFE0E','\u263E\uFE0E','\u25D1','\u25D0'];
-  var MOON_CORE_QUARTER  = ['\u25D1','\u25D0','\u25D5','\u25D4'];
-  var MOON_CORE_GIBBOUS  = ['\u25D5','\u25D4','\u25CE','\u25CB'];
-  var MOON_CORE_FULL     = ['\u25CB','\u25CE','\u25EF','\u25CB','\u263D\uFE0E'];
-  var MOON_SURFACE       = ['\u2218','\u25E6','\u2299','\u229A','\u25CC','\u25CD','\u00B7','\u2219'];
-  var MOON_GLOW          = ['\u00B7','\u2022\uFE0E','\u2219','\u22C5','\u02D9','\u00B0','.',',','\'','`'];
+  /* Medieval woodcut moon — phase-aware cores with ornate circle variants,
+     stippled surface evoking engraved lunar maria, and soft scattered glow.
+     Ref: Très Riches Heures du Duc de Berry (c.1412-16), Schedel (1493).  */
+  var MOON_CORE_NEW      = ['\u25CC','\u25CB','\u25EF','\u25CE'];
+  var MOON_CORE_CRESCENT = ['\u263D\uFE0E','\u263E\uFE0E','\u25D1','\u25D0','\u25E0'];
+  var MOON_CORE_QUARTER  = ['\u25D1','\u25D0','\u25D5','\u25D4','\u25D7','\u25D6'];
+  var MOON_CORE_GIBBOUS  = ['\u25D5','\u25D4','\u25CE','\u25CB','\u25CD','\u25C9'];
+  var MOON_CORE_FULL     = ['\u25CB','\u25CE','\u25EF','\u25CC','\u25C9','\u25CD'];
+  var MOON_SURFACE       = ['\u2218','\u25E6','\u25CC','\u25CD','\u2299','\u229A','\u00B7','\u2219','\u02DA','\u00B0','\u2055','\u2727'];
+  var MOON_GLOW          = ['\u00B7','\u2219','\u02D9','\u00B0','\u02DA','\u2727','.',',','\'','`'];
 
   /* Font size multipliers (relative to SUN_CELL) */
   var SUN_SIZES  = { glow: 0.8, corona: 0.9, rays: 0.9, inner: 1.1, core: 1.4 };
@@ -3097,7 +3101,7 @@
     /* Breathing: slow noise-driven pulsation */
     var sunBreath = noise.noise2D(time * 0.03, 0.77) * 0.08 + 1.0;
     sunGlowAlpha *= sunBreath;
-    drawGlow(sunGlowR, sunColor, sunGlowPeak, sunGlowSoft, cx, cy, sunGlowAlpha);
+    /* drawGlow(sunGlowR, sunColor, sunGlowPeak, sunGlowSoft, cx, cy, sunGlowAlpha); — disabled: translucent glow circle removed per design */
 
     /* Zone 5: GLOW */
     var glowR = radius * 1.3 * glowMult;
@@ -3117,7 +3121,7 @@
       }
     }
 
-    /* Zone 4: CORONA */
+    /* Zone 4: CORONA — widened to fill the disc between inner body and glow */
     var corR = radius * 0.95 * glowMult;
     var corC = Math.ceil(corR * 2 / SUN_CELL);
     for (var gy = -corC; gy <= corC; gy++) {
@@ -3125,17 +3129,18 @@
         var px = cx + gx * SUN_CELL, py = cy + gy * SUN_CELL;
         var dx = px-cx, dy = py-cy, dist = Math.sqrt(dx*dx+dy*dy);
         var nd = dist / corR;
-        if (nd < 0.65 || nd > 0.90) continue;
-        var fade = 1.0 - (nd-0.65)/0.25;
+        if (nd < 0.45 || nd > 0.92) continue;
+        var fade = nd < 0.65 ? (nd - 0.45) / 0.20 : 1.0 - (nd - 0.65) / 0.27;
         var pulse = noise.noise2D(gx*0.5+time*0.12, gy*0.5-time*0.08) * 0.4 + 0.6;
-        var a = fade * pulse * flickerVis * 0.35;
+        var a = fade * pulse * flickerVis * 0.40;
         if (a < 0.01) continue;
         ctx.globalAlpha = a;
         drawCelestialSprite(pickCelestialChar(SUN_CORONA, gx*11+gy*17+Math.floor(time*0.4)), fsCorona, px, py, colorStr);
       }
     }
 
-    /* Zone 3: RAYS */
+    /* Zone 3: RAYS — spokes emanate outward; between-spoke gaps are filled
+       with a softer circular body to maintain a complete disc shape. */
     var rayR = radius * 0.75 * rayLenMult;
     var rayC = Math.ceil(rayR * 2 / SUN_CELL);
     var NUM_RAYS = 16, rayAngles = [];
@@ -3152,23 +3157,32 @@
           diff = Math.min(diff, Math.PI*2-diff);
           bestAlign = Math.max(bestAlign, Math.max(0, 1.0-diff/((ri%2===0)?0.18:0.10)));
         }
-        if (bestAlign < 0.1) continue;
         var radFade = 1.0-(nd-0.35)/0.35;
         var rn = noise.noise2D(gx*0.8+time*0.1, gy*0.8+time*0.06)*0.3+0.7;
-        var a = bestAlign * radFade * rn * flickerVis * coreSharp * 0.55;
-        if (a < 0.01) continue;
-        var absA = ((angle%(Math.PI*2))+Math.PI*2)%(Math.PI*2);
-        var oct = Math.floor(absA/(Math.PI/4)+0.5)%8;
-        var ch = ['\u2014','\u2572','|','\u2571','\u2014','\u2572','|','\u2571'][oct];
-        if (nd > 0.55) ch = pickCelestialChar(SUN_INNER, gx*3+gy*7+Math.floor(time*0.5));
-        var rfs = clamp(Math.round(SUN_CELL*(0.9+bestAlign*0.3)), 9, 14);
-        ctx.globalAlpha = a;
-        drawCelestialSprite(ch, rfs, px, py, colorStr);
+        if (bestAlign >= 0.1) {
+          /* On a ray spoke */
+          var a = bestAlign * radFade * rn * flickerVis * coreSharp * 0.55;
+          if (a < 0.01) continue;
+          var absA = ((angle%(Math.PI*2))+Math.PI*2)%(Math.PI*2);
+          var oct = Math.floor(absA/(Math.PI/4)+0.5)%8;
+          var ch = ['\u2014','\u2572','|','\u2571','\u2014','\u2572','|','\u2571'][oct];
+          if (nd > 0.55) ch = pickCelestialChar(SUN_INNER, gx*3+gy*7+Math.floor(time*0.5));
+          var rfs = clamp(Math.round(SUN_CELL*(0.9+bestAlign*0.3)), 9, 14);
+          ctx.globalAlpha = a;
+          drawCelestialSprite(ch, rfs, px, py, colorStr);
+        } else {
+          /* Between spokes — fill with softer INNER chars to keep disc shape */
+          var fillFade = radFade * 0.7;
+          var a = fillFade * rn * flickerVis * coreSharp * 0.30;
+          if (a < 0.01) continue;
+          ctx.globalAlpha = a;
+          drawCelestialSprite(pickCelestialChar(SUN_INNER, gx*5+gy*11+Math.floor(time*0.4)), fsInner, px, py, colorStr);
+        }
       }
     }
 
-    /* Zone 2: INNER */
-    var innR = radius * 0.40;
+    /* Zone 2: INNER — expanded radius for a solid circular body */
+    var innR = radius * 0.55;
     var innC = Math.ceil(innR * 2 / SUN_CELL);
     for (var gy = -innC; gy <= innC; gy++) {
       for (var gx = -innC; gx <= innC; gx++) {
@@ -3257,7 +3271,7 @@
     /* Breathing: slow noise-driven pulsation */
     var moonBreath = moonNoise.noise2D(time * 0.025, 1.33) * 0.06 + 1.0;
     moonGlowAlpha *= moonBreath;
-    drawGlow(moonGlowR, moonColor, moonGlowPeak, moonGlowSoft, cx, cy, moonGlowAlpha);
+    /* drawGlow(moonGlowR, moonColor, moonGlowPeak, moonGlowSoft, cx, cy, moonGlowAlpha); — disabled: translucent glow circle removed per design */
 
     /* Zone 3: GLOW */
     var glowR = radius * 1.4 * glowMult;
