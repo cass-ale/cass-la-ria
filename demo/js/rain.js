@@ -4332,6 +4332,15 @@
   var doorDissolveProgress = 0;
   var weatherFadeAlpha = 1;     /* 1 = full, fades to 0 during door animation */
 
+  /* --- KNOCK text state --- */
+  var knockTextIndex = 0;        /* 0 = none, 1/2/3 = which knock is showing */
+  var knockTextAlpha = 0;        /* opacity for current knock text */
+  var knockTextTimer = 0;        /* timestamp when current knock text appeared */
+  var bubbleVisible = true;      /* hide bubble after first knock */
+  var KNOCK_DISPLAY_MS = 500;    /* how long the 3rd knock stays visible */
+  /* Angular positions (degrees): 180=top, 90=right, 270=left */
+  var KNOCK_ANGLES = [120, 210, 180];
+
   /* Initialize luminance data */
   parseDoorLuminance();
 
@@ -4339,6 +4348,16 @@
    * Get the translated bubble text for the current language.
    * Falls back to English if the key or language is missing.
    */
+  function getKnockText() {
+    var lang = document.documentElement.lang || 'en';
+    var i18nData = window.i18n;
+    if (i18nData && i18nData.translations) {
+      var langData = i18nData.translations[lang] || i18nData.translations['en'];
+      if (langData && langData['door-knock']) return langData['door-knock'];
+    }
+    return 'KNOCK';
+  }
+
   function getBubbleText() {
     var lang = document.documentElement.lang || 'en';
     var i18nData = window.i18n;
@@ -4464,7 +4483,7 @@
     doorBaseH = doorH;
 
     /* Position: bottom-left, with padding above the frame boundary */
-    var bottomPad = isMobile ? 24 : 12;
+    var bottomPad = isMobile ? 2 : 8;
     var doorX = frameInset + 8;
     var doorY = H - frameInset - doorH - bottomPad;
     doorBaseX = doorX;
@@ -4528,7 +4547,8 @@
     var dy = doorAnimating ? doorAnimY : doorDrawY;
     var dw = doorBaseW * doorAnimScale;
     var dh = doorBaseH * doorAnimScale;
-    return cx >= dx && cx <= dx + dw && cy >= dy && cy <= dy + dh;
+    var hit = cx >= dx && cx <= dx + dw && cy >= dy && cy <= dy + dh;
+    return hit;
   }
 
   /**
@@ -4539,12 +4559,30 @@
     var now = performance.now();
     if (now - doorKnockTimer > KNOCK_TIMEOUT) {
       doorKnocks = 0;
+      knockTextIndex = 0;
+      knockTextAlpha = 0;
+      bubbleVisible = true; /* reset bubble if timeout */
     }
     doorKnocks++;
     doorKnockTimer = now;
 
+    /* Hide bubble on first knock */
+    if (doorKnocks === 1) {
+      bubbleVisible = false;
+    }
+
+    /* Show KNOCK text at the angular position for this knock */
+    knockTextIndex = doorKnocks; /* 1, 2, or 3 */
+    knockTextAlpha = 1;
+    knockTextTimer = now;
+
     if (doorKnocks >= 3) {
-      startDoorAnimation();
+      /* Delay the animation start by KNOCK_DISPLAY_MS so the 3rd KNOCK is visible */
+      setTimeout(function() {
+        knockTextIndex = 0;
+        knockTextAlpha = 0;
+        startDoorAnimation();
+      }, KNOCK_DISPLAY_MS);
     }
   }
 
@@ -4642,7 +4680,109 @@
   }
 
   /**
-   * Draw the door (and bubble) on the main canvas, handling animation states.
+   * Compute the position for KNOCK text at a given angle around the door.
+   * Angles: 180=top-center, 90=bottom-right, 270=bottom-left.
+   * Returns {x, y} in canvas coordinates, positioned outside the door.
+   */
+  function getKnockPosition(angleDeg, dX, dY, dW, dH) {
+    var rad = angleDeg * Math.PI / 180;
+    /* Door center */
+    var cx = dX + dW / 2;
+    var cy = dY + dH / 2;
+    /* Elliptical radius: half-width + padding, half-height + padding */
+    var fontSize = Math.max(10, Math.round(dH * 0.14));
+    var padX = fontSize * 2.2;  /* enough room for the text width */
+    var padY = fontSize * 1.2;  /* enough room for the text height */
+    var rx = dW / 2 + padX;
+    var ry = dH / 2 + padY;
+    /* Standard math angle: 0=right, 90=up. Our convention: 180=top.
+       Convert: math_angle = angleDeg - 90 (so 180 -> 90 = up) */
+    var mathRad = (angleDeg - 90) * Math.PI / 180;
+    var px = cx + rx * Math.cos(mathRad);
+    var py = cy - ry * Math.sin(mathRad);
+    /* Clamp to viewport so text is never cut off */
+    var textW = fontSize * 3.5;
+    var m = 8;
+    px = Math.max(m + textW / 2, Math.min(W - m - textW / 2, px));
+    py = Math.max(m + fontSize, Math.min(H - m, py));
+    return { x: px, y: py, fontSize: fontSize };
+  }
+
+  /**
+   * Draw the KNOCK text at the current knock position with a punch-stamp
+   * animation: scale overshoot → micro-shake → settle.
+   *
+   * Animation phases (total ~400ms):
+   *   0-150ms   Scale from 1.6x → 1.0x (ease-out cubic), opacity 0→1
+   *   150-350ms Decaying horizontal oscillation (3 cycles, 3px amplitude)
+   *   350-400ms Settle to rest
+   *
+   * Inspired by:
+   *   - StackOverflow: canvas shake via ctx.translate + sin + easing decay
+   *     https://stackoverflow.com/questions/28023696
+   *   - CSS-Tricks: Easing Animations in Canvas (cubic ease-out for scale)
+   *     https://css-tricks.com/easing-animations-in-canvas/
+   */
+  var KNOCK_ANIM_MS = 400; /* total punch-stamp duration */
+
+  function drawKnockText(dX, dY, dW, dH) {
+    if (knockTextIndex < 1 || knockTextIndex > 3) return;
+    if (knockTextAlpha <= 0) return;
+
+    var angle = KNOCK_ANGLES[knockTextIndex - 1];
+    var pos = getKnockPosition(angle, dX, dY, dW, dH);
+    var textColor = getCSSColor('--color-text', '#d8c8d0');
+
+    /* --- Animation progress --- */
+    var elapsed = performance.now() - knockTextTimer;
+    var t = Math.min(elapsed / KNOCK_ANIM_MS, 1); /* 0 → 1 over 400ms */
+
+    /* Scale: starts at 1.6x, eases to 1.0x with cubic ease-out */
+    var scaleOvershoot = 0.6; /* extra scale above 1.0 */
+    var easeOut = 1 - Math.pow(1 - Math.min(t / 0.375, 1), 3); /* cubic ease-out over first 150ms (0.375 of 400) */
+    var scale = 1 + scaleOvershoot * (1 - easeOut);
+
+    /* Opacity: quick fade-in over first 100ms */
+    var alpha = Math.min(elapsed / 100, 1) * knockTextAlpha;
+
+    /* Micro-shake: decaying sine oscillation after the pop phase */
+    var shakeX = 0;
+    var rotationDeg = 0;
+    if (t > 0.25) {
+      var shakeT = (t - 0.25) / 0.75; /* 0→1 over remaining 300ms */
+      var decay = 1 - shakeT; /* linear decay */
+      decay = decay * decay; /* quadratic decay for faster falloff */
+      var shakeAmp = Math.max(2, pos.fontSize * 0.15); /* proportional to font size */
+      shakeX = Math.sin(shakeT * Math.PI * 6) * shakeAmp * decay; /* 3 full cycles */
+      rotationDeg = Math.sin(shakeT * Math.PI * 4) * 3 * decay; /* subtle rotation wobble */
+    }
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    /* Translate to text position, apply shake offset */
+    ctx.translate(pos.x + shakeX, pos.y);
+
+    /* Apply rotation */
+    if (rotationDeg !== 0) {
+      ctx.rotate(rotationDeg * Math.PI / 180);
+    }
+
+    /* Apply scale from center */
+    if (scale !== 1) {
+      ctx.scale(scale, scale);
+    }
+
+    ctx.font = 'bold ' + pos.fontSize + 'px "Cormorant Garamond", Georgia, serif';
+    ctx.fillStyle = textColor;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(getKnockText(), 0, 0); /* draw at origin since we translated */
+    ctx.restore();
+  }
+
+  /**
+   * Draw the door (and bubble/knock text) on the main canvas, handling animation states.
    */
   function drawDoor() {
     if (!doorOffscreen) return;
@@ -4655,8 +4795,8 @@
       /* Static door at base position */
       ctx.drawImage(doorOffscreen, doorDrawX, doorDrawY);
 
-      /* Draw chat bubble above the door with gentle floating bob */
-      if (bubbleOffscreen) {
+      /* Draw chat bubble above the door with gentle floating bob (only if visible) */
+      if (bubbleOffscreen && bubbleVisible) {
         var floatAmp = Math.max(2, doorBaseH * 0.02); /* ~2-3 px */
         var floatY = Math.sin(bubbleFloatPhase) * floatAmp;
         var bx = doorDrawX + doorBaseW * 0.1;
@@ -4666,26 +4806,14 @@
         ctx.globalAlpha = 1;
       }
 
+      /* Draw KNOCK text if active */
+      drawKnockText(doorDrawX, doorDrawY, doorBaseW, doorBaseH);
+
     } else if (doorAnimPhase === 'moving') {
       /* Moving + scaling to center */
       var sw = doorBaseW * doorAnimScale;
       var sh = doorBaseH * doorAnimScale;
       ctx.drawImage(doorOffscreen, doorAnimX, doorAnimY, sw, sh);
-
-      /* Fade out bubble during move (keep float bob) */
-      if (bubbleOffscreen) {
-        var fadeOut = 1 - doorAnimProgress;
-        if (fadeOut > 0) {
-          var floatAmp2 = Math.max(2, doorBaseH * 0.02);
-          var floatY2 = Math.sin(bubbleFloatPhase) * floatAmp2 * fadeOut;
-          ctx.globalAlpha = fadeOut * 0.9;
-          var bx2 = doorAnimX + sw * 0.1;
-          var by2 = doorAnimY - bubbleH * doorAnimScale - 6 + floatY2;
-          ctx.drawImage(bubbleOffscreen, bx2, by2,
-            bubbleW * doorAnimScale, bubbleH * doorAnimScale);
-          ctx.globalAlpha = 1;
-        }
-      }
 
     } else if (doorAnimPhase === 'dissolving') {
       /* Top-to-bottom dissolve at center */
