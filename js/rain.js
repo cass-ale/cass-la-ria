@@ -999,6 +999,31 @@
    *  Ref: unicode.org/emoji/charts/emoji-variants.html (v17.0)              */
   var EMOJI_SAFE_FONT = '"Apple Symbols", "Segoe UI Symbol", "Noto Sans Symbols 2", "DejaVu Sans", "Cormorant Garamond", Georgia, serif';
 
+  /* ---- CJK-aware font string for canvas text ----
+     Canvas fillText() doesn't inherit CSS :lang() rules, so we must
+     explicitly prepend the correct CJK font family when the page is
+     in a CJK language. Maps to the same Google Fonts loaded lazily
+     by main.js → loadCJKFont().
+     Ref: developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/font */
+  var CJK_CANVAS_FONTS = {
+    ja: '"Shippori Mincho", ',
+    ko: '"Noto Serif KR", ',
+    zh: '"Noto Serif SC", '
+  };
+
+  /**
+   * Return a canvas-ready font string with CJK prefix if needed.
+   * @param {string} weight  e.g. 'italic', 'bold', 'italic bold', ''
+   * @param {number} size    font size in px
+   * @returns {string}       e.g. 'italic 14px "Shippori Mincho", "Cormorant Garamond", Georgia, serif'
+   */
+  function canvasFont(weight, size) {
+    var lang = document.documentElement.lang || 'en';
+    var cjk = CJK_CANVAS_FONTS[lang] || '';
+    var prefix = weight ? weight + ' ' : '';
+    return prefix + size + 'px ' + cjk + '"Cormorant Garamond", Georgia, serif';
+  }
+
   /* ============================================================
      6. NOISE HELPERS
      ============================================================ */
@@ -4414,7 +4439,7 @@
     /* Measure text */
     var measureCanvas = document.createElement('canvas');
     var mctx = measureCanvas.getContext('2d');
-    mctx.font = fontSize + 'px "Cormorant Garamond", Georgia, serif';
+    mctx.font = canvasFont('', fontSize);
     var metrics = mctx.measureText(text);
 
     bubbleW = Math.ceil(metrics.width + padding * 2);
@@ -4453,7 +4478,7 @@
 
     /* Draw text */
     bctx.fillStyle = textColor;
-    bctx.font = 'italic ' + fontSize + 'px "Cormorant Garamond", Georgia, serif';
+    bctx.font = canvasFont('italic', fontSize);
     bctx.textAlign = 'center';
     bctx.textBaseline = 'middle';
     bctx.fillText(text, bubbleW / 2, bodyH / 2);
@@ -4557,6 +4582,13 @@
 
     /* Also render the chat bubble */
     renderBubble(doorW);
+
+    /* CJK fonts may still be loading; re-render once ready */
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(function() {
+        if (doorBaseW > 0) renderBubble(doorBaseW);
+      });
+    }
   }
 
   /**
@@ -4797,7 +4829,7 @@
       ctx.scale(scale, scale);
     }
 
-    ctx.font = 'bold ' + pos.fontSize + 'px "Cormorant Garamond", Georgia, serif';
+    ctx.font = canvasFont('bold', pos.fontSize);
     ctx.fillStyle = textColor;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -4954,6 +4986,14 @@
     /* Re-render bubble when language changes */
     if (curLang !== bubbleLastLang && doorBaseW > 0) {
       renderBubble(doorBaseW);
+      /* CJK fonts load asynchronously via Google Fonts; re-render
+         the bubble once they're ready so glyphs aren't missing.
+         Ref: developer.mozilla.org/en-US/docs/Web/API/FontFaceSet/ready */
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(function() {
+          if (doorBaseW > 0) renderBubble(doorBaseW);
+        });
+      }
     }
     if (doorDirty) {
       renderDoor();
