@@ -447,7 +447,7 @@ const translations = {
     'cicero-skip7': '四跳ね . . ？',
     'cicero-skip8': '五跳ね . . ！',
     'cicero-skip9': '六跳ね . . .',
-    'cicero-title': '若き日のCicero du Lac'
+    'cicero-title': 'Young Cicero du Lac'
   },
 
   // Korean (KO) - Han/Jeong: Emotional weight, warmth, oral quality
