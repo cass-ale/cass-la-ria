@@ -31,6 +31,11 @@
   --color-border-light:#d4b3be;       /* lighter rose for hover       */
   --color-weather:     #2a1f2d;       /* weather elements (= text)    */
 
+  /* ---- Chapter II Character Colours ---- */
+  --color-elder:       #6b4226;       /* older boy — warm umber        */
+  --color-younger:     #7a6a8a;       /* younger boy — soft lavender    */
+  --color-woman:       #a35d6f;       /* the woman — warm rose          */
+
   /* ---- Typography ---- */
   --font-display:  'Cormorant Garamond', 'Georgia', serif;
   --font-body:     'Cormorant Garamond', 'Georgia', serif;

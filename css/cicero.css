@@ -428,3 +428,44 @@ html[lang="en"] [data-editable]::after {
     max-width: 800px;
   }
 }
+
+/* ============================================================
+   CHAPTER II — New Character Dialogue Styles
+   Three new speakers join the story, each with a distinct
+   visual voice that contrasts with the existing two.
+   ============================================================ */
+
+/* The older boy — brash, confident, natural leader.
+   Slightly bolder than narration, warm earth tone,
+   no italic (direct, unfiltered speech). */
+.story__dialogue--elder {
+  font-weight: 500;
+  font-style: normal;
+  color: var(--color-elder, #6b4226);
+}
+
+/* The younger boy — timid, scrawny, follows his brother.
+   Lighter weight, smaller size, softer presence.
+   Italic like the man but even more subdued. */
+.story__dialogue--younger {
+  font-weight: 300;
+  font-style: italic;
+  font-size: clamp(1.05rem, 2.6vw, 1.35rem);
+  color: var(--color-younger, #7a6a8a);
+}
+
+/* The woman/wife/mother — warm, determined, maternal.
+   Medium weight, distinct warm rose tone,
+   italic to match the story's feminine grace. */
+.story__dialogue--woman {
+  font-weight: 400;
+  font-style: italic;
+  color: var(--color-woman, #a35d6f);
+}
+
+/* ---- Chapter II responsive adjustments ---- */
+@media (max-width: 600px) {
+  .story__dialogue--younger {
+    font-size: clamp(0.95rem, 3.8vw, 1.2rem);
+  }
+}
