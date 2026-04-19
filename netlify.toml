@@ -57,15 +57,17 @@
     #     +s8TkJ... = 404.html lang-aware title observer
     #     C2bqz1... = cicero.html FOUC guard removal + rAF
     #     GjEV8W... = offline.html retry button handler
+    #     OvGvX8... = cicero.html .is-source-lang class (English hover fix)
     #   style-src hashes:
     #     hE4OtW... = 404.html entrance animations
     #     HviAbv... = offline.html self-contained styles
     #     B3RmA7... = FOUC guard inline style (all pages)
+    #     Qz41X5... = cicero.html editable-en-guard (English hover fix)
     # To regenerate hashes after editing inline content:
     #   python3 -c "import re,hashlib,base64;h=open('FILE.html').read();[print('sha256-'+base64.b64encode(hashlib.sha256(m.group(2).encode()).digest()).decode()) for m in re.finditer(r'<(script|style)([^>]*)>(.*?)</\\1>',h,re.DOTALL) if 'src=' not in m.group(2) and m.group(3).strip()]"
     # manifest-src 'self' allows the PWA manifest.json to be loaded.
     # worker-src 'self' allows the service worker (sw.js) to be registered.
-    Content-Security-Policy = "default-src 'none'; script-src 'self' 'sha256-2se67jeqDptuJ195uK1pyIOBC3ZcE4wuRKJrJ4/wB9E=' 'sha256-/svvI+4i8kD0pOJWlVlwsInwtDyBT+g7hoNJNOXW+Rw=' 'sha256-bg6I/zRKDoyBUam4jG6U3ClToOei979pjOum6mmbNBQ=' 'sha256-iVb8AVt2owJg0CoWHKfy6GhTAdPrjJwgu/8X+maGXts=' 'sha256-+s8TkJ5Z99YKtAMyghilURDLxZ25lIBbzWE8Buam4sA=' 'sha256-C2bqz1qy1p7Y/5iYznaHnkxstHtTAhYbPpT9T4StdYs=' 'sha256-GjEV8Wo4B6ytLaM4dCeuWuE4AoK511PUbU+DWjdyjJQ='; style-src 'self' https://fonts.googleapis.com 'sha256-hE4OtW+OL886wD+ApYbWgyTXd5mLqZzBWuQXSN6ucPE=' 'sha256-HviAbv7MGUpFm8iX9mjlQ4c3i+KhzCQxk0MpI8/Cqjs=' 'sha256-B3RmA7pKFzSG13mhQcZHuHWgE+slkmcZti0ek8GFSHI='; font-src 'self' https://fonts.gstatic.com; img-src 'self'; connect-src 'self' https://script.google.com; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
+    Content-Security-Policy = "default-src 'none'; script-src 'self' 'sha256-2se67jeqDptuJ195uK1pyIOBC3ZcE4wuRKJrJ4/wB9E=' 'sha256-/svvI+4i8kD0pOJWlVlwsInwtDyBT+g7hoNJNOXW+Rw=' 'sha256-bg6I/zRKDoyBUam4jG6U3ClToOei979pjOum6mmbNBQ=' 'sha256-iVb8AVt2owJg0CoWHKfy6GhTAdPrjJwgu/8X+maGXts=' 'sha256-+s8TkJ5Z99YKtAMyghilURDLxZ25lIBbzWE8Buam4sA=' 'sha256-C2bqz1qy1p7Y/5iYznaHnkxstHtTAhYbPpT9T4StdYs=' 'sha256-GjEV8Wo4B6ytLaM4dCeuWuE4AoK511PUbU+DWjdyjJQ=' 'sha256-OvGvX889EZJB4u81dZzatGgM2eOdg+oOMeAko0IUkV4='; style-src 'self' https://fonts.googleapis.com 'sha256-hE4OtW+OL886wD+ApYbWgyTXd5mLqZzBWuQXSN6ucPE=' 'sha256-HviAbv7MGUpFm8iX9mjlQ4c3i+KhzCQxk0MpI8/Cqjs=' 'sha256-B3RmA7pKFzSG13mhQcZHuHWgE+slkmcZti0ek8GFSHI=' 'sha256-Qz41X5liHWcxgiwhNwCA3XiKmiwjTkifaEzayXFHoBU='; font-src 'self' https://fonts.gstatic.com; img-src 'self'; connect-src 'self' https://script.google.com; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
 
     # -- Disable browser features we don't use --
     # interest-cohort=() blocks Google FLoC tracking.
