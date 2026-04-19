@@ -304,12 +304,15 @@
     result.border      = lerpColor(prevColors.border,      nextColors.border,      tBg);
     result.borderLight = lerpColor(prevColors.borderLight, nextColors.borderLight, tBg);
 
-    /* Text-group properties: text, textMuted, accent, accentSoft, weather */
+    /* Text-group properties: text, textMuted, accent, accentSoft, weather, character colors */
     result.text        = lerpColor(prevColors.text,        nextColors.text,        tText);
     result.textMuted   = lerpColor(prevColors.textMuted,   nextColors.textMuted,   tText);
     result.accent      = lerpColor(prevColors.accent,      nextColors.accent,      tText);
     result.accentSoft  = lerpColor(prevColors.accentSoft,  nextColors.accentSoft,  tText);
     result.weather     = lerpColor(prevColors.weather,     nextColors.weather,     tText);
+    result.elder       = lerpColor(prevColors.elder,       nextColors.elder,       tText);
+    result.younger     = lerpColor(prevColors.younger,     nextColors.younger,     tText);
+    result.woman       = lerpColor(prevColors.woman,       nextColors.woman,       tText);
 
     /* Safety check: if contrast still drops below 3:1, force text to
        whichever endpoint has better contrast against current bg */
