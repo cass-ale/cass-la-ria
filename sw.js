@@ -1,45 +1,39 @@
 /* ============================================================
-   Service Worker — Cass la Ria (v10 — cache reset)
+   Service Worker — Cass la Ria (v11 — permanent no-op)
 
-   TEMPORARY: This version clears ALL cached data and forces
-   every open tab to reload with fresh content from the network.
+   This is a permanent no-op service worker. It has NO fetch
+   handler, so all requests pass straight through to the browser's
+   normal HTTP stack (Netlify CDN → browser cache → network).
 
-   Why: Previous service worker versions cached stale JS files
-   (notably rain.js without the door feature) on users' devices.
-   Even though the SW was updated to network-first (v9), users
-   who had the old cache-first SW (v8) were still being served
-   stale sub-resources on their first visit after the update.
-   The updatefound → activated → reload cycle in index.html
-   was not reliably firing on all browsers (especially iOS Safari)
-   because the installing worker's statechange to 'activated'
-   can be missed if the page navigates or the event fires before
-   the listener is attached.
+   Why a no-op instead of removing sw.js entirely:
+   - If sw.js is removed, users who have an old SW installed
+     will never get an update (the browser checks the same URL)
+   - A no-op at the same URL replaces any old SW and then
+     gets out of the way — Chrome's recommended approach
+   - Reference: https://developer.chrome.com/docs/workbox/remove-buggy-service-workers
 
-   This "nuke" SW solves the chicken-and-egg problem by:
-   1. Installing immediately (skipWaiting)
-   2. On activate: deleting ALL caches, claiming all clients,
-      and navigating every open tab to reload
-   3. On fetch: passing everything straight to the network
-      (no caching at all) so users always get fresh content
+   Cache strategy is now handled entirely by HTTP headers:
+   - HTML: max-age=0, must-revalidate (always fresh)
+   - CSS/JS: max-age=31536000, immutable (content-hashed filenames)
+   - Assets: max-age=31536000, immutable (stable filenames)
+   - Reference: https://jakearchibald.com/2016/caching-best-practices/
 
-   After all users have picked up this version (24h max per
-   the browser spec), a future deploy can restore caching.
-
-   Reference: https://medium.com/@nekrtemplar/self-destroying-serviceworker-73d62921d717
-   Reference: https://github.com/NekR/self-destroying-sw
-   Reference: https://web.dev/articles/service-worker-lifecycle
-   Reference: https://stackoverflow.com/questions/59725245
+   History:
+   - v1–v8: Cache-first PWA (caused stale content issues)
+   - v9: Network-first (transition)
+   - v10: Nuke (cleared all caches, forced reload)
+   - v11: Permanent no-op (this version — final)
    ============================================================ */
 
-// Install — skip waiting immediately so this SW activates ASAP
-self.addEventListener('install', function(event) {
+// Install — skip waiting so this replaces any old SW immediately
+self.addEventListener('install', function() {
   self.skipWaiting();
 });
 
-// Activate — nuke all caches, claim all clients, force reload
+// Activate — claim all clients and clear any leftover caches
 self.addEventListener('activate', function(event) {
   event.waitUntil(
-    // Step 1: Delete every cache
+    // Clean up any caches left by previous SW versions
     caches.keys()
       .then(function(cacheNames) {
         return Promise.all(
@@ -48,26 +42,14 @@ self.addEventListener('activate', function(event) {
           })
         );
       })
-      // Step 2: Take control of all open tabs
       .then(function() {
+        // Take control of all open tabs
         return self.clients.claim();
-      })
-      // Step 3: Force every open tab to reload with fresh content
-      .then(function() {
-        return self.clients.matchAll({ type: 'window' });
-      })
-      .then(function(clients) {
-        clients.forEach(function(client) {
-          client.navigate(client.url);
-        });
       })
   );
 });
 
-// Fetch — pure network pass-through, no caching whatsoever.
-// Every request goes straight to the server. If offline,
-// the browser's native error page will show (acceptable
-// trade-off for guaranteed freshness during the reset period).
-self.addEventListener('fetch', function(event) {
-  event.respondWith(fetch(event.request));
-});
+// NO fetch handler — all requests use the browser's normal
+// HTTP stack. This is intentional. The browser will use its
+// HTTP cache (controlled by Cache-Control headers) and fall
+// through to the network as needed.

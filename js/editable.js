@@ -133,6 +133,41 @@
     return getCurrentLang() === 'en';
   }
 
+  /* ---- English hover suppression ----
+     When the language is English, we completely remove the
+     data-editable attribute so that editable.css hover styles
+     (dashed underline, tooltip) cannot match. The key is stashed
+     in data-editable-key so it can be restored when switching
+     to a non-English language.
+     This is more robust than CSS-only suppression because it
+     eliminates the selector match at the DOM level, avoiding
+     any specificity or cache issues.
+     Reference: https://css-tricks.com/a-complete-guide-to-data-attributes/ */
+
+  function suppressEditableForEnglish() {
+    document.querySelectorAll('[data-editable]').forEach(function (el) {
+      var key = el.getAttribute('data-editable');
+      el.setAttribute('data-editable-key', key);
+      el.removeAttribute('data-editable');
+      el.removeAttribute('data-edit-hint');
+      el.removeAttribute('data-editable-multiline');
+    });
+  }
+
+  function restoreEditableForTranslation(lang) {
+    document.querySelectorAll('[data-editable-key]').forEach(function (el) {
+      var key = el.getAttribute('data-editable-key');
+      el.setAttribute('data-editable', key);
+      /* Restore multiline if the element originally had it
+         (we detect this from the HTML — multiline elements have
+         longer text content, typically paragraphs) */
+      if (el.hasAttribute('data-editable-multiline-stash')) {
+        el.setAttribute('data-editable-multiline', '');
+      }
+      el.setAttribute('data-edit-hint', HINT_I18N[lang] || DOUBLE_CLICK_HINT);
+    });
+  }
+
   /* ---- State ---- */
   var activeElement = null;
   var originalText = '';
@@ -779,6 +814,11 @@
         el.setAttribute('data-original-text', el.textContent.trim());
       }
 
+      // Stash multiline flag before potential suppression
+      if (el.hasAttribute('data-editable-multiline')) {
+        el.setAttribute('data-editable-multiline-stash', '');
+      }
+
       // Set the hover hint (desktop only — hidden by CSS on touch)
       // No hint when viewing English source text
       if (lang === 'en') {
@@ -813,6 +853,13 @@
         showPencilButton(el);
       });
     });
+
+    /* Suppress editable hover affordance when viewing English source.
+       This removes data-editable entirely so editable.css selectors
+       cannot match — no dashed underline, no tooltip, no cursor change. */
+    if (lang === 'en') {
+      suppressEditableForEnglish();
+    }
 
     // Desktop: keyboard handlers
     document.addEventListener('keydown', function (e) {
@@ -861,7 +908,7 @@
     document.addEventListener('touchend', function (e) {
       if (!activePencilBtn) return;
       if (activePencilBtn.contains(e.target)) return;
-      if (e.target.closest && e.target.closest('[data-editable]')) return;
+      if (e.target.closest && (e.target.closest('[data-editable]') || e.target.closest('[data-editable-key]'))) return;
       removePencilButton();
     });
 
@@ -879,11 +926,21 @@
    * Re-initialize after a language switch.
    */
   function onLanguageChange() {
-    var elements = document.querySelectorAll('[data-editable]');
     var lang = getCurrentLang();
 
+    /* When switching TO English, suppress editable affordance.
+       When switching FROM English, restore it first. */
+    if (lang === 'en') {
+      suppressEditableForEnglish();
+    } else {
+      restoreEditableForTranslation(lang);
+    }
+
+    /* Query both selectors to cover elements in either state */
+    var elements = document.querySelectorAll('[data-editable], [data-editable-key]');
+
     elements.forEach(function (el) {
-      var key = el.getAttribute('data-editable');
+      var key = el.getAttribute('data-editable') || el.getAttribute('data-editable-key');
 
       // No hint when viewing English source text
       if (lang === 'en') {
@@ -958,7 +1015,7 @@
       localStorage.removeItem(k);
     });
 
-    document.querySelectorAll('[data-editable]').forEach(function (el) {
+    document.querySelectorAll('[data-editable], [data-editable-key]').forEach(function (el) {
       var origText = getOriginalText(el);
       if (origText) el.textContent = origText;
       el.classList.remove('is-modified');

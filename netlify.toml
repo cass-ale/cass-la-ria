@@ -1,14 +1,21 @@
 # ============================================================
 # Netlify Configuration — Cass la Ria
-# Plain static site (HTML/CSS/JS). No build step.
+#
+# Build: bash build.sh produces dist/ with content-hashed
+# CSS/JS filenames (e.g., styles.a1b2c3d4.css). This follows
+# the industry-standard "immutable content + long max-age"
+# pattern for optimal caching and guaranteed freshness.
+#
+# Reference: https://jakearchibald.com/2016/caching-best-practices/
+# Reference: https://web.dev/articles/use-long-term-caching
 #
 # Security headers follow OWASP HTTP Headers Cheat Sheet:
 # https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html
 # ============================================================
 
 [build]
-  # No build command — the site is pre-built static files.
-  publish = "."
+  command = "bash build.sh"
+  publish = "dist"
 
 # ============================================================
 # GLOBAL SECURITY & PRIVACY HEADERS
@@ -73,18 +80,22 @@
 # ============================================================
 # CACHE CONTROL
 #
-# Strategy: Cache with revalidation for CSS/JS since this is a
-# plain static site without filename hashing. The browser will
-# cache files but check with the server (via ETag/If-None-Match)
-# on each visit. This gives fast loads (304 Not Modified) while
-# ensuring updates are always picked up.
+# Strategy: Content-hashed filenames for CSS/JS (Pattern 1 from
+# Jake Archibald's caching best practices). Each CSS/JS file
+# has an 8-char MD5 hash in its filename that changes when the
+# content changes. This means:
 #
-# "immutable" is only safe with content-hashed filenames
-# (e.g., main.a1b2c3.css) — without hashing, it causes stale
-# cache issues that are impossible to fix without user action.
+#   - Changed files → new URL → browser fetches fresh copy
+#   - Unchanged files → same URL → browser uses cache (zero network)
+#   - No manual version bumping required
+#   - No race conditions between old HTML + new CSS/JS
 #
-# Reference: web.dev/http-cache
-# Reference: jakearchibald.com/2016/caching-best-practices
+# HTML uses Pattern 2: always revalidate with the server.
+# The browser sends If-None-Match (ETag) and gets a fast 304
+# if nothing changed, or the new content if it did.
+#
+# Reference: https://jakearchibald.com/2016/caching-best-practices/
+# Reference: https://web.dev/articles/use-long-term-caching
 # ============================================================
 
 # Service Worker — MUST never be cached by the CDN or browser.
@@ -99,17 +110,20 @@
   [headers.values]
     Cache-Control = "no-cache, no-store, must-revalidate"
 
-# CSS files — always revalidate (cache busted via ?v= query strings)
+# CSS files — immutable, long cache (content-hashed filenames)
+# Since filenames contain a content hash (e.g., styles.a1b2c3d4.css),
+# the URL changes whenever the content changes. Safe to cache forever.
 [[headers]]
   for = "/css/*"
   [headers.values]
-    Cache-Control = "public, max-age=0, must-revalidate"
+    Cache-Control = "public, max-age=31536000, immutable"
 
-# JavaScript files — always revalidate (cache busted via ?v= query strings)
+# JavaScript files — immutable, long cache (content-hashed filenames)
+# Same as CSS: filenames contain content hashes, safe to cache forever.
 [[headers]]
   for = "/js/*"
   [headers.values]
-    Cache-Control = "public, max-age=0, must-revalidate"
+    Cache-Control = "public, max-age=31536000, immutable"
 
 # Assets (fonts, images, icons) — long cache OK, these rarely change
 # and are referenced by stable filenames
@@ -118,7 +132,12 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# HTML — always revalidate
+# HTML — always revalidate (Pattern 2)
+# The browser checks with the server on every visit. If the HTML
+# hasn't changed, it gets a fast 304 Not Modified. If it has,
+# the new HTML references new content-hashed CSS/JS URLs, so
+# the browser fetches those fresh too. This is the atomic
+# update mechanism.
 [[headers]]
   for = "/*.html"
   [headers.values]
@@ -128,6 +147,23 @@
   for = "/"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
+
+# Manifest, robots, sitemap — mutable metadata files.
+# These should always revalidate since they may change between deploys.
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/robots.txt"
+  [headers.values]
+    Cache-Control = "public, max-age=3600, must-revalidate"
+
+[[headers]]
+  for = "/sitemap.xml"
+  [headers.values]
+    Cache-Control = "public, max-age=3600, must-revalidate"
 
 # ============================================================
 # POST PROCESSING
