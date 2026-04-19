@@ -2236,12 +2236,20 @@
       umbrellaEl.style.top = mouseY + 'px';
 
       /* Hide custom cursor over clickable elements so the default pointer shows */
-      if (isClickable(e.target)) {
+      var overDoor = doorEnabled && isDoorHit(e.clientX, e.clientY);
+      if (isClickable(e.target) || overDoor) {
         umbrellaEl.classList.remove('visible');
         document.body.classList.remove('rain-active');
+        /* Show pointer hand when hovering over the door */
+        if (overDoor) {
+          document.body.style.cursor = 'pointer';
+        } else {
+          document.body.style.cursor = '';
+        }
       } else {
         umbrellaEl.classList.add('visible');
         document.body.classList.add('rain-active');
+        document.body.style.cursor = '';
       }
     }
   }
