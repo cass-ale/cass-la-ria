@@ -398,12 +398,66 @@
   }
 
   /* ============================================================
-     5. INITIALISATION
+     5. LANGUAGE TOOLTIP (homepage only)
+     Shows a floating hint above the globe on the user's first
+     visit per session. Uses sessionStorage so it only appears
+     once — navigating away and returning won't re-trigger it.
+     Float animation is CSS-driven (~3s cycle) to match the
+     door bubble's 2.1 rad/s phase in rain.js.
+     ============================================================ */
+
+  function setupLangTooltip() {
+    var tooltip = document.getElementById('lang-tooltip');
+    if (!tooltip) return;
+
+    /* Only show on the homepage (index.html or root /) */
+    var path = window.location.pathname;
+    var isHome = path === '/' || path === '/index.html' || path.endsWith('/index.html');
+    if (!isHome) return;
+
+    /* Check if already shown this session */
+    var key = 'cass-la-ria-tooltip-shown';
+    try {
+      if (sessionStorage.getItem(key)) return;
+    } catch (e) {
+      /* sessionStorage may be blocked */
+    }
+
+    /* Mark as shown immediately */
+    try {
+      sessionStorage.setItem(key, '1');
+    } catch (e) { /* ignore */ }
+
+    /* Delay appearance slightly so the page settles first */
+    setTimeout(function () {
+      tooltip.classList.add('lang-tooltip--visible');
+
+      /* Auto-dismiss after 2.5 seconds */
+      setTimeout(function () {
+        tooltip.classList.remove('lang-tooltip--visible');
+        tooltip.classList.add('lang-tooltip--fade-out');
+      }, 2500);
+    }, 800);
+
+    /* Also dismiss if user clicks the globe (they got the hint) */
+    var trigger = document.getElementById('lang-trigger');
+    if (trigger) {
+      trigger.addEventListener('click', function dismissTooltip() {
+        tooltip.classList.remove('lang-tooltip--visible');
+        tooltip.classList.add('lang-tooltip--fade-out');
+        trigger.removeEventListener('click', dismissTooltip);
+      });
+    }
+  }
+
+  /* ============================================================
+     6. INITIALISATION
      ============================================================ */
 
   document.addEventListener('DOMContentLoaded', function () {
     setupDeepLinks();
     setupMailtoFallback();
     setupLanguageSwitcher();
+    setupLangTooltip();
   });
 })();

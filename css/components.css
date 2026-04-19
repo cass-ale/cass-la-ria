@@ -439,3 +439,118 @@
     padding: 5px 12px;
   }
 }
+
+/* ============================================================
+   LANGUAGE TOOLTIP
+   A small speech-bubble hint that appears above the globe on
+   the first visit to the homepage. Floats in sync with the
+   door's chat bubble (~3s cycle, 2.1 rad/s).
+   Disappears after 2.5 seconds, never reappears once dismissed.
+   Theme-aware: uses CSS custom properties for all colors.
+   ============================================================ */
+
+.lang-tooltip {
+  position: fixed;
+  /* Positioned above the globe: globe is at bottom + frame-inset + 12px,
+     globe height is 34px, so tooltip sits above that */
+  bottom: calc(var(--frame-inset) + 12px + 34px + 12px);
+  right: calc(var(--frame-inset) + 12px);
+  z-index: 49;
+
+  /* Hidden by default — JS adds .lang-tooltip--visible */
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(4px);
+
+  transition:
+    opacity 0.6s var(--ease-out),
+    visibility 0.6s var(--ease-out),
+    transform 0.6s var(--ease-out);
+}
+
+.lang-tooltip--visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  /* Float animation: ~3s cycle (2.1 rad/s → period ≈ 2π/2.1 ≈ 2.99s)
+     Amplitude ~3px, matching the door bubble */
+  animation: lang-tooltip-float 3s ease-in-out infinite;
+}
+
+.lang-tooltip--fade-out {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+}
+
+@keyframes lang-tooltip-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.lang-tooltip__text {
+  display: block;
+  position: relative;
+  font-family: var(--font-display);
+  font-size: 0.6875rem;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+
+  background: color-mix(in srgb, var(--color-bg) 80%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 5px 12px;
+
+  transition:
+    color 2s ease,
+    background-color 2s ease,
+    border-color 2s ease;
+}
+
+/* Small tail pointing down toward the globe */
+.lang-tooltip__text::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  right: 12px;
+  width: 8px;
+  height: 8px;
+  background: color-mix(in srgb, var(--color-bg) 80%, transparent);
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  transform: rotate(45deg);
+  transition:
+    background-color 2s ease,
+    border-color 2s ease;
+}
+
+/* ---- Responsive ---- */
+
+@media (min-width: 768px) {
+  .lang-tooltip {
+    bottom: calc(var(--frame-inset) + 12px + 36px + 12px);
+  }
+
+  .lang-tooltip__text {
+    font-size: 0.75rem;
+    padding: 6px 14px;
+  }
+}
+
+@media (max-width: 374px) {
+  .lang-tooltip {
+    bottom: calc(var(--frame-inset) + 6px + 30px + 10px);
+    right: calc(var(--frame-inset) + 6px);
+  }
+
+  .lang-tooltip__text {
+    font-size: 0.625rem;
+    padding: 4px 10px;
+  }
+}

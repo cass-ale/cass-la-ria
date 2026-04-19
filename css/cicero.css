@@ -350,24 +350,128 @@ html[lang="en"] [data-editable]::after {
   transition: background-color 2s ease;
 }
 
-/* ---- Back link ---- */
-.story__back {
-  display: inline-block;
-  font-family: 'Cormorant Garamond', 'Georgia', serif;
-  font-size: 0.82rem;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--color-accent-soft, #a34d78);
+/* ---- Return door ---- */
+.story__door {
+  display: block;
+  width: clamp(100px, 25vw, 180px);
+  margin: clamp(2rem, 4vh, 3.5rem) auto 0;
   text-decoration: none;
-  border: 1px solid var(--color-border-light, #d4b3be);
-  padding: 0.6em 1.8em;
-  margin-top: clamp(2rem, 4vh, 3.5rem);
-  transition: border-color 2s ease, color 2s ease;
+  cursor: pointer;
+  transition: transform 0.3s ease-out, opacity 0.3s ease-out;
 }
 
-.story__back:hover {
-  border-color: var(--color-accent, #8b3a62);
-  color: var(--color-text, #2a1f2d);
+.story__door canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.story__door:hover {
+  transform: scale(1.05);
+}
+
+.story__door:active {
+  transform: scale(0.97);
+  opacity: 0.85;
+}
+
+/* ============================================================
+   SCROLL-TO-TOP BUTTON
+   Circular button above the language globe. Hidden by default,
+   fades in after the user scrolls past 2× the viewport height.
+   Matches the globe trigger's exact dimensions and visual style.
+   ============================================================ */
+
+.scroll-top {
+  position: fixed;
+  bottom: calc(var(--frame-inset, 14px) + 12px + 34px + 10px);
+  right: calc(var(--frame-inset, 14px) + 12px);
+  z-index: 50;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  margin: 0;
+
+  background: color-mix(in srgb, var(--color-bg) 60%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  color: var(--color-text-muted);
+  cursor: pointer;
+
+  /* Hidden by default */
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(8px);
+
+  transition:
+    opacity 0.35s var(--ease-out, ease-out),
+    visibility 0.35s var(--ease-out, ease-out),
+    transform 0.35s var(--ease-out, ease-out),
+    color var(--duration, 0.3s) var(--ease-out, ease-out),
+    border-color var(--duration, 0.3s) var(--ease-out, ease-out),
+    background-color var(--duration, 0.3s) var(--ease-out, ease-out);
+}
+
+.scroll-top.is-visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.scroll-top:hover,
+.scroll-top:focus-visible {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+  background-color: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  transform: scale(1.08);
+}
+
+.scroll-top:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-accent);
+}
+
+.scroll-top svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* Desktop: match globe sizing */
+@media (min-width: 768px) {
+  .scroll-top {
+    width: 36px;
+    height: 36px;
+    bottom: calc(var(--frame-inset, 14px) + 12px + 36px + 10px);
+  }
+
+  .scroll-top svg {
+    width: 17px;
+    height: 17px;
+  }
+}
+
+/* Small phones: match globe sizing */
+@media (max-width: 374px) {
+  .scroll-top {
+    width: 30px;
+    height: 30px;
+    bottom: calc(var(--frame-inset, 14px) + 6px + 30px + 8px);
+    right: calc(var(--frame-inset, 14px) + 6px);
+  }
+
+  .scroll-top svg {
+    width: 14px;
+    height: 14px;
+  }
 }
 
 /* ============================================================

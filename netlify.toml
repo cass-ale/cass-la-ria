@@ -188,6 +188,23 @@
   compress = true
 
 # ============================================================
+# REDIRECTS
+# Redirect old .html URLs to clean paths for SEO and consistency.
+# 301 = permanent redirect (browsers and search engines cache it).
+# ============================================================
+[[redirects]]
+  from = "/cicero.html"
+  to = "/cicero"
+  status = 301
+  force = true
+
+# Also ensure /cicero (the pretty URL) gets the same cache headers as HTML
+[[headers]]
+  for = "/cicero"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# ============================================================
 # CUSTOM ERROR PAGES
 # Netlify automatically serves 404.html for any path that
 # doesn't resolve to a static file.

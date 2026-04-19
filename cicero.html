@@ -58,7 +58,7 @@
   <!-- Navbar -->
   <nav class="navbar" role="navigation" aria-label="Site navigation">
     <div class="navbar__left">
-      <a href="index.html" class="navbar__icon" aria-label="Home">
+      <a href="/" class="navbar__icon" aria-label="Home">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
           <polyline points="9 22 9 12 15 12 15 22"/>
@@ -66,7 +66,7 @@
       </a>
     </div>
     <div class="navbar__center">
-      <a href="index.html" class="navbar__brand">Cass la Ria</a>
+      <a href="/" class="navbar__brand">Cass la Ria</a>
     </div>
     <div class="navbar__right">
       <a href="https://www.youtube.com/@casslaria" target="_blank" rel="noopener noreferrer" class="navbar__icon" aria-label="YouTube">
@@ -80,6 +80,13 @@
       </a>
     </div>
   </nav>
+
+  <!-- Scroll-to-top button (appears after 2× viewport scroll) -->
+  <button class="scroll-top" id="scroll-top" aria-label="Scroll to top" title="Scroll to top">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <polyline points="18 15 12 9 6 15"/>
+    </svg>
+  </button>
 
   <!-- Language switcher -->
   <div class="lang-switcher" role="navigation" aria-label="Language">
@@ -423,8 +430,10 @@
 
     <div class="story__break fade-in" aria-hidden="true"></div>
 
-    <!-- Return link -->
-    <a href="index.html" class="story__back fade-in" data-i18n="cicero-back">Return</a>
+    <!-- Return door -->
+    <a href="/" class="story__door fade-in" id="return-door" aria-label="Return home">
+      <canvas id="return-door-canvas" aria-hidden="true"></canvas>
+    </a>
 
   </main>
 
@@ -437,6 +446,7 @@
   <!-- time-theme.js moved to <head> for FOUC prevention -->
   <script src="js/editable.js?v=5"></script>
   <script src="js/cicero.js?v=1"></script>
+  <script src="js/story-door.js?v=1"></script>
 
 </body>
 </html>

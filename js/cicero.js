@@ -92,7 +92,30 @@
   }
 
   /* ============================================================
-     4. SCROLL TO TOP ON LOAD
+     4. SCROLL-TO-TOP BUTTON
+     Shows after the user scrolls past 2× the viewport height.
+     Smooth-scrolls back to the top when clicked.
+     ============================================================ */
+
+  var scrollBtn = document.getElementById('scroll-top');
+  if (scrollBtn) {
+    var scrollThreshold = window.innerHeight * 2;
+
+    window.addEventListener('scroll', function () {
+      if (window.scrollY >= scrollThreshold) {
+        scrollBtn.classList.add('is-visible');
+      } else {
+        scrollBtn.classList.remove('is-visible');
+      }
+    }, { passive: true });
+
+    scrollBtn.addEventListener('click', function () {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+
+  /* ============================================================
+     5. SCROLL TO TOP ON LOAD
      ============================================================ */
 
   window.scrollTo(0, 0);
