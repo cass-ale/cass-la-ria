@@ -27,6 +27,31 @@
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Infant:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/fonts-cjk.css?v=2" />
 
+  <!-- English hover suppression — MUST load before any external CSS.
+       Prevents the dashed-underline / tooltip flash on first paint in
+       Edge/Windows and other browsers that render a frame before JS runs.
+       Uses both lang-attribute and class-based selectors for maximum
+       cross-browser reliability (Edge has known issues with attribute
+       selectors not updating after JS changes — SO #44723246).
+       Reference: https://stackoverflow.com/q/44723246 -->
+  <style id="editable-en-guard">
+    html[lang="en"] [data-editable],
+    html.is-source-lang [data-editable]{cursor:default!important;border-bottom-color:transparent!important;border-bottom-style:none!important}
+    html[lang="en"] [data-editable]:hover,
+    html.is-source-lang [data-editable]:hover{border-bottom-color:transparent!important}
+    html[lang="en"] [data-editable]::after,
+    html.is-source-lang [data-editable]::after{display:none!important;content:none!important}
+  </style>
+  <script>
+    /* Add .is-source-lang class synchronously so the CSS guard above
+       matches immediately, even before external stylesheets load.
+       This class is managed by editable.js on language switches. */
+    (function(){
+      var h=document.documentElement;
+      if((h.lang||'en')==='en') h.classList.add('is-source-lang');
+    })();
+  </script>
+
   <!-- Styles -->
   <link rel="stylesheet" href="css/variables.css?v=5" />
   <link rel="stylesheet" href="css/reset.css?v=4" />

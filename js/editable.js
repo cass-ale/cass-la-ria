@@ -145,6 +145,10 @@
      Reference: https://css-tricks.com/a-complete-guide-to-data-attributes/ */
 
   function suppressEditableForEnglish() {
+    /* Add class-based CSS guard (Edge-safe, no attribute-selector issues).
+       Reference: https://stackoverflow.com/q/44723246 */
+    document.documentElement.classList.add('is-source-lang');
+
     document.querySelectorAll('[data-editable]').forEach(function (el) {
       var key = el.getAttribute('data-editable');
       el.setAttribute('data-editable-key', key);
@@ -155,6 +159,9 @@
   }
 
   function restoreEditableForTranslation(lang) {
+    /* Remove class-based CSS guard so hover styles apply again */
+    document.documentElement.classList.remove('is-source-lang');
+
     document.querySelectorAll('[data-editable-key]').forEach(function (el) {
       var key = el.getAttribute('data-editable-key');
       el.setAttribute('data-editable', key);
@@ -856,10 +863,23 @@
 
     /* Suppress editable hover affordance when viewing English source.
        This removes data-editable entirely so editable.css selectors
-       cannot match — no dashed underline, no tooltip, no cursor change. */
+       cannot match — no dashed underline, no tooltip, no cursor change.
+       Belt-and-suspenders: re-suppress after current task queue clears
+       (catches race conditions with other DOMContentLoaded handlers)
+       and again on window load (catches late-running scripts).
+       Reference: https://github.com/whatwg/dom/issues/520 */
     if (lang === 'en') {
       suppressEditableForEnglish();
+      requestAnimationFrame(function () {
+        if (getCurrentLang() === 'en') suppressEditableForEnglish();
+      });
     }
+
+    /* Final safety net: re-check on window load in case any script
+       between DOMContentLoaded and load re-adds data-editable. */
+    window.addEventListener('load', function () {
+      if (getCurrentLang() === 'en') suppressEditableForEnglish();
+    });
 
     // Desktop: keyboard handlers
     document.addEventListener('keydown', function (e) {

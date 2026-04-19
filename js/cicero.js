@@ -63,6 +63,18 @@
         if (newLang !== lastLang) {
           lastLang = newLang;
           onLanguageChanged(newLang);
+        } else if (newLang === 'en') {
+          /* Safety net: even if lang didn't change, ensure the
+             is-source-lang class and attribute suppression are
+             still in place. MutationObserver fires on every
+             setAttribute call regardless of value change
+             (WHATWG DOM spec — github.com/whatwg/dom/issues/520).
+             This catches Edge race conditions where switchLanguage()
+             re-sets lang='en' and triggers a style recalculation. */
+          document.documentElement.classList.add('is-source-lang');
+          if (window.EditableModule && window.EditableModule.onLanguageChange) {
+            window.EditableModule.onLanguageChange();
+          }
         }
       }
     });
