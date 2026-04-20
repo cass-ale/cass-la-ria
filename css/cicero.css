@@ -573,3 +573,162 @@ html[lang="en"] [data-editable]::after {
     font-size: clamp(0.95rem, 3.8vw, 1.2rem);
   }
 }
+
+/* ============================================================
+   CHAPTER III — Young Cicero du Lac (adult) & THE END
+   Characters: Young Cicero du Lac, the Lake (reuses --lake).
+
+   Cicero is the child born at the end of Chapter II — the
+   boy the Lake delivered from the mother's womb, the one
+   whose birth was an "unforeseen complication" (a boy, not
+   the daughter the mother expected). He is the Lake's
+   chosen, born of its waters, carrying gray eyes as his
+   birthright. In Chapter III he returns to the Lake as a
+   young man — grounded, self-assured, speaking with natural
+   AAVE cadence, carrying the weight of a difficult childhood
+   but having found his own voice and released his hatred.
+
+   His color is a deep slate teal — the color of lake water
+   under an overcast sky, the gray of the eyes the Lake gave
+   his grandfather. It is entirely his own: not the muted
+   purple of the hesitant young man (Ch I), not the earth
+   tone of the brash older brother (Ch II), not the rose of
+   the mother. He is water-born, and his color says so.
+   ============================================================ */
+
+/* Young Cicero du Lac — water-born, grounded, self-assured.
+   Medium-bold weight, normal style (not italic — he speaks
+   with conviction, not hesitation). Slightly larger than
+   base dialogue to give his voice its earned presence. */
+.story__dialogue--cicero {
+  font-weight: 500;
+  font-style: normal;
+  font-size: clamp(1.18rem, 2.9vw, 1.48rem);
+  color: var(--color-cicero, #406068);
+}
+
+/* Cicero narration-mixed lines: dialogue that flows into
+   narration within the same paragraph. Uses Cicero's color
+   but italic to signal the narrator's voice blending in. */
+.story__dialogue--cicero-narration {
+  font-weight: 400;
+  font-style: italic;
+  color: var(--color-cicero, #406068);
+}
+
+/* ---- Text message styling ----
+   The story's emotional climax: Cicero texts his mother.
+   These messages bridge the fairy-tale world and the modern
+   world — the ancient Lake has receded, and what remains is
+   a young man and his phone, reaching out to the woman who
+   raised him. The styling should feel intimate, modern, and
+   tender — a quiet exhale after the mythic naming ceremony.
+
+   Cicero's message: slate teal (his color), left-aligned
+   bubble with a soft glow, like a phone screen in twilight.
+   Mother's reply: warm rose (her color from Ch II), right-
+   aligned, completing the visual call-and-response. */
+
+/* Shared text message base */
+.story__text-msg {
+  font-family: 'Cormorant Infant', 'Cormorant Garamond', 'Georgia', serif;
+  font-size: clamp(1.05rem, 2.5vw, 1.3rem);
+  font-weight: 400;
+  font-style: italic;
+  letter-spacing: 0.03em;
+  line-height: 1.7;
+  color: var(--color-cicero, #406068);
+  margin: 0;
+  padding: 0.8em 1.4em;
+  max-width: 80%;
+  border-radius: 1.2em 1.2em 1.2em 0.2em;
+  background: color-mix(in srgb, var(--color-cicero, #406068) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-cicero, #406068) 15%, transparent);
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--color-cicero, #406068) 8%, transparent);
+  display: inline-block;
+  position: relative;
+  transition: color 2s ease, background 2s ease, border-color 2s ease, box-shadow 2s ease;
+}
+
+/* Mother's reply — warm rose, mirrored alignment */
+.story__text-msg--reply {
+  color: var(--color-woman, #a35d6f);
+  background: color-mix(in srgb, var(--color-woman, #a35d6f) 6%, transparent);
+  border-color: color-mix(in srgb, var(--color-woman, #a35d6f) 15%, transparent);
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--color-woman, #a35d6f) 8%, transparent);
+  border-radius: 1.2em 1.2em 0.2em 1.2em;
+  font-weight: 500;
+}
+
+/* Wrapper — positions the bubbles with breathing room.
+   Cicero's message aligns left, mother's aligns right,
+   creating a visual conversation flow. */
+.story__text-msg-wrap {
+  display: flex;
+  justify-content: flex-start;
+  padding: 0 clamp(1rem, 5vw, 4rem);
+  margin: 0 0 1.2em;
+}
+
+.story__text-msg-wrap:has(.story__text-msg--reply) {
+  justify-content: flex-end;
+}
+
+/* Fallback for browsers without :has() support */
+.story__text-msg-wrap--reply {
+  justify-content: flex-end;
+}
+
+/* ---- THE END ----
+   The visual weight of finality. Large, spaced, commanding.
+   Uses the accent color with a slow, dignified fade-in.
+   Larger than mystical text, with generous vertical spacing
+   to give it room to breathe as the story's final word. */
+.story__end {
+  font-family: 'Cormorant Garamond', 'Georgia', serif;
+  font-size: clamp(1.4rem, 3.5vw, 2.2rem);
+  font-weight: 600;
+  letter-spacing: 0.35em;
+  line-height: 1.4;
+  color: var(--color-accent, #8b3a62);
+  margin: clamp(3rem, 6vh, 5rem) 0 clamp(2rem, 4vh, 3rem);
+  text-align: center;
+  opacity: 0;
+  animation: endFadeIn 4s ease-in-out forwards;
+  transition: color 2s ease;
+}
+
+@keyframes endFadeIn {
+  0% { opacity: 0; transform: translateY(8px); }
+  60% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Subtle decorative rule above THE END */
+.story__end::before {
+  content: '';
+  display: block;
+  width: 80px;
+  height: 1px;
+  background: var(--color-accent, #8b3a62);
+  margin: 0 auto clamp(1.5rem, 3vh, 2.5rem);
+  opacity: 0.5;
+}
+
+/* ---- Chapter III responsive adjustments ---- */
+@media (max-width: 600px) {
+  .story__dialogue--cicero {
+    font-size: clamp(1.08rem, 4vw, 1.35rem);
+  }
+  .story__text-msg {
+    font-size: clamp(0.95rem, 3.8vw, 1.15rem);
+    padding: 0.6em 1em;
+    max-width: 90%;
+  }
+  .story__text-msg-wrap {
+    padding: 0 clamp(0.5rem, 3vw, 1.5rem);
+  }
+  .story__end {
+    font-size: clamp(1.2rem, 5vw, 1.8rem);
+  }
+}
