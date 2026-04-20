@@ -142,7 +142,30 @@ CH2_ORDER = [
     'cicero2-p56', 'cicero2-p57', 'cicero2-p58',
 ]
 
-FULL_ORDER = CH1_ORDER + CH2_ORDER
+CH3_ORDER = [
+    'cicero3-ch',
+    'cicero3-p1', 'cicero3-p2', 'cicero3-p3', 'cicero3-p4', 'cicero3-p5',
+    'cicero3-p6', 'cicero3-p7', 'cicero3-p8', 'cicero3-p9', 'cicero3-p10',
+    'cicero3-p11', 'cicero3-p12', 'cicero3-p13', 'cicero3-p14', 'cicero3-p15',
+    'cicero3-p16', 'cicero3-p17', 'cicero3-p18', 'cicero3-p19', 'cicero3-p20',
+    'cicero3-p21', 'cicero3-p22', 'cicero3-p23', 'cicero3-p24', 'cicero3-p25',
+    'cicero3-p26', 'cicero3-p27', 'cicero3-p28',
+    'cicero3-m1', 'cicero3-m2', 'cicero3-m3',
+    'cicero3-p29', 'cicero3-p30', 'cicero3-p31', 'cicero3-p32', 'cicero3-p33',
+    'cicero3-p34', 'cicero3-p35', 'cicero3-p36', 'cicero3-p37',
+    'cicero3-skip1', 'cicero3-skip2', 'cicero3-skip3', 'cicero3-skip4',
+    'cicero3-skip5', 'cicero3-skip6', 'cicero3-skip7', 'cicero3-skip8',
+    'cicero3-skip9', 'cicero3-skip10', 'cicero3-skip11', 'cicero3-skip12',
+    'cicero3-skip13', 'cicero3-skip14', 'cicero3-skip15', 'cicero3-skip16',
+    'cicero3-skip17', 'cicero3-skip18', 'cicero3-skip19', 'cicero3-skip20',
+    'cicero3-skip21', 'cicero3-skip22', 'cicero3-skip23', 'cicero3-skip24',
+    'cicero3-skip25', 'cicero3-skip26',
+    'cicero3-p38', 'cicero3-p39', 'cicero3-p40', 'cicero3-p41',
+    'cicero3-p42', 'cicero3-p43',
+    'cicero3-end',
+]
+
+FULL_ORDER = CH1_ORDER + CH2_ORDER + CH3_ORDER
 
 LANGUAGE_NAMES = {
     'en': 'English',
@@ -339,17 +362,20 @@ You are also deeply read in modern literary criticism and translation reviews. Y
 
 You know that the greatest risk in literary translation is the loss of ambiguity — reducing a word with multiple simultaneous meanings to one that covers only a single sense. You also know that Garcia Marquez said Gregory Rabassa's English translation of One Hundred Years of Solitude was "more accurate than the original" — because precision in translation can sometimes illuminate what the source text left implicit.
 
-Your task is to evaluate a translation of the fairy tale "Young Cicero du Lac" — a lyrical, emotionally rich story about a young man, a magical lake, and the gifts it bestows. The story has two chapters: Chapter I follows the young man receiving the gift of special eyes; Chapter II follows a family and the Lake's promise of a daughter that arrives as a son.
+Your task is to evaluate a translation of the fairy tale "Young Cicero du Lac" — a lyrical, emotionally rich story spanning three chapters about a young man, a magical Great Lake, the gifts it bestows, and the boy born from its promise who returns as a young man. Chapter I follows the young man receiving the gift of special gray eyes to find love; Chapter II follows a family of four and the Lake's promise of a daughter that arrives as a son (Cicero); Chapter III follows Cicero as a grown young man returning to Lake Ealasaid, where the Lake recognizes him and they share a profound, playful encounter culminating in Cicero skipping 25 stones and texting his mother.
 
 The story features:
-- A fairy tale register ("Once upon a time" / "Once, a young man...")
-- The Lake as a character with a grandiose, warm, slightly theatrical voice
-- Dialogue with distinct character voices (the Lake's formality, the young man's hesitance, the older brother's street-smart bravado, the younger brother's innocence)
-- Onomatopoeia for stone-skipping sounds
+- A fairy tale register ("Once upon a time" / "Once, a young man..." / "And then he said, Fine.")
+- The Lake as a character with a grandiose, warm, slightly theatrical voice marked by "~" tildes ("Ha~!", "Mhm~!", "Ow~!") and the endearment "my sweet"
+- Dialogue with distinct character voices: the Lake's formality, the young man's hesitance (Ch. I), the older brother's street-smart AAVE bravado (Ch. II), the younger brother's innocence (Ch. II), and Cicero's grounded, modern, slightly casual voice (Ch. III)
+- Cicero in Chapter III speaks with a distinct voice — he is the baby from the end of Ch. II now grown, with gray eyes inherited from the Lake's gift. He uses contractions, modern phrasing, and gentle humor. His dialogue MUST feel different from the young man in Ch. I and the brothers in Ch. II
+- Onomatopoeia for stone-skipping sounds (up to 25 skips in Ch. III)
 - Poetic imagery around water, light, eyes, and color
-- Emotional crescendo from loneliness to wonder to joy (Ch. I) and from family tension to divine intervention to twist ending (Ch. II)
-- Spaced-out letters for dramatic emphasis (e.g., "L O N E L I N E S S . . .")
+- Emotional crescendo from loneliness to wonder to joy (Ch. I), from family tension to divine intervention to twist ending (Ch. II), and from quiet return to recognition to joyful reunion to tender farewell (Ch. III)
+- Spaced-out letters for dramatic emphasis (e.g., "L O N E L I N E S S . . .", "G R A Y - E Y E S . . .")
 - The older brother in Chapter II speaks in a distinctly informal, youthful register — this MUST be preserved in translation
+- Chapter III ends with a modern text message exchange between Cicero and his mother — this intimate, contemporary moment must feel natural in each language
+- "T H E   E N D" closes the story with finality and visual weight
 
 You evaluate with the highest standards — comparable to what would be expected in a published literary translation by a major press (Penguin, Knopf, Granta, New Directions). You are generous with praise where deserved and specific with criticism where needed. You cite the modern literary review benchmarks provided to calibrate your assessment."""
 
@@ -399,13 +425,13 @@ When assessing, calibrate against the modern literary review benchmarks above. A
 
 1. **Narrative Voice** — Does the fairy tale register carry through naturally? Does it open with the right storytelling cadence for this language's tradition? (Calibrate against: Le Petit Prince for French, Miyazawa for Japanese, Quiroga for Spanish, Pramoedya for Indonesian, Lispector for Portuguese, classical storytelling for Chinese/Korean)
 
-2. **Character Voice Distinction** — Are the Lake's grandiose warmth, the young man's hesitance, the older brother's street-smart bravado (Chapter II), and the younger brother's innocence all distinctly rendered? Is the older brother's informal/slang register preserved authentically? (Calibrate against: Kawakami's Osaka dialect handling, Han Kang's register shifts, Saramago's dialogue-within-prose)
+2. **Character Voice Distinction** — Are the Lake's grandiose warmth, the young man's hesitance (Ch. I), the older brother's street-smart bravado (Ch. II), the younger brother's innocence (Ch. II), and Cicero's grounded modern voice (Ch. III) all distinctly rendered? Is the older brother's informal/slang register preserved authentically? Does Cicero sound like a different person from the young man in Ch. I? (Calibrate against: Kawakami's Osaka dialect handling, Han Kang's register shifts, Saramago's dialogue-within-prose)
 
 3. **Poetic Imagery** — Are the water metaphors, color descriptions, and emotional landscapes rendered with equivalent beauty and precision? Do images land with the same sensory impact? (Calibrate against: Kawabata's snow imagery, Lispector's sensory prose, Garcia Marquez's magical descriptions)
 
 4. **Onomatopoeia & Sound Words** — Are the stone-skipping sounds (skip counts, "Swat!", "Sink!"), the Lake's exclamations ("Ha~!", "Mhm~!"), and other sound effects rendered with equivalent sonic impact in the target language? Are they culturally natural sound words?
 
-5. **Emotional Arc & Resonance** — Does the translation preserve the emotional trajectory? The loneliness, the wonder of the Lake's appearance, the tenderness of the gift, the joy of transformation (Ch. I)? The family tension, divine promise, and twist ending (Ch. II)? (Calibrate against: Korean han, Japanese mono no aware, Spanish duende)
+5. **Emotional Arc & Resonance** — Does the translation preserve the emotional trajectory? The loneliness, the wonder of the Lake's appearance, the tenderness of the gift, the joy of transformation (Ch. I)? The family tension, divine promise, and twist ending (Ch. II)? The quiet return, joyful reunion, the Lake's recognition of Gray-Eyes, the 25-skip triumph, and the tender text to his mother (Ch. III)? (Calibrate against: Korean han, Japanese mono no aware, Spanish duende)
 
 6. **Cultural Naturalness** — Does this read like a fairy tale that could have been originally written in {lang_name}? Or does it feel like a translation? Are idioms and expressions natural to the target culture? (The Deborah Smith test: is it beautiful AND faithful, not just one or the other?)
 
@@ -413,7 +439,7 @@ When assessing, calibrate against the modern literary review benchmarks above. A
 
 8. **Lexical Precision & Intentionality** — Is every word choice intentional and serving the story? Are there any words that feel generic where a more precise or poetic choice exists? Does the vocabulary match the register? (Daniel Hahn: "If the writer has used word x, we need to know why that was the word he chose of all the options")
 
-9. **Register Consistency** — Is the formal narration distinct from casual dialogue? In Chapter II, is the contrast between the narrator's literary voice and the older brother's colloquial speech maintained? Are honorific/politeness levels appropriate? (Calibrate against: Indonesian baku/gaul contrast, Korean jondaenmal/banmal, Japanese keigo levels)
+9. **Register Consistency** — Is the formal narration distinct from casual dialogue? In Chapter II, is the contrast between the narrator's literary voice and the older brother's colloquial speech maintained? In Chapter III, does Cicero's modern casual voice contrast properly with the Lake's theatrical formality and the fairy tale narration? Are honorific/politeness levels appropriate across all three chapters? Is the text message at the end rendered in a natural, contemporary register? (Calibrate against: Indonesian baku/gaul contrast, Korean jondaenmal/banmal, Japanese keigo levels)
 
 10. **Rhythm & Cadence** — Does the prose flow when read aloud? Are sentence lengths varied for effect? Does the pacing match the emotional beats of the story? (Calibrate against: PT-BR musical quality, Chinese qi yun, French clarte)
 
@@ -531,7 +557,7 @@ def evaluate_translation(source_text: str, target_text: str, lang_code: str, cli
 def generate_markdown_report(results: list, timestamp: str) -> str:
     """Generate a comprehensive Markdown report from all evaluation results."""
     lines = []
-    lines.append("# Weekly Translation Quality Report — Young Cicero du Lac")
+    lines.append("# Full-Story Translation Quality Report — Young Cicero du Lac (Chapters I–III)")
     lines.append("")
     lines.append(f"**Generated:** {timestamp}")
     lines.append("")
@@ -682,7 +708,7 @@ def generate_markdown_report(results: list, timestamp: str) -> str:
 def generate_json_report(results: list, timestamp: str) -> dict:
     """Generate a structured JSON report."""
     return {
-        "report_type": "weekly_translation_quality",
+        "report_type": "full_story_translation_quality",
         "story": "Young Cicero du Lac",
         "generated": timestamp,
         "model": "gemini-2.5-flash",
