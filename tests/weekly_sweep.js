@@ -12,9 +12,10 @@
  *   5. Console error / warning detection
  *   6. Resource loading (no 404s, no broken assets)
  *   7. Service worker and cache integrity
- *   8. Accessibility basics (lang attribute, ARIA)
- *   9. Performance budget (LCP, CLS)
- *  10. FOUC guard lifecycle
+ *   8. Translation integrity (i18n.js audit — contamination, missing keys, encoding)
+ *   9. Accessibility basics (lang attribute, ARIA)
+ *  10. Performance budget (LCP, CLS)
+ *  11. FOUC guard lifecycle
  *
  * References:
  *   - https://pptr.dev/ (Puppeteer docs)
@@ -515,6 +516,75 @@ async function testHybridDevice(page) {
   }
 }
 
+/**
+ * Suite 8: Translation Integrity (i18n.js audit)
+ * Runs the full_audit.py script to check for contamination, missing keys, etc.
+ * This is the same audit that runs in the pre-commit hook and CI pipeline.
+ */
+async function testTranslationIntegrity() {
+  console.log('\n── Suite 8: Translation Integrity (i18n.js audit) ──');
+
+  const { execSync } = require('child_process');
+  const path = require('path');
+
+  // Locate the audit script relative to this file
+  const scriptDir = path.dirname(path.resolve(__filename || __dirname));
+  const auditScript = path.join(scriptDir, 'full_audit.py');
+  const altAuditScript = path.join(scriptDir, '..', 'tests', 'full_audit.py');
+
+  let auditPath = null;
+  try {
+    require('fs').accessSync(auditScript);
+    auditPath = auditScript;
+  } catch {
+    try {
+      require('fs').accessSync(altAuditScript);
+      auditPath = altAuditScript;
+    } catch {
+      warn('Translation integrity', 'full_audit.py not found — skipping');
+      return;
+    }
+  }
+
+  try {
+    const output = execSync(`python3 "${auditPath}"`, {
+      encoding: 'utf-8',
+      timeout: 30000,
+    });
+
+    // Parse the results line
+    const resultLine = output.match(/(\d+) CRITICAL, (\d+) MAJOR, (\d+) WARNING/);
+    if (resultLine) {
+      const critical = parseInt(resultLine[1], 10);
+      const major = parseInt(resultLine[2], 10);
+      const warning = parseInt(resultLine[3], 10);
+
+      if (critical === 0 && major === 0) {
+        pass('Translation integrity audit', `0 CRITICAL, 0 MAJOR, ${warning} WARNING`);
+      } else {
+        fail('Translation integrity audit',
+          `${critical} CRITICAL, ${major} MAJOR, ${warning} WARNING — contamination detected!`);
+      }
+
+      if (warning > 0) {
+        warn('Translation integrity warnings', `${warning} warning(s) — review recommended`);
+      }
+    } else {
+      pass('Translation integrity audit', 'Script ran successfully (no result line parsed)');
+    }
+  } catch (err) {
+    // execSync throws on non-zero exit code
+    const output = (err.stdout || '') + (err.stderr || '');
+    const resultLine = output.match(/(\d+) CRITICAL, (\d+) MAJOR, (\d+) WARNING/);
+    if (resultLine) {
+      fail('Translation integrity audit',
+        `${resultLine[1]} CRITICAL, ${resultLine[2]} MAJOR, ${resultLine[3]} WARNING`);
+    } else {
+      fail('Translation integrity audit', `Script error: ${err.message.substring(0, 200)}`);
+    }
+  }
+}
+
 /* ══════════════════════════════════════════════════════════
    MAIN RUNNER
    ══════════════════════════════════════════════════════════ */
@@ -581,6 +651,13 @@ async function main() {
         await mobilePage.close();
       }
     }
+
+    /* ── Translation Integrity ─────────────────────────── */
+    console.log(`\n${'═'.repeat(56)}`);
+    console.log('  Translation Integrity Check');
+    console.log(`${'═'.repeat(56)}`);
+
+    await testTranslationIntegrity();
 
     /* ── Landing page quick check ──────────────────────── */
     console.log(`\n${'═'.repeat(56)}`);
