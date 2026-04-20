@@ -473,9 +473,9 @@
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
-  /* Float animation: ~3s cycle (2.1 rad/s → period ≈ 2π/2.1 ≈ 2.99s)
-     Amplitude ~3px, matching the door bubble */
-  animation: lang-tooltip-float 3s ease-in-out infinite;
+  /* 2.993s ≈ 2π / 2.1 rad/s — synced with rain.js bubbleFloatPhase,
+     amplitude 2.5px ≈ max(2, doorH * 0.02) */
+  animation: lang-tooltip-float 2.993s ease-in-out infinite;
 }
 
 .lang-tooltip--fade-out {
@@ -484,9 +484,13 @@
   transform: translateY(-4px);
 }
 
+/* Float cycle synced with door knock bubble:
+   rain.js uses 2.1 rad/s → period = 2π/2.1 ≈ 2.993s,
+   amplitude = max(2, doorH * 0.02) ≈ 2–3px,
+   waveform = sin(phase). CSS ease-in-out approximates sine. */
 @keyframes lang-tooltip-float {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-3px); }
+  50% { transform: translateY(-2.5px); }
 }
 
 .lang-tooltip__text {

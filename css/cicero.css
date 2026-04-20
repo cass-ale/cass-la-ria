@@ -541,10 +541,10 @@ html[lang="en"] [data-editable]::after {
 
 /* The older boy — brash, confident, natural leader.
    Slightly bolder than narration, warm earth tone,
-   no italic (direct, unfiltered speech). */
+   italic for consistency with all character dialogue. */
 .story__dialogue--elder {
   font-weight: 500;
-  font-style: normal;
+  font-style: italic;
   color: var(--color-elder, #6b4226);
 }
 
@@ -597,12 +597,12 @@ html[lang="en"] [data-editable]::after {
    ============================================================ */
 
 /* Young Cicero du Lac — water-born, grounded, self-assured.
-   Medium-bold weight, normal style (not italic — he speaks
-   with conviction, not hesitation). Slightly larger than
-   base dialogue to give his voice its earned presence. */
+   Medium-bold weight, italic for consistency with all
+   character dialogue. Slightly larger than base dialogue
+   to give his voice its earned presence. */
 .story__dialogue--cicero {
   font-weight: 500;
-  font-style: normal;
+  font-style: italic;
   font-size: clamp(1.18rem, 2.9vw, 1.48rem);
   color: var(--color-cicero, #406068);
 }
