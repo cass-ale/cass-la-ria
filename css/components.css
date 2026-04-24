@@ -558,3 +558,71 @@
     padding: 4px 10px;
   }
 }
+
+/* ============================================================
+   CUSTOM SCROLLBAR — Desktop Only
+   Theme-aware scrollbar that follows the time-based color
+   system. Uses CSS custom properties so time-theme.js color
+   transitions propagate automatically.
+
+   Desktop only (min-width: 769px) — mobile devices keep their
+   native scrollbar for optimal touch UX and platform consistency.
+
+   Two-layer approach for maximum browser coverage:
+     1. Standard: scrollbar-color + scrollbar-width (Firefox 64+,
+        Chrome 121+, Safari 18.2+)
+     2. WebKit:   ::-webkit-scrollbar pseudo-elements (Chrome,
+        Edge, Safari, Opera — supports transitions)
+
+   References:
+     - MDN: developer.mozilla.org/en-US/docs/Web/CSS/scrollbar-color
+     - Chrome: developer.chrome.com/docs/css-ui/scrollbar-styling
+     - W3C: drafts.csswg.org/css-scrollbars-1
+   ============================================================ */
+
+@media (min-width: 769px) {
+
+  /* ---- Standard CSS Scrollbars (Firefox, Chrome 121+) ----
+     scrollbar-color: <thumb> <track>
+     Note: does not support transitions — snaps to new color.
+     The var() values are updated by time-theme.js inline styles
+     on <html>, so the scrollbar follows the theme automatically. */
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) var(--color-bg-subtle);
+  }
+
+  /* ---- WebKit Scrollbar (Chrome, Edge, Safari, Opera) ----
+     These pseudo-elements DO support CSS transitions, so the
+     scrollbar color will animate smoothly with the theme.
+     When both standard and webkit rules are present, browsers
+     that support both will use the standard properties, while
+     older WebKit browsers fall back to the pseudo-elements. */
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--color-bg-subtle);
+    transition: background-color 2s ease;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border: 2px solid var(--color-bg-subtle);
+    border-radius: 8px;
+    transition: background-color 2s ease, border-color 2s ease;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-accent-soft);
+  }
+
+  /* Corner piece where horizontal and vertical scrollbars meet */
+  ::-webkit-scrollbar-corner {
+    background: var(--color-bg-subtle);
+    transition: background-color 2s ease;
+  }
+}
