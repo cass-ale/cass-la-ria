@@ -39,6 +39,7 @@
   /* ---- Typography ---- */
   --font-display:  'Cormorant Garamond', 'Georgia', serif;
   --font-body:     'Cormorant Garamond', 'Georgia', serif;
+  --font-story:    'Cormorant Garamond', 'Georgia', serif;
 
   /* ---- Spacing Scale (rem) ---- */
   --space-xs:  0.25rem;

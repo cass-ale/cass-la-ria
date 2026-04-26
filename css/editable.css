@@ -87,9 +87,20 @@
     display: none;
   }
   
-  /* On touch devices, show a subtle bottom border as affordance */
-  [data-editable] {
+  /* On touch devices, show a subtle bottom border as affordance
+     — but only in non-English languages. In English mode the
+     editable elements should look like plain text (no border).
+     The html[lang="en"] override in cicero.css uses !important,
+     but specificity conflicts can cause "sticky hover" on some
+     touch browsers. This selector explicitly excludes English. */
+  html:not([lang="en"]) [data-editable] {
     border-bottom: 1px dashed var(--color-border, #c9a0ad);
+    cursor: default;
+  }
+  
+  /* English on touch: ensure border is fully removed */
+  html[lang="en"] [data-editable] {
+    border-bottom: none !important;
     cursor: default;
   }
 }

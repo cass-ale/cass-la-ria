@@ -278,8 +278,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   margin: 0;
 
@@ -417,7 +417,7 @@
   }
 }
 
-/* Small phones */
+/* Small phones — still meet 44px WCAG minimum touch target */
 @media (max-width: 374px) {
   .lang-switcher {
     bottom: calc(var(--frame-inset) + 6px);
@@ -425,13 +425,13 @@
   }
 
   .lang-switcher__trigger {
-    width: 30px;
-    height: 30px;
+    width: 44px;
+    height: 44px;
   }
 
   .lang-switcher__trigger svg {
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
   }
 
   .lang-switcher__option {

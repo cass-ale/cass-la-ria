@@ -18,8 +18,13 @@ import re
 import json
 import subprocess
 import sys
+import os
 
-I18N_PATH = '/home/ubuntu/cass-la-ria-git/js/i18n.js'
+# Resolve i18n.js relative to this script's location (tests/ -> ../js/i18n.js)
+# This avoids hard-coding sandbox paths and works in any clone directory.
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_REPO_ROOT = os.path.dirname(_SCRIPT_DIR)
+I18N_PATH = os.path.join(_REPO_ROOT, 'js', 'i18n.js')
 
 LANGUAGES = {
     'en': {'name': 'English', 'script': 'latin'},
