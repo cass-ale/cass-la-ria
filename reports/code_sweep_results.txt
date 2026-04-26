@@ -1,0 +1,36 @@
+Weekly Code Sweep Results — 2026-04-26
+Target: https://caprilaria.com
+
+SWEEP SUMMARY
+═══════════════════════════════════════════════════════
+  Passed:   52
+  Failed:   6
+  Warnings: 6
+  Total:    64
+
+FAILURES:
+  1. Sticky hover states detected — 2 elements (tablet 768x1024)
+  2. Sticky hover states detected — 2 elements (mobileLarge 428x926)
+  3. Sticky hover states detected — 2 elements (mobileSmall 375x667)
+  4. Sticky hover states detected — 2 elements (mobileTiny 320x568)
+  5. Sticky hover states detected — 2 elements (hybridLaptop 1366x768)
+  6. Translation integrity audit — full_audit.py path error (non-blocking, separate check runs below)
+
+WARNINGS:
+  1. Missing CSS custom properties — --font-story
+  2. Small touch targets (tablet) — A("") 32x32px, A("Cass la Ria") 120x17px, A("") 32x32px, A("") 32x32px, A("") 32x32px
+  3. Small touch targets (mobileLarge) — A("") 36x36px, A("Cass la Ria") 85x13px, A("") 36x36px, A("") 36x36px, A("") 36x36px
+  4. Small touch targets (mobileSmall) — A("") 36x36px, A("Cass la Ria") 85x13px, A("") 36x36px, A("") 36x36px, A("") 36x36px
+  5. Small touch targets (mobileTiny) — A("") 36x36px, A("Cass la Ria") 72x12px, A("") 36x36px, A("") 36x36px, A("") 36x36px
+  6. Small touch targets (hybridLaptop) — A("") 32x32px, A("Cass la Ria") 120x17px, A("") 32x32px, A("") 32x32px, A("") 32x32px
+
+PASSING SUITES:
+  - English Hover Suppression (all 5 layers): PASS across all viewports
+  - Language Switch Round-Trip (EN→ES→EN): PASS
+  - FOUC Guard Lifecycle: PASS
+  - Accessibility Basics: PASS
+  - Asset Hashing: PASS (13 hashed assets)
+  - Console Errors & Resources (Cicero): PASS
+  - Console Errors & Resources (Landing): PASS
+  - Hybrid Device cursor/border: PASS
+  - No horizontal overflow on any viewport: PASS
