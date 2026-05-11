@@ -806,6 +806,9 @@
   /* ---- Initialization ---- */
 
   function init() {
+    /* Bail out entirely when translation UI is disabled */
+    if (document.documentElement.classList.contains('i18n-disabled')) return;
+
     detectTouch();
 
     var elements = document.querySelectorAll('[data-editable]');

@@ -247,6 +247,39 @@
 }
 
 /* ============================================================
+   i18n KILL-SWITCH
+   When html.i18n-disabled is set, hide ALL translation-related
+   UI across every page: globe button, language list, tooltip,
+   translation prompt banner, editable text indicators, and
+   pencil icons.
+
+   To re-enable: remove the "i18n-disabled" class from <html>
+   in each HTML file.
+   ============================================================ */
+
+html.i18n-disabled .lang-switcher,
+html.i18n-disabled .lang-tooltip,
+html.i18n-disabled .story__note,
+html.i18n-disabled [data-editable]::after,
+html.i18n-disabled .editable-desktop-hint,
+html.i18n-disabled .editable-sr-only {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Suppress editable hover borders and cursor when disabled */
+html.i18n-disabled [data-editable] {
+  border-bottom: none !important;
+  cursor: default !important;
+}
+
+html.i18n-disabled [data-editable]:hover {
+  border-bottom-color: transparent !important;
+}
+
+/* ============================================================
    LANGUAGE SWITCHER
    Globe icon in the bottom-right corner of the decorative frame.
    Click to reveal a vertically stacked list of languages above

@@ -232,6 +232,9 @@
    * aria-current on switcher, and persists to localStorage.
    */
   function switchLanguage(lang) {
+    /* Block language switching when translation UI is disabled */
+    if (document.documentElement.classList.contains('i18n-disabled')) return;
+
     var i18nData = window.i18n || {};
     var translations = i18nData.translations || {};
     var defaultLang = i18nData.defaultLang || 'en';
@@ -318,6 +321,9 @@
    * - Keyboard: Enter/Space to toggle, arrow keys to navigate
    */
   function setupLanguageSwitcher() {
+    /* Skip entirely when translation UI is disabled */
+    if (document.documentElement.classList.contains('i18n-disabled')) return;
+
     var trigger = document.getElementById('lang-trigger');
     var list = document.getElementById('lang-list');
     if (!trigger || !list) return;
@@ -407,6 +413,9 @@
      ============================================================ */
 
   function setupLangTooltip() {
+    /* Skip entirely when translation UI is disabled */
+    if (document.documentElement.classList.contains('i18n-disabled')) return;
+
     var tooltip = document.getElementById('lang-tooltip');
     if (!tooltip) return;
 
